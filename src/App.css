@@ -1047,3 +1047,332 @@
   background: rgba(255, 255, 255, 0.68);
   border-color: rgba(58, 39, 87, 0.08);
 }
+.history-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.history-action-button {
+  width: 36px;
+  height: 36px;
+
+  display: grid;
+  place-items: center;
+
+  border: 0;
+  border-radius: 12px;
+
+  background: rgba(255, 255, 255, 0.06);
+  color: #bca5f3;
+
+  cursor: pointer;
+
+  font-size: 0.95rem;
+}
+
+.history-action-button:hover {
+  background: rgba(255, 255, 255, 0.11);
+}
+
+
+.split-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+
+  margin: 8px 0 24px;
+
+  padding: 16px;
+
+  border-radius: 18px;
+
+  background: rgba(255, 255, 255, 0.05);
+
+  color: #c8bed7;
+  font-weight: 600;
+}
+
+
+.twelve-hour-card {
+  overflow: hidden;
+}
+
+
+.sleep-percentage {
+  min-width: 60px;
+  height: 60px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 50%;
+
+  background: rgba(151, 119, 233, 0.14);
+  border: 1px solid rgba(190, 163, 255, 0.15);
+
+  color: #cfbcff;
+
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+
+.twelve-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  gap: 12px;
+
+  margin-top: 20px;
+}
+
+
+.twelve-stats > div {
+  padding: 18px;
+
+  border-radius: 20px;
+
+  background: rgba(255, 255, 255, 0.045);
+}
+
+
+.twelve-stats span {
+  display: block;
+
+  margin-bottom: 6px;
+
+  color: #8f859c;
+
+  font-size: 0.78rem;
+}
+
+
+.twelve-stats strong {
+  display: block;
+
+  color: #f5efff;
+
+  font-size: 1.35rem;
+}
+
+
+.sleep-timeline {
+  margin-top: 24px;
+}
+
+
+.timeline-track {
+  position: relative;
+
+  width: 100%;
+  height: 32px;
+
+  overflow: hidden;
+
+  border-radius: 999px;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255, 205, 130, 0.11),
+      rgba(255, 222, 172, 0.075)
+    );
+
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+
+.timeline-sleep-block {
+  position: absolute;
+
+  top: 0;
+  bottom: 0;
+
+  min-width: 2px;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(126, 89, 211, 0.85),
+      rgba(164, 127, 239, 0.95)
+    );
+
+  box-shadow:
+    0 0 18px rgba(133, 93, 219, 0.2);
+}
+
+
+.timeline-times {
+  display: flex;
+  justify-content: space-between;
+
+  margin-top: 8px;
+
+  color: #746b81;
+
+  font-size: 0.7rem;
+}
+
+
+.timeline-legend {
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+
+  margin-top: 14px;
+
+  color: #8c8297;
+
+  font-size: 0.73rem;
+}
+
+
+.timeline-legend span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+
+.timeline-legend i {
+  width: 9px;
+  height: 9px;
+
+  display: inline-block;
+
+  border-radius: 50%;
+}
+
+
+.legend-awake {
+  background: rgba(255, 216, 159, 0.55);
+}
+
+
+.legend-sleep {
+  background: #9875de;
+}
+
+
+.mini-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 10px;
+
+  margin-top: 20px;
+}
+
+
+.mini-stats > div {
+  min-width: 0;
+
+  padding: 14px 10px;
+
+  text-align: center;
+
+  border-radius: 18px;
+
+  background: rgba(255, 255, 255, 0.04);
+}
+
+
+.mini-stats span {
+  display: block;
+
+  margin-bottom: 6px;
+
+  color: #857b91;
+
+  font-size: 0.69rem;
+}
+
+
+.mini-stats strong {
+  display: block;
+
+  color: #f2ecfa;
+
+  font-size: 0.94rem;
+}
+
+
+.seven-day-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 10px;
+
+  margin-top: 18px;
+}
+
+
+.seven-day-grid > div {
+  padding: 16px;
+
+  border-radius: 18px;
+
+  background: rgba(255, 255, 255, 0.04);
+}
+
+
+.seven-day-grid span {
+  display: block;
+
+  margin-bottom: 6px;
+
+  color: #857b91;
+
+  font-size: 0.72rem;
+}
+
+
+.seven-day-grid strong {
+  display: block;
+
+  color: #f2ecfa;
+
+  font-size: 1.05rem;
+}
+
+
+[data-theme="light"] .twelve-stats > div,
+[data-theme="light"] .mini-stats > div,
+[data-theme="light"] .seven-day-grid > div,
+[data-theme="light"] .split-summary,
+[data-theme="light"] .history-action-button {
+  background: rgba(62, 42, 82, 0.055);
+}
+
+
+[data-theme="light"] .twelve-stats strong,
+[data-theme="light"] .mini-stats strong,
+[data-theme="light"] .seven-day-grid strong {
+  color: #31243d;
+}
+
+
+[data-theme="light"] .timeline-track {
+  background: rgba(223, 193, 148, 0.22);
+
+  border-color: rgba(63, 42, 86, 0.08);
+}
+
+
+@media (max-width: 420px) {
+  .mini-stats {
+    gap: 7px;
+  }
+
+  .mini-stats > div {
+    padding: 13px 6px;
+  }
+
+  .mini-stats strong {
+    font-size: 0.84rem;
+  }
+}
