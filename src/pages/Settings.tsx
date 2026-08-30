@@ -53,7 +53,7 @@ export default function Settings() {
       <section className="settings-card">
         <div className="setting-copy">
           <p className="setting-title">About</p>
-          <p className="muted">Sleepy 2.0 · Phase 1</p>
+          <p className="muted">Sleepy 2.0 - "2.1.0" - Phase 1</p>
         </div>
       </section>
     </main>
