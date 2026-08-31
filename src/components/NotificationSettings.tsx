@@ -27,9 +27,15 @@ export default function NotificationSettings() {
     }
 
     hasPushSubscription()
-      .then(setEnabled)
+      .then((result) => {
+        console.log("Existing push subscription:", result);
+        setEnabled(result);
+      })
       .catch((error) => {
-        console.error("Could not check push subscription:", error);
+        console.error(
+          "Could not check push subscription:",
+          error,
+        );
       })
       .finally(() => {
         setLoading(false);
@@ -37,22 +43,45 @@ export default function NotificationSettings() {
   }, [supported]);
 
   async function handleEnable() {
+    alert("Enable clicked");
+
     try {
       setLoading(true);
       setMessage("");
 
+      console.log("Push supported:", pushSupported());
+
+      if ("Notification" in window) {
+        console.log(
+          "Current notification permission:",
+          Notification.permission,
+        );
+      }
+
+      console.log("Current bbyid:", currentBbyId);
+
       await enablePushNotifications(currentBbyId);
+
+      console.log("Push notification subscription created.");
 
       setEnabled(true);
       setMessage("Notifications enabled.");
-    } catch (error) {
-      console.error("Could not enable notifications:", error);
 
-      setMessage(
+      alert("Notifications enabled.");
+    } catch (error) {
+      console.error(
+        "Could not enable notifications:",
+        error,
+      );
+
+      const errorMessage =
         error instanceof Error
           ? error.message
-          : "Could not enable notifications.",
-      );
+          : "Could not enable notifications.";
+
+      setMessage(errorMessage);
+
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -67,14 +96,22 @@ export default function NotificationSettings() {
 
       setEnabled(false);
       setMessage("Notifications disabled.");
-    } catch (error) {
-      console.error("Could not disable notifications:", error);
 
-      setMessage(
+      alert("Notifications disabled.");
+    } catch (error) {
+      console.error(
+        "Could not disable notifications:",
+        error,
+      );
+
+      const errorMessage =
         error instanceof Error
           ? error.message
-          : "Could not disable notifications.",
-      );
+          : "Could not disable notifications.";
+
+      setMessage(errorMessage);
+
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -85,17 +122,30 @@ export default function NotificationSettings() {
       setLoading(true);
       setMessage("");
 
+      console.log(
+        "Sending test notification for:",
+        currentBbyId,
+      );
+
       await sendTestNotification(currentBbyId);
 
       setMessage("Test notification sent.");
-    } catch (error) {
-      console.error("Could not send test notification:", error);
 
-      setMessage(
+      alert("Test notification sent.");
+    } catch (error) {
+      console.error(
+        "Could not send test notification:",
+        error,
+      );
+
+      const errorMessage =
         error instanceof Error
           ? error.message
-          : "Could not send test notification.",
-      );
+          : "Could not send test notification.";
+
+      setMessage(errorMessage);
+
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -123,6 +173,10 @@ export default function NotificationSettings() {
 
       <p>
         Receive Sleepy notifications even when the app is closed.
+      </p>
+
+      <p>
+        Status: {enabled ? "Enabled" : "Disabled"}
       </p>
 
       {!enabled ? (
