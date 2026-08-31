@@ -46,18 +46,24 @@ export default function Settings() {
           </p>
         </div>
 
-        <button className="secondary-button" onClick={toggleTheme}>
+        <button
+          className="secondary-button"
+          onClick={toggleTheme}
+        >
           {theme === "dark" ? "Use light mode" : "Use dark mode"}
         </button>
       </section>
 
+      <NotificationSettings bbyid={currentBbyId} />
+
       <section className="settings-card">
         <div className="setting-copy">
           <p className="setting-title">About</p>
-          <p className="muted">Sleepy 2.0 - "2.1.0" - Phase 1</p>
+          <p className="muted">
+            Sleepy 2.0 - "2.1.0" - Phase 1
+          </p>
         </div>
       </section>
-      <NotificationSettings />
     </main>
   );
 }

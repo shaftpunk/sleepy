@@ -76,6 +76,18 @@ export default {
             "id, endpoint, p256dh, auth",
           )
           .eq("bbyid", bbyid);
+          console.log("Push request received", {
+  bbyid,
+  subscriptionCount: subscriptions?.length ?? 0,
+});
+
+console.log(
+  "Subscriptions:",
+  subscriptions?.map((sub) => ({
+    id: sub.id,
+    endpoint: sub.endpoint,
+  })),
+);
 
       if (error) {
         throw error;
@@ -143,6 +155,38 @@ export default {
       ).length;
 
       const failed = results.length - sent;
+      console.log("Push result", {
+  total: results.length,
+  sent,
+  failed,
+});
+
+for (const result of results) {
+  if (result.status === "rejected") {
+    //console.error("Push failed:", result.reason);
+
+    console.error(
+  "Push failed details:",
+  JSON.stringify(
+    {
+      name: result.reason?.name,
+      message: result.reason?.message,
+      statusCode: result.reason?.statusCode,
+      body: result.reason?.body,
+      headers: result.reason?.headers,
+    },
+    null,
+    2,
+  ),
+);
+
+
+
+
+
+
+  }
+}
 
       return json({
         success: true,
