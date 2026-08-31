@@ -39,6 +39,10 @@ export default function SleepModal({
     localDateTime(sleep?.endtime ?? now)
   );
 
+  const [rate, setRate] = useState<number | null>(
+    sleep?.rate ? Number(sleep.rate) : null
+  );
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -55,13 +59,16 @@ export default function SleepModal({
         return;
       }
 
+      const rateValue = rate != null ? String(rate) : null;
+
       if (sleep) {
-        await updateSleep(sleep.id, starttime, endtime);
+        await updateSleep(sleep.id, starttime, endtime, rateValue);
       } else {
         await createManualSleep({
           bbyid,
           starttime,
           endtime,
+          rate: rateValue,
         });
       }
 
@@ -111,6 +118,30 @@ export default function SleepModal({
             onChange={(event) => setEnd(event.target.value)}
           />
         </label>
+
+        <div className="form-field">
+          <span>Quality</span>
+
+          <div className="star-picker">
+            {[1, 2, 3, 4, 5].map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={
+                  rate != null && value <= rate
+                    ? "star-button active"
+                    : "star-button"
+                }
+                onClick={() =>
+                  setRate(rate === value ? null : value)
+                }
+                aria-label={`Rate ${value} star${value === 1 ? "" : "s"}`}
+              >
+                ★
+              </button>
+            ))}
+          </div>
+        </div>
 
         {error && <p className="form-error">{error}</p>}
 

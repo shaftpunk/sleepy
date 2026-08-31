@@ -1,0 +1,265 @@
+.analysis-tab-bar {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+
+  padding: 4px;
+  border-radius: 16px;
+
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.analysis-tab {
+  flex: 1;
+  white-space: nowrap;
+
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 12px;
+
+  background: transparent;
+  color: #b7aec8;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.analysis-tab.active {
+  background: #8f74df;
+  color: white;
+}
+
+.analysis-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.overview-average {
+  font-size: clamp(2.2rem, 9vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.trend-chip {
+  display: inline-block;
+  margin-top: 10px;
+
+  padding: 8px 13px;
+  border-radius: 999px;
+
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.trend-chip.neutral {
+  background: rgba(255, 255, 255, 0.06);
+  color: #b7aec8;
+}
+
+.trend-chip.positive {
+  background: rgba(88, 201, 149, 0.16);
+  color: #6fe0ae;
+}
+
+.trend-chip.warning {
+  background: rgba(240, 176, 90, 0.16);
+  color: #f3bd75;
+}
+
+.bar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.bar-list-row-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+
+  font-size: 0.88rem;
+}
+
+.bar-list-label {
+  color: #d8d0e6;
+  font-weight: 600;
+}
+
+.bar-list-value {
+  color: #b7aec8;
+}
+
+.bar-list-track {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.bar-list-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #8f74df;
+}
+
+.bar-list-fill.success {
+  background: #58c995;
+}
+
+.bar-list-fill.info {
+  background: #6fa4ef;
+}
+
+.bar-list-fill.warning {
+  background: #f0b05a;
+}
+
+.bar-list-fill.neutral {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.bar-list-detail {
+  display: block;
+  margin-top: 4px;
+
+  font-size: 0.78rem;
+  color: #8f859c;
+}
+
+.wake-window-rows {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.wake-window-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  padding: 12px;
+  border-radius: 16px;
+
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.wake-window-row span {
+  font-size: 0.78rem;
+  color: #9f96ad;
+}
+
+.wake-window-row small {
+  color: #8f859c;
+}
+
+.month-bar-grid {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+
+  height: 110px;
+}
+
+.month-bar {
+  flex: 1;
+  min-width: 2px;
+  border-radius: 3px 3px 0 0;
+}
+
+.month-bar-high {
+  background: linear-gradient(180deg, #b39cf0, #8f74df);
+}
+
+.month-bar-low {
+  background: rgba(143, 116, 223, 0.35);
+}
+
+.month-bar-empty {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.month-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+
+  font-size: 0.75rem;
+  color: #8f859c;
+}
+
+.month-footer {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.month-footer > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.month-footer span {
+  font-size: 0.78rem;
+  color: #9f96ad;
+}
+
+.month-total-badge {
+  padding: 8px 14px;
+  border-radius: 999px;
+
+  background: rgba(151, 119, 233, 0.14);
+  border: 1px solid rgba(190, 163, 255, 0.15);
+
+  font-weight: 700;
+}
+
+.insight-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.insight-row {
+  margin: 0;
+  line-height: 1.4;
+}
+
+[data-theme="light"] .analysis-tab-bar {
+  background: rgba(255, 255, 255, 0.68);
+  border-color: rgba(58, 39, 87, 0.08);
+}
+
+[data-theme="light"] .analysis-tab {
+  color: #6b6078;
+}
+
+[data-theme="light"] .bar-list-label {
+  color: #30263c;
+}
+
+[data-theme="light"] .bar-list-value,
+[data-theme="light"] .bar-list-detail,
+[data-theme="light"] .wake-window-row span,
+[data-theme="light"] .wake-window-row small,
+[data-theme="light"] .month-axis,
+[data-theme="light"] .month-footer span,
+[data-theme="light"] .trend-chip.neutral {
+  color: #776d82;
+}
+
+[data-theme="light"] .bar-list-track {
+  background: rgba(58, 39, 87, 0.08);
+}
+
+[data-theme="light"] .wake-window-row {
+  background: rgba(58, 39, 87, 0.05);
+}
+
+[data-theme="light"] .month-bar-empty {
+  background: rgba(58, 39, 87, 0.06);
+}

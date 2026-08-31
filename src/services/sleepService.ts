@@ -171,7 +171,8 @@ export async function createManualSleep(
 export async function updateSleep(
   id: string,
   starttime: string,
-  endtime: string
+  endtime: string,
+  rate?: string | null
 ) {
   if (
     new Date(endtime).getTime() <=
@@ -196,6 +197,10 @@ export async function updateSleep(
           starttime,
           endtime
         ),
+
+      ...(rate !== undefined
+        ? { rate }
+        : {}),
 
       updated_at:
         new Date().toISOString(),

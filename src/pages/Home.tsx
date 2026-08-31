@@ -1,5 +1,6 @@
 import {
     useEffect,
+    useMemo,
     useState,
   } from "react";
   
@@ -30,7 +31,14 @@ import {
   
   import FeedModal from "../components/FeedModal";
   import FeedHistory from "../components/FeedHistory";
-  
+  import SleepStrip from "../components/SleepStrip";
+
+  import { useAnalyticsData } from "../hooks/useAnalyticsData";
+  import { computeNextFeedSide, computeNextSleepHint, computeTodayTotals } from "../analytics/home";
+  import { computeWakeWindows } from "../analytics/wakeWindows";
+  import { median } from "../analytics/time";
+  import { formatClock, formatDuration, stars } from "../lib/format";
+
   function durationFrom(
     dateString: string
   ) {
@@ -261,11 +269,53 @@ import {
       useState(false);
   
     const [
-      clockTick,
-      setClockTick,
+      now,
+      setNow,
     ] =
-      useState(0);
-  
+      useState(
+        () => Date.now()
+      );
+
+    const {
+      sessions: analyticsSessions,
+      active: analyticsActive,
+      feeds: analyticsFeeds,
+    } = useAnalyticsData(currentBbyId);
+
+    const todayStats = useMemo(
+      () => computeTodayTotals(analyticsSessions, now),
+      [analyticsSessions, now]
+    );
+
+    const wakeWindowStats = useMemo(() => {
+      const windows = computeWakeWindows(analyticsSessions).windows;
+      return {
+        count: windows.length,
+        medianMinutes: windows.length
+          ? median(windows.map((w) => w.minutes))
+          : null,
+      };
+    }, [analyticsSessions]);
+
+    const nextSleepHint = useMemo(
+      () =>
+        computeNextSleepHint({
+          lastSessionEndMs: lastSleep?.endtime
+            ? new Date(lastSleep.endtime).getTime()
+            : null,
+          isCurrentlyAsleep: Boolean(activeSleep),
+          wakeWindowCount: wakeWindowStats.count,
+          medianWakeWindowMinutes: wakeWindowStats.medianMinutes,
+          now,
+        }),
+      [lastSleep, activeSleep, wakeWindowStats, now]
+    );
+
+    const nextFeedSide = useMemo(
+      () => computeNextFeedSide(analyticsFeeds),
+      [analyticsFeeds]
+    );
+
     async function loadSleepData() {
       const [
         active,
@@ -408,20 +458,19 @@ import {
       const interval =
         window.setInterval(
           () => {
-            setClockTick(
-              (value) =>
-                value + 1
+            setNow(
+              Date.now()
             );
           },
           30000
         );
-  
+
       return () =>
         window.clearInterval(
           interval
         );
     }, []);
-  
+
     async function handleSleep() {
       try {
         setSaving(true);
@@ -447,8 +496,6 @@ import {
         setSaving(false);
       }
     }
-  
-    void clockTick;
   
     return (
       <>
@@ -513,13 +560,48 @@ import {
                   : "Start sleep"}
             </button>
           </section>
-  
+
+          {!activeSleep && nextSleepHint && (
+            <p className="next-sleep-hint">
+              {nextSleepHint.kind === "predicted" &&
+                `Pleier å sovne rundt kl. ${formatClock(nextSleepHint.predictedTs)}`}
+
+              {nextSleepHint.kind === "about-usual" &&
+                "Har vært våken omtrent så lenge den pleier"}
+
+              {nextSleepHint.kind === "longer-than-usual" &&
+                `Våken lenger enn vanlig (+${formatDuration(nextSleepHint.overMinutes)})`}
+            </p>
+          )}
+
+          <section className="today-stats">
+            <div>
+              <span>Sleep today</span>
+              <strong>{formatDuration(todayStats.totalMinutes)}</strong>
+            </div>
+
+            <div>
+              <span>Sessions</span>
+              <strong>{todayStats.sessionCount}</strong>
+            </div>
+
+            <div>
+              <span>Avg quality</span>
+              <strong>{stars(todayStats.avgRating)}</strong>
+            </div>
+          </section>
+
+          <SleepStrip
+            sessions={analyticsSessions}
+            active={analyticsActive}
+          />
+
           <section className="feed-card">
             <div>
               <p className="card-label">
                 Last fed
               </p>
-  
+
               <h2>
                 {lastFeed
                   ? relativeTime(
@@ -527,7 +609,7 @@ import {
                     )
                   : "Not registered"}
               </h2>
-  
+
               <p className="muted">
                 {lastFeed
                   ? feedDescription(
@@ -535,8 +617,14 @@ import {
                     )
                   : "No feeding yet"}
               </p>
+
+              {nextFeedSide && (
+                <p className="muted">
+                  neste: {nextFeedSide === "left" ? "venstre" : "høyre"}
+                </p>
+              )}
             </div>
-  
+
             <button
               className="secondary-button"
               onClick={() =>
@@ -548,7 +636,7 @@ import {
               Register
             </button>
           </section>
-  
+
           <section className="recent-section">
             <div className="section-heading">
               <div>
