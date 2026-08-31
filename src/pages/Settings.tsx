@@ -1,5 +1,6 @@
 import { useAppStore } from "../stores/appStore";
 import NotificationSettings from "../components/NotificationSettings";
+import FamilySettings from "../components/FamilySettings";
 
 export default function Settings() {
   const currentBbyId = useAppStore(
@@ -43,9 +44,9 @@ export default function Settings() {
         <h1>Settings</h1>
 
         <p className="page-description">
-          Choose your baby, legacy data profile
-          and how Sleepy should look on this
-          device.
+          Choose your baby, manage your family,
+          notifications and how Sleepy should
+          look on this device.
         </p>
       </header>
 
@@ -93,6 +94,8 @@ export default function Settings() {
         )}
       </section>
 
+      <FamilySettings />
+
       <section className="settings-card">
         <div className="setting-copy">
           <p className="setting-title">
@@ -101,8 +104,8 @@ export default function Settings() {
 
           <p className="muted">
             Legacy Sleepy data profile.
-            Sleep and feeding data still use
-            this selection during migration.
+            This will be removed when the
+            migration is complete.
           </p>
         </div>
 
