@@ -7,9 +7,12 @@ export default defineConfig({
     react(),
 
     VitePWA({
-      registerType: "autoUpdate",
+      strategies: "injectManifest",
 
-      includeAssets: ["sleep.mp4"],
+      srcDir: "src",
+      filename: "sw.ts",
+
+      registerType: "autoUpdate",
 
       manifest: {
         name: "Sleepy",
@@ -24,6 +27,7 @@ export default defineConfig({
         display: "standalone",
 
         start_url: "/",
+        id: "/",
 
         orientation: "portrait-primary",
 
@@ -47,7 +51,7 @@ export default defineConfig({
         ],
       },
 
-      workbox: {
+      injectManifest: {
         globPatterns: [
           "**/*.{js,css,html,ico,png,svg,webp}",
         ],

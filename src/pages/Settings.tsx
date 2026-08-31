@@ -1,4 +1,5 @@
 import { useAppStore } from "../stores/appStore";
+import NotificationSettings from "../components/NotificationSettings";
 
 export default function Settings() {
   const currentBbyId = useAppStore((state) => state.currentBbyId);
@@ -56,6 +57,7 @@ export default function Settings() {
           <p className="muted">Sleepy 2.0 - "2.1.0" - Phase 1</p>
         </div>
       </section>
+      <NotificationSettings />
     </main>
   );
 }
