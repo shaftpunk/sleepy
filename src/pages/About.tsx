@@ -12,6 +12,7 @@ export default function About() {
         <section className="about-hero">
           <div className="about-moon">☾</div>
           <h2>Sleepy 2.0</h2>
+          <h2>v.2.2.0</h2>
           <p>Sleep. Feed. Understand the rhythm.</p>
         </section>
   
