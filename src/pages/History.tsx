@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useState,
 } from "react";
@@ -121,11 +122,24 @@ function feedLabel(
 
 
 export default function History() {
-  const bbyid =
+  const currentBabyId =
     useAppStore(
       (state) =>
-        state.currentBbyId
+        state.currentBabyId
     );
+
+  const babies =
+    useAppStore(
+      (state) =>
+        state.babies
+    );
+
+  const currentBaby =
+    babies.find(
+      (baby) =>
+        baby.id === currentBabyId
+    ) ?? null;
+
 
   const [
     sleeps,
@@ -183,46 +197,73 @@ export default function History() {
     useState(false);
 
 
-  async function load() {
-    const [
-      sleepData,
-      feedData,
-    ] =
-      await Promise.all([
-        getRecentSleeps(
-          bbyid,
-          100
-        ),
+  const load =
+    useCallback(
+      async () => {
+        if (!currentBabyId) {
+          setSleeps([]);
+          setFeeds([]);
+          return;
+        }
 
-        getRecentFeeds(
-          bbyid,
-          100
-        ),
-      ]);
+        try {
+          const [
+            sleepData,
+            feedData,
+          ] =
+            await Promise.all([
+              getRecentSleeps(
+                currentBabyId,
+                100
+              ),
 
-    setSleeps(
-      sleepData
+              getRecentFeeds(
+                currentBabyId,
+                100
+              ),
+            ]);
+
+          setSleeps(
+            sleepData
+          );
+
+          setFeeds(
+            feedData
+          );
+        } catch (error) {
+          console.error(
+            "Could not load history:",
+            error
+          );
+        }
+      },
+      [currentBabyId]
     );
-
-    setFeeds(
-      feedData
-    );
-  }
 
 
   useEffect(() => {
-    load();
+    if (!currentBabyId) {
+      setSleeps([]);
+      setFeeds([]);
+      return;
+    }
+
+    void load();
 
     const offSleep =
       subscribeToSleepChanges(
-        bbyid,
-        load
+        currentBabyId,
+        () => {
+          void load();
+        }
       );
 
     const offFeed =
       subscribeToFeedChanges(
-        bbyid,
-        load
+        currentBabyId,
+        () => {
+          void load();
+        }
       );
 
     return () => {
@@ -230,7 +271,10 @@ export default function History() {
       offFeed();
     };
 
-  }, [bbyid]);
+  }, [
+    currentBabyId,
+    load,
+  ]);
 
 
   return (
@@ -239,7 +283,8 @@ export default function History() {
 
         <header className="page-header">
           <p className="eyebrow">
-            {bbyid}
+            {currentBaby?.name ??
+              "Sleepy"}
           </p>
 
           <h1>
@@ -261,6 +306,7 @@ export default function History() {
 
             <button
               className="secondary-button"
+              disabled={!currentBabyId}
               onClick={() =>
                 setNewSleep(true)
               }
@@ -390,6 +436,7 @@ export default function History() {
 
             <button
               className="secondary-button"
+              disabled={!currentBabyId}
               onClick={() =>
                 setNewFeed(true)
               }
@@ -491,7 +538,6 @@ export default function History() {
         editingSleep) && (
 
         <SleepModal
-          bbyid={bbyid}
           sleep={editingSleep}
           onClose={() => {
             setNewSleep(
@@ -527,16 +573,10 @@ export default function History() {
         editingFeed) && (
 
         <FeedModal
-          bbyid={bbyid}
           feed={editingFeed}
           onClose={() => {
-            setNewFeed(
-              false
-            );
-
-            setEditingFeed(
-              null
-            );
+            setNewFeed(false);
+            setEditingFeed(null);
           }}
           onSaved={load}
         />

@@ -1,12 +1,18 @@
 import { supabase } from "../lib/supabase";
-import type { BabyId } from "../stores/appStore";
 
 export type FeedType = "bottle" | "breast" | "food";
 export type FeedSide = "left" | "right" | "both" | null;
 
 export type FeedRecord = {
   id: string;
-  bbyid: BabyId;
+
+  // Sleepy 3.0
+  baby_id: string;
+  created_by_user_id: string | null;
+  updated_by_user_id: string | null;
+  deleted_at: string | null;
+  deleted_by_user_id: string | null;
+
   feedtype: FeedType;
   side: FeedSide;
   amountml: number | null;
@@ -14,12 +20,13 @@ export type FeedRecord = {
   endtime: string | null;
   durationminutes: number | null;
   note: string | null;
+
   created_at?: string;
   updated_at?: string;
 };
 
 export type FeedInput = {
-  bbyid: BabyId;
+  baby_id: string;
   feedtype: FeedType;
   side?: FeedSide;
   amountml?: number | null;
@@ -29,103 +36,225 @@ export type FeedInput = {
   note?: string | null;
 };
 
-export async function createFeed(input: FeedInput) {
+/**
+ * Get the currently authenticated user's ID.
+ */
+async function getCurrentUserId(): Promise<string> {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!user) {
+    throw new Error("You must be logged in.");
+  }
+
+  return user.id;
+}
+
+/**
+ * Create a new feeding record.
+ */
+export async function createFeed(
+  input: FeedInput,
+): Promise<FeedRecord> {
+  const userId = await getCurrentUserId();
+
   const { data, error } = await supabase
     .from("feed")
     .insert({
-      bbyid: input.bbyid,
+      baby_id: input.baby_id,
+
       feedtype: input.feedtype,
       side: input.side ?? null,
       amountml: input.amountml ?? null,
-      starttime: input.starttime ?? new Date().toISOString(),
+
+      starttime:
+        input.starttime ??
+        new Date().toISOString(),
+
       endtime: input.endtime ?? null,
-      durationminutes: input.durationminutes ?? null,
+
+      durationminutes:
+        input.durationminutes ?? null,
+
       note: input.note ?? null,
+
+      created_by_user_id: userId,
+      updated_by_user_id: userId,
+
+      deleted_at: null,
+      deleted_by_user_id: null,
     })
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return data as FeedRecord;
 }
 
+/**
+ * Update an existing feeding record.
+ */
 export async function updateFeed(
   id: string,
-  input: Partial<FeedInput>
-) {
+  input: Partial<FeedInput>,
+): Promise<FeedRecord> {
+  const userId = await getCurrentUserId();
+
+  const updates: Record<string, unknown> = {
+    updated_by_user_id: userId,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (input.feedtype !== undefined) {
+    updates.feedtype = input.feedtype;
+  }
+
+  if (input.side !== undefined) {
+    updates.side = input.side;
+  }
+
+  if (input.amountml !== undefined) {
+    updates.amountml = input.amountml;
+  }
+
+  if (input.starttime !== undefined) {
+    updates.starttime = input.starttime;
+  }
+
+  if (input.endtime !== undefined) {
+    updates.endtime = input.endtime;
+  }
+
+  if (input.durationminutes !== undefined) {
+    updates.durationminutes =
+      input.durationminutes;
+  }
+
+  if (input.note !== undefined) {
+    updates.note = input.note;
+  }
+
   const { data, error } = await supabase
     .from("feed")
-    .update({
-      feedtype: input.feedtype,
-      side: input.side,
-      amountml: input.amountml,
-      starttime: input.starttime,
-      endtime: input.endtime,
-      durationminutes: input.durationminutes,
-      note: input.note,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updates)
     .eq("id", id)
+    .is("deleted_at", null)
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return data as FeedRecord;
 }
 
-export async function deleteFeed(id: string) {
+/**
+ * Soft-delete a feeding record.
+ *
+ * The row remains in the database for audit/history,
+ * but normal Sleepy queries will no longer return it.
+ */
+export async function deleteFeed(
+  id: string,
+): Promise<void> {
+  const userId = await getCurrentUserId();
+
+  const now = new Date().toISOString();
+
   const { error } = await supabase
     .from("feed")
-    .delete()
-    .eq("id", id);
+    .update({
+      deleted_at: now,
+      deleted_by_user_id: userId,
+      updated_by_user_id: userId,
+      updated_at: now,
+    })
+    .eq("id", id)
+    .is("deleted_at", null);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 }
 
-export async function getLastFeed(bbyid: BabyId) {
+/**
+ * Get the most recent feeding for a baby.
+ */
+export async function getLastFeed(
+  babyId: string,
+): Promise<FeedRecord | null> {
   const { data, error } = await supabase
     .from("feed")
     .select("*")
-    .eq("bbyid", bbyid)
-    .order("starttime", { ascending: false })
+    .eq("baby_id", babyId)
+    .is("deleted_at", null)
+    .order("starttime", {
+      ascending: false,
+    })
     .limit(1)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return data as FeedRecord | null;
 }
 
+/**
+ * Get the latest feeding records for a baby.
+ */
 export async function getRecentFeeds(
-  bbyid: BabyId,
-  limit = 20
-) {
+  babyId: string,
+  limit = 20,
+): Promise<FeedRecord[]> {
   const { data, error } = await supabase
     .from("feed")
     .select("*")
-    .eq("bbyid", bbyid)
-    .order("starttime", { ascending: false })
+    .eq("baby_id", babyId)
+    .is("deleted_at", null)
+    .order("starttime", {
+      ascending: false,
+    })
     .limit(limit);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return (data ?? []) as FeedRecord[];
 }
 
+/**
+ * Get feeding records from a given date.
+ */
 export async function getFeedsFromDate(
-  bbyid: BabyId,
-  fromDate: string
-) {
+  babyId: string,
+  fromDate: string,
+): Promise<FeedRecord[]> {
   const { data, error } = await supabase
     .from("feed")
     .select("*")
-    .eq("bbyid", bbyid)
+    .eq("baby_id", babyId)
+    .is("deleted_at", null)
     .gte("starttime", fromDate)
-    .order("starttime", { ascending: true });
+    .order("starttime", {
+      ascending: true,
+    });
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return (data ?? []) as FeedRecord[];
 }

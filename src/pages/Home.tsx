@@ -1,48 +1,128 @@
 import {
-    useEffect,
-    useMemo,
-    useState,
-  } from "react";
-  
-  import { useAppStore } from "../stores/appStore";
-  
-  import {
-    getActiveSleep,
-    getLastCompletedSleep,
-    getRecentSleeps,
-    startSleep,
-    stopSleep,
-    type SleepRecord,
-  } from "../services/sleepService";
-  
-  import {
-    getLastFeed,
-    getRecentFeeds,
-    type FeedRecord,
-  } from "../services/feedService";
-  
-  import {
-    subscribeToSleepChanges,
-  } from "../services/sleepRealtime";
-  
-  import {
-    subscribeToFeedChanges,
-  } from "../services/feedRealtime";
-  
-  import FeedModal from "../components/FeedModal";
-  import FeedHistory from "../components/FeedHistory";
-  import SleepStrip from "../components/SleepStrip";
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
-  import { useAnalyticsData } from "../hooks/useAnalyticsData";
-  import { computeNextFeedSide, computeNextSleepHint, computeTodayTotals } from "../analytics/home";
-  import { computeWakeWindows } from "../analytics/wakeWindows";
-  import { median } from "../analytics/time";
-  import { formatClock, formatDuration, stars } from "../lib/format";
+import { useAppStore } from "../stores/appStore";
 
-  function durationFrom(
-    dateString: string
-  ) {
-    const seconds = Math.max(
+import {
+  getActiveSleep,
+  getLastCompletedSleep,
+  getRecentSleeps,
+  startSleep,
+  stopSleep,
+  type SleepRecord,
+} from "../services/sleepService";
+
+import {
+  getLastFeed,
+  getRecentFeeds,
+  type FeedRecord,
+} from "../services/feedService";
+
+import {
+  subscribeToSleepChanges,
+} from "../services/sleepRealtime";
+
+import {
+  subscribeToFeedChanges,
+} from "../services/feedRealtime";
+
+import FeedModal from "../components/FeedModal";
+import FeedHistory from "../components/FeedHistory";
+import SleepStrip from "../components/SleepStrip";
+
+import { useAnalyticsData } from "../hooks/useAnalyticsData";
+import { computeNextFeedSide, computeNextSleepHint, computeTodayTotals } from "../analytics/home";
+import { computeWakeWindows } from "../analytics/wakeWindows";
+import { median } from "../analytics/time";
+import { formatClock, formatDuration, stars } from "../lib/format";
+
+function durationFrom(
+  dateString: string
+) {
+  const seconds = Math.max(
+    0,
+    Math.floor(
+      (
+        Date.now() -
+        new Date(
+          dateString
+        ).getTime()
+      ) / 1000
+    )
+  );
+
+  const hours =
+    Math.floor(seconds / 3600);
+
+  const minutes =
+    Math.floor(
+      (seconds % 3600) / 60
+    );
+
+  const secs =
+    seconds % 60;
+
+  return [
+    hours
+      .toString()
+      .padStart(2, "0"),
+
+    minutes
+      .toString()
+      .padStart(2, "0"),
+
+    secs
+      .toString()
+      .padStart(2, "0"),
+  ].join(":");
+}
+
+function formatTime(
+  dateString: string
+) {
+  return new Intl.DateTimeFormat(
+    "nb-NO",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+    }
+  ).format(
+    new Date(dateString)
+  );
+}
+
+function formatMinutes(
+  minutes: number | null
+) {
+  if (minutes === null) {
+    return "";
+  }
+
+  const h =
+    Math.floor(minutes / 60);
+
+  const m =
+    minutes % 60;
+
+  if (!h) {
+    return `${m} min`;
+  }
+
+  if (!m) {
+    return `${h} t`;
+  }
+
+  return `${h} t ${m} min`;
+}
+
+function relativeTime(
+  dateString: string
+) {
+  const minutes =
+    Math.max(
       0,
       Math.floor(
         (
@@ -50,668 +130,621 @@ import {
           new Date(
             dateString
           ).getTime()
-        ) / 1000
+        ) / 60000
       )
     );
-  
-    const hours =
-      Math.floor(seconds / 3600);
-  
-    const minutes =
-      Math.floor(
-        (seconds % 3600) / 60
-      );
-  
-    const secs =
-      seconds % 60;
-  
-    return [
-      hours
-        .toString()
-        .padStart(2, "0"),
-  
-      minutes
-        .toString()
-        .padStart(2, "0"),
-  
-      secs
-        .toString()
-        .padStart(2, "0"),
-    ].join(":");
-  }
-  
-  function formatTime(
-    dateString: string
-  ) {
-    return new Intl.DateTimeFormat(
-      "nb-NO",
-      {
-        hour: "2-digit",
-        minute: "2-digit",
-      }
-    ).format(
-      new Date(dateString)
-    );
-  }
-  
-  function formatMinutes(
-    minutes: number | null
-  ) {
-    if (minutes === null) {
-      return "";
-    }
-  
-    const h =
-      Math.floor(minutes / 60);
-  
-    const m =
-      minutes % 60;
-  
-    if (!h) {
-      return `${m} min`;
-    }
-  
-    if (!m) {
-      return `${h} t`;
-    }
-  
-    return `${h} t ${m} min`;
-  }
-  
-  function relativeTime(
-    dateString: string
-  ) {
-    const minutes =
-      Math.max(
-        0,
-        Math.floor(
-          (
-            Date.now() -
-            new Date(
-              dateString
-            ).getTime()
-          ) / 60000
-        )
-      );
-  
-    if (minutes < 1) {
-      return "Just now";
-    }
-  
-    if (minutes < 60) {
-      return `${minutes}m ago`;
-    }
-  
-    const h =
-      Math.floor(minutes / 60);
-  
-    const m =
-      minutes % 60;
-  
-    if (!m) {
-      return `${h}h ago`;
-    }
-  
-    return `${h}h ${m}m ago`;
-  }
-  
-  function feedDescription(
-    feed: FeedRecord
-  ) {
-    if (
-      feed.feedtype ===
-      "bottle"
-    ) {
-      return feed.amountml !== null
-        ? `Bottle · ${feed.amountml} ml`
-        : "Bottle";
-    }
-  
-    if (
-      feed.feedtype ===
-      "breast"
-    ) {
-      if (feed.side === "left") {
-        return "Breast · Left";
-      }
-  
-      if (feed.side === "right") {
-        return "Breast · Right";
-      }
-  
-      if (feed.side === "both") {
-        return "Breast · Both";
-      }
-  
-      return "Breast";
-    }
-  
-    return "Food";
-  }
-  
-  export default function Home() {
-    const currentBbyId =
-      useAppStore(
-        (state) =>
-          state.currentBbyId
-      );
-  
-    const [
-      activeSleep,
-      setActiveSleep,
-    ] =
-      useState<
-        SleepRecord | null
-      >(null);
-  
-    const [
-      lastSleep,
-      setLastSleep,
-    ] =
-      useState<
-        SleepRecord | null
-      >(null);
-  
-    const [
-      recentSleeps,
-      setRecentSleeps,
-    ] =
-      useState<
-        SleepRecord[]
-      >([]);
-  
-    const [
-      lastFeed,
-      setLastFeed,
-    ] =
-      useState<
-        FeedRecord | null
-      >(null);
-  
-    const [
-      recentFeeds,
-      setRecentFeeds,
-    ] =
-      useState<
-        FeedRecord[]
-      >([]);
-  
-    const [
-      feedModalOpen,
-      setFeedModalOpen,
-    ] =
-      useState(false);
-  
-    const [
-      timer,
-      setTimer,
-    ] =
-      useState(
-        "00:00:00"
-      );
-  
-    const [
-      loading,
-      setLoading,
-    ] =
-      useState(true);
-  
-    const [
-      saving,
-      setSaving,
-    ] =
-      useState(false);
-  
-    const [
-      showAllFeeds,
-      setShowAllFeeds,
-    ] =
-      useState(false);
-  
-    const [
-      now,
-      setNow,
-    ] =
-      useState(
-        () => Date.now()
-      );
 
-    const {
-      sessions: analyticsSessions,
-      active: analyticsActive,
-      feeds: analyticsFeeds,
-    } = useAnalyticsData(currentBbyId);
+  if (minutes < 1) {
+    return "Just now";
+  }
 
-    const todayStats = useMemo(
-      () => computeTodayTotals(analyticsSessions, now),
-      [analyticsSessions, now]
+  if (minutes < 60) {
+    return `${minutes}m ago`;
+  }
+
+  const h =
+    Math.floor(minutes / 60);
+
+  const m =
+    minutes % 60;
+
+  if (!m) {
+    return `${h}h ago`;
+  }
+
+  return `${h}h ${m}m ago`;
+}
+
+function feedDescription(
+  feed: FeedRecord
+) {
+  if (
+    feed.feedtype ===
+    "bottle"
+  ) {
+    return feed.amountml !== null
+      ? `Bottle · ${feed.amountml} ml`
+      : "Bottle";
+  }
+
+  if (
+    feed.feedtype ===
+    "breast"
+  ) {
+    if (feed.side === "left") {
+      return "Breast · Left";
+    }
+
+    if (feed.side === "right") {
+      return "Breast · Right";
+    }
+
+    if (feed.side === "both") {
+      return "Breast · Both";
+    }
+
+    return "Breast";
+  }
+
+  return "Food";
+}
+
+export default function Home() {
+  const currentBabyId =
+    useAppStore(
+      (state) =>
+        state.currentBabyId
     );
 
-    const wakeWindowStats = useMemo(() => {
-      const windows = computeWakeWindows(analyticsSessions).windows;
-      return {
-        count: windows.length,
-        medianMinutes: windows.length
-          ? median(windows.map((w) => w.minutes))
+  const babies =
+    useAppStore(
+      (state) =>
+        state.babies
+    );
+
+  const currentBaby =
+    babies.find(
+      (baby) =>
+        baby.id === currentBabyId
+    );
+
+  const [
+    activeSleep,
+    setActiveSleep,
+  ] =
+    useState<
+      SleepRecord | null
+    >(null);
+
+  const [
+    lastSleep,
+    setLastSleep,
+  ] =
+    useState<
+      SleepRecord | null
+    >(null);
+
+  const [
+    recentSleeps,
+    setRecentSleeps,
+  ] =
+    useState<
+      SleepRecord[]
+    >([]);
+
+  const [
+    lastFeed,
+    setLastFeed,
+  ] =
+    useState<
+      FeedRecord | null
+    >(null);
+
+  const [
+    recentFeeds,
+    setRecentFeeds,
+  ] =
+    useState<
+      FeedRecord[]
+    >([]);
+
+  const [
+    feedModalOpen,
+    setFeedModalOpen,
+  ] =
+    useState(false);
+
+  const [
+    timer,
+    setTimer,
+  ] =
+    useState(
+      "00:00:00"
+    );
+
+  const [
+    loading,
+    setLoading,
+  ] =
+    useState(true);
+
+  const [
+    saving,
+    setSaving,
+  ] =
+    useState(false);
+
+  const [
+    showAllFeeds,
+    setShowAllFeeds,
+  ] =
+    useState(false);
+
+  const [
+    now,
+    setNow,
+  ] =
+    useState(
+      () => Date.now()
+    );
+
+  const {
+    sessions: analyticsSessions,
+    active: analyticsActive,
+    feeds: analyticsFeeds,
+  } = useAnalyticsData(currentBabyId);
+
+  const todayStats = useMemo(
+    () => computeTodayTotals(analyticsSessions, now),
+    [analyticsSessions, now]
+  );
+
+  const wakeWindowStats = useMemo(() => {
+    const windows = computeWakeWindows(analyticsSessions).windows;
+    return {
+      count: windows.length,
+      medianMinutes: windows.length
+        ? median(windows.map((w) => w.minutes))
+        : null,
+    };
+  }, [analyticsSessions]);
+
+  const nextSleepHint = useMemo(
+    () =>
+      computeNextSleepHint({
+        lastSessionEndMs: lastSleep?.endtime
+          ? new Date(lastSleep.endtime).getTime()
           : null,
-      };
-    }, [analyticsSessions]);
+        isCurrentlyAsleep: Boolean(activeSleep),
+        wakeWindowCount: wakeWindowStats.count,
+        medianWakeWindowMinutes: wakeWindowStats.medianMinutes,
+        now,
+      }),
+    [lastSleep, activeSleep, wakeWindowStats, now]
+  );
 
-    const nextSleepHint = useMemo(
-      () =>
-        computeNextSleepHint({
-          lastSessionEndMs: lastSleep?.endtime
-            ? new Date(lastSleep.endtime).getTime()
-            : null,
-          isCurrentlyAsleep: Boolean(activeSleep),
-          wakeWindowCount: wakeWindowStats.count,
-          medianWakeWindowMinutes: wakeWindowStats.medianMinutes,
-          now,
-        }),
-      [lastSleep, activeSleep, wakeWindowStats, now]
-    );
+  const nextFeedSide = useMemo(
+    () => computeNextFeedSide(analyticsFeeds),
+    [analyticsFeeds]
+  );
 
-    const nextFeedSide = useMemo(
-      () => computeNextFeedSide(analyticsFeeds),
-      [analyticsFeeds]
-    );
-
-    async function loadSleepData() {
-      const [
-        active,
-        last,
-        recent,
-      ] =
-        await Promise.all([
-          getActiveSleep(
-            currentBbyId
-          ),
-  
-          getLastCompletedSleep(
-            currentBbyId
-          ),
-  
-          getRecentSleeps(
-            currentBbyId,
-            5
-          ),
-        ]);
-  
-      setActiveSleep(active);
-      setLastSleep(last);
-      setRecentSleeps(recent);
+  async function loadSleepData() {
+    if (!currentBabyId) {
+      setActiveSleep(null);
+      setLastSleep(null);
+      setRecentSleeps([]);
+      return;
     }
-  
-    async function loadFeedData() {
-      const [
-        last,
-        recent,
-      ] =
-        await Promise.all([
-          getLastFeed(
-            currentBbyId
-          ),
-  
-          getRecentFeeds(
-            currentBbyId,
-            10
-          ),
-        ]);
-  
-      setLastFeed(last);
-      setRecentFeeds(recent);
-    }
-  
-    async function loadAllData() {
+
+    const [
+      active,
+      last,
+      recent,
+    ] =
       await Promise.all([
-        loadSleepData(),
-        loadFeedData(),
+        getActiveSleep(
+          currentBabyId
+        ),
+
+        getLastCompletedSleep(
+          currentBabyId
+        ),
+
+        getRecentSleeps(
+          currentBabyId,
+          5
+        ),
       ]);
+
+    setActiveSleep(active);
+    setLastSleep(last);
+    setRecentSleeps(recent);
+  }
+
+  async function loadFeedData() {
+    if (!currentBabyId) {
+      setLastFeed(null);
+      setRecentFeeds([]);
+      return;
     }
-  
-    useEffect(() => {
-      let mounted = true;
-  
-      async function load() {
-        setLoading(true);
-  
-        try {
-          await loadAllData();
-        } catch (error) {
-          console.error(
-            "Failed loading Sleepy:",
-            error
-          );
-        } finally {
-          if (mounted) {
-            setLoading(false);
-          }
-        }
-      }
-  
-      load();
-  
-      const unsubscribeSleep =
-        subscribeToSleepChanges(
-          currentBbyId,
-          loadSleepData
-        );
-  
-      const unsubscribeFeed =
-        subscribeToFeedChanges(
-          currentBbyId,
-          loadFeedData
-        );
-  
-      return () => {
-        mounted = false;
-        unsubscribeSleep();
-        unsubscribeFeed();
-      };
-    }, [currentBbyId]);
-  
-    useEffect(() => {
-      function update() {
-        if (activeSleep) {
-          setTimer(
-            durationFrom(
-              activeSleep.starttime
-            )
-          );
-  
-          return;
-        }
-  
-        if (lastSleep?.endtime) {
-          setTimer(
-            durationFrom(
-              lastSleep.endtime
-            )
-          );
-  
-          return;
-        }
-  
-        setTimer(
-          "00:00:00"
-        );
-      }
-  
-      update();
-  
-      const interval =
-        window.setInterval(
-          update,
-          1000
-        );
-  
-      return () =>
-        window.clearInterval(
-          interval
-        );
-    }, [
-      activeSleep,
-      lastSleep,
+
+    const [
+      last,
+      recent,
+    ] =
+      await Promise.all([
+        getLastFeed(
+          currentBabyId
+        ),
+
+        getRecentFeeds(
+          currentBabyId,
+          10
+        ),
+      ]);
+
+    setLastFeed(last);
+    setRecentFeeds(recent);
+  }
+
+  async function loadAllData() {
+    await Promise.all([
+      loadSleepData(),
+      loadFeedData(),
     ]);
-  
-    useEffect(() => {
-      const interval =
-        window.setInterval(
-          () => {
-            setNow(
-              Date.now()
-            );
-          },
-          30000
-        );
+  }
 
-      return () =>
-        window.clearInterval(
-          interval
-        );
-    }, []);
+  useEffect(() => {
+    let mounted = true;
 
-    async function handleSleep() {
+    async function load() {
+      setLoading(true);
+
       try {
-        setSaving(true);
-  
-        if (activeSleep) {
-          await stopSleep(
-            activeSleep.id,
-            activeSleep.starttime
-          );
-        } else {
-          await startSleep(
-            currentBbyId
-          );
-        }
-  
-        await loadSleepData();
+        await loadAllData();
       } catch (error) {
         console.error(
-          "Sleep action failed:",
+          "Failed loading Sleepy:",
           error
         );
       } finally {
-        setSaving(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
-  
-    return (
-      <>
-        <main className="home-page">
-          <header className="home-header">
-            <div>
-              <p className="eyebrow">
-                Sleepy
+
+    load();
+
+    const unsubscribeSleep =
+      currentBabyId
+        ? subscribeToSleepChanges(
+          currentBabyId,
+          loadSleepData
+        )
+        : () => { };
+
+    const unsubscribeFeed =
+      currentBabyId
+        ? subscribeToFeedChanges(
+          currentBabyId,
+          loadFeedData
+        )
+        : () => { };
+
+    return () => {
+      mounted = false;
+      unsubscribeSleep();
+      unsubscribeFeed();
+    };
+  }, [currentBabyId]);
+
+  useEffect(() => {
+    function update() {
+      if (activeSleep) {
+        setTimer(
+          durationFrom(
+            activeSleep.starttime
+          )
+        );
+
+        return;
+      }
+
+      if (lastSleep?.endtime) {
+        setTimer(
+          durationFrom(
+            lastSleep.endtime
+          )
+        );
+
+        return;
+      }
+
+      setTimer(
+        "00:00:00"
+      );
+    }
+
+    update();
+
+    const interval =
+      window.setInterval(
+        update,
+        1000
+      );
+
+    return () =>
+      window.clearInterval(
+        interval
+      );
+  }, [
+    activeSleep,
+    lastSleep,
+  ]);
+
+  useEffect(() => {
+    const interval =
+      window.setInterval(
+        () => {
+          setNow(
+            Date.now()
+          );
+        },
+        30000
+      );
+
+    return () =>
+      window.clearInterval(
+        interval
+      );
+  }, []);
+
+  async function handleSleep() {
+    try {
+      setSaving(true);
+
+      if (activeSleep) {
+        await stopSleep(
+          activeSleep.id,
+          activeSleep.starttime
+        );
+      } else {
+        if (!currentBabyId) {
+          return;
+        }
+
+        await startSleep(
+          currentBabyId
+        );
+      }
+
+      await loadSleepData();
+    } catch (error) {
+      console.error(
+        "Sleep action failed:",
+        error
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <main className="home-page">
+        <header className="home-header">
+          <div>
+            <p className="eyebrow">
+              Sleepy
+            </p>
+
+            <h1>
+              {currentBaby?.name ?? "Sleepy"}
+            </h1>
+          </div>
+
+          <div className="status-pill">
+            {loading
+              ? "Loading..."
+              : activeSleep
+                ? "Sleeping"
+                : "Awake"}
+          </div>
+        </header>
+
+        <section className="sleep-card">
+          <p className="sleep-label">
+            {activeSleep
+              ? "Sleeping for"
+              : "Awake for"}
+          </p>
+
+          <div className="sleep-timer">
+            {timer}
+          </div>
+
+          <p className="sleep-subtitle">
+            {activeSleep
+              ? `Started ${formatTime(
+                activeSleep.starttime
+              )}`
+              : lastSleep?.endtime
+                ? `Woke up ${formatTime(
+                  lastSleep.endtime
+                )}`
+                : "Ready for the next nap"}
+          </p>
+
+          <button
+            className="primary-button"
+            onClick={
+              handleSleep
+            }
+            disabled={
+              loading ||
+              saving
+            }
+          >
+            {saving
+              ? "Saving..."
+              : activeSleep
+                ? "Stop sleep"
+                : "Start sleep"}
+          </button>
+        </section>
+
+        {!activeSleep && nextSleepHint && (
+          <p className="next-sleep-hint">
+            {nextSleepHint.kind === "predicted" &&
+              `Pleier å sovne rundt kl. ${formatClock(nextSleepHint.predictedTs)}`}
+
+            {nextSleepHint.kind === "about-usual" &&
+              "Har vært våken omtrent så lenge den pleier"}
+
+            {nextSleepHint.kind === "longer-than-usual" &&
+              `Våken lenger enn vanlig (+${formatDuration(nextSleepHint.overMinutes)})`}
+          </p>
+        )}
+
+        <section className="today-stats">
+          <div>
+            <span>Sleep today</span>
+            <strong>{formatDuration(todayStats.totalMinutes)}</strong>
+          </div>
+
+          <div>
+            <span>Sessions</span>
+            <strong>{todayStats.sessionCount}</strong>
+          </div>
+
+          <div>
+            <span>Avg quality</span>
+            <strong>{stars(todayStats.avgRating)}</strong>
+          </div>
+        </section>
+
+        <SleepStrip
+          sessions={analyticsSessions}
+          active={analyticsActive}
+        />
+
+        <section className="feed-card">
+          <div>
+            <p className="card-label">
+              Last fed
+            </p>
+
+            <h2>
+              {lastFeed
+                ? relativeTime(
+                  lastFeed.starttime
+                )
+                : "Not registered"}
+            </h2>
+
+            <p className="muted">
+              {lastFeed
+                ? feedDescription(
+                  lastFeed
+                )
+                : "No feeding yet"}
+            </p>
+
+            {nextFeedSide && (
+              <p className="muted">
+                neste: {nextFeedSide === "left" ? "venstre" : "høyre"}
               </p>
-  
-              <h1>
-                {currentBbyId}
-              </h1>
-            </div>
-  
-            <div className="status-pill">
-              {loading
-                ? "Loading..."
-                : activeSleep
-                  ? "Sleeping"
-                  : "Awake"}
-            </div>
-          </header>
-  
-          <section className="sleep-card">
-            <p className="sleep-label">
-              {activeSleep
-                ? "Sleeping for"
-                : "Awake for"}
-            </p>
-  
-            <div className="sleep-timer">
-              {timer}
-            </div>
-  
-            <p className="sleep-subtitle">
-              {activeSleep
-                ? `Started ${formatTime(
-                    activeSleep.starttime
-                  )}`
-                : lastSleep?.endtime
-                  ? `Woke up ${formatTime(
-                      lastSleep.endtime
-                    )}`
-                  : "Ready for the next nap"}
-            </p>
-  
-            <button
-              className="primary-button"
-              onClick={
-                handleSleep
-              }
-              disabled={
-                loading ||
-                saving
-              }
-            >
-              {saving
-                ? "Saving..."
-                : activeSleep
-                  ? "Stop sleep"
-                  : "Start sleep"}
-            </button>
-          </section>
+            )}
+          </div>
 
-          {!activeSleep && nextSleepHint && (
-            <p className="next-sleep-hint">
-              {nextSleepHint.kind === "predicted" &&
-                `Pleier å sovne rundt kl. ${formatClock(nextSleepHint.predictedTs)}`}
+          <button
+            className="secondary-button"
+            onClick={() =>
+              setFeedModalOpen(
+                true
+              )
+            }
+          >
+            Register
+          </button>
+        </section>
 
-              {nextSleepHint.kind === "about-usual" &&
-                "Har vært våken omtrent så lenge den pleier"}
-
-              {nextSleepHint.kind === "longer-than-usual" &&
-                `Våken lenger enn vanlig (+${formatDuration(nextSleepHint.overMinutes)})`}
-            </p>
-          )}
-
-          <section className="today-stats">
-            <div>
-              <span>Sleep today</span>
-              <strong>{formatDuration(todayStats.totalMinutes)}</strong>
-            </div>
-
-            <div>
-              <span>Sessions</span>
-              <strong>{todayStats.sessionCount}</strong>
-            </div>
-
-            <div>
-              <span>Avg quality</span>
-              <strong>{stars(todayStats.avgRating)}</strong>
-            </div>
-          </section>
-
-          <SleepStrip
-            sessions={analyticsSessions}
-            active={analyticsActive}
-          />
-
-          <section className="feed-card">
+        <section className="recent-section">
+          <div className="section-heading">
             <div>
               <p className="card-label">
-                Last fed
+                Recent
               </p>
 
-              <h2>
-                {lastFeed
-                  ? relativeTime(
-                      lastFeed.starttime
-                    )
-                  : "Not registered"}
-              </h2>
+              <h2>Sleep</h2>
+            </div>
+          </div>
 
-              <p className="muted">
-                {lastFeed
-                  ? feedDescription(
-                      lastFeed
-                    )
-                  : "No feeding yet"}
+          {recentSleeps.length ===
+            0 ? (
+            <div className="empty-card">
+              <div className="moon-icon">
+                ☾
+              </div>
+
+              <p>
+                No sleep
+                registrations yet.
               </p>
+            </div>
+          ) : (
+            <div className="sleep-list">
+              {recentSleeps.map(
+                (sleep) => (
+                  <div
+                    className="sleep-list-item"
+                    key={
+                      sleep.id
+                    }
+                  >
+                    <div>
+                      <strong>
+                        {formatTime(
+                          sleep.starttime
+                        )}
+                        {" – "}
+                        {sleep.endtime
+                          ? formatTime(
+                            sleep.endtime
+                          )
+                          : "Sleeping"}
+                      </strong>
 
-              {nextFeedSide && (
-                <p className="muted">
-                  neste: {nextFeedSide === "left" ? "venstre" : "høyre"}
-                </p>
+                      <p className="muted">
+                        {formatMinutes(
+                          sleep.durationminutes
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="sleep-list-icon">
+                      ☾
+                    </div>
+                  </div>
+                )
               )}
             </div>
+          )}
+        </section>
 
-            <button
-              className="secondary-button"
-              onClick={() =>
-                setFeedModalOpen(
-                  true
-                )
-              }
-            >
-              Register
-            </button>
-          </section>
+        <section className="recent-section">
+          <div className="section-heading">
+            <div>
+              <p className="card-label">
+                Recent
+              </p>
 
-          <section className="recent-section">
-            <div className="section-heading">
-              <div>
-                <p className="card-label">
-                  Recent
-                </p>
-  
-                <h2>Sleep</h2>
-              </div>
+              <h2>Feeding</h2>
             </div>
-  
-            {recentSleeps.length ===
-            0 ? (
-              <div className="empty-card">
-                <div className="moon-icon">
-                  ☾
-                </div>
-  
-                <p>
-                  No sleep
-                  registrations yet.
-                </p>
-              </div>
-            ) : (
-              <div className="sleep-list">
-                {recentSleeps.map(
-                  (sleep) => (
-                    <div
-                      className="sleep-list-item"
-                      key={
-                        sleep.id
-                      }
-                    >
-                      <div>
-                        <strong>
-                          {formatTime(
-                            sleep.starttime
-                          )}
-                          {" – "}
-                          {sleep.endtime
-                            ? formatTime(
-                                sleep.endtime
-                              )
-                            : "Sleeping"}
-                        </strong>
-  
-                        <p className="muted">
-                          {formatMinutes(
-                            sleep.durationminutes
-                          )}
-                        </p>
-                      </div>
-  
-                      <div className="sleep-list-icon">
-                        ☾
-                      </div>
-                    </div>
-                  )
-                )}
-              </div>
-            )}
-          </section>
-  
-          <section className="recent-section">
-            <div className="section-heading">
-              <div>
-                <p className="card-label">
-                  Recent
-                </p>
-  
-                <h2>Feeding</h2>
-              </div>
-  
-              {recentFeeds.length >
-                3 && (
+
+            {recentFeeds.length >
+              3 && (
                 <button
                   className="text-button"
                   onClick={() =>
@@ -726,39 +759,36 @@ import {
                     : "View all"}
                 </button>
               )}
-            </div>
-  
-            <FeedHistory
-              feeds={
-                showAllFeeds
-                  ? recentFeeds
-                  : recentFeeds.slice(
-                      0,
-                      3
-                    )
-              }
-              onChanged={
-                loadFeedData
-              }
-            />
-          </section>
-        </main>
-  
-        {feedModalOpen && (
-          <FeedModal
-            bbyid={
-              currentBbyId
+          </div>
+
+          <FeedHistory
+            feeds={
+              showAllFeeds
+                ? recentFeeds
+                : recentFeeds.slice(
+                  0,
+                  3
+                )
             }
-            onClose={() =>
-              setFeedModalOpen(
-                false
-              )
-            }
-            onSaved={
+            onChanged={
               loadFeedData
             }
           />
-        )}
-      </>
-    );
-  }
+        </section>
+      </main>
+
+      {feedModalOpen && (
+        <FeedModal
+          onClose={() =>
+            setFeedModalOpen(
+              false
+            )
+          }
+          onSaved={
+            loadFeedData
+          }
+        />
+      )}
+    </>
+  );
+}

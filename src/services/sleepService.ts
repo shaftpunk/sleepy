@@ -1,9 +1,14 @@
 import { supabase } from "../lib/supabase";
-import type { BabyId } from "../stores/appStore";
 
 export type SleepRecord = {
   id: string;
-  bbyid: BabyId;
+
+  // Sleepy 3.0
+  baby_id: string;
+  created_by_user_id: string | null;
+  updated_by_user_id: string | null;
+  deleted_at: string | null;
+  deleted_by_user_id: string | null;
 
   sleep_type: string;
 
@@ -20,9 +25,8 @@ export type SleepRecord = {
   updated_at?: string;
 };
 
-
 export type SleepInput = {
-  bbyid: BabyId;
+  baby_id: string;
 
   starttime: string;
   endtime: string;
@@ -31,10 +35,9 @@ export type SleepInput = {
   note?: string | null;
 };
 
-
 function calculateMinutes(
   starttime: string,
-  endtime: string
+  endtime: string,
 ) {
   return Math.max(
     0,
@@ -42,21 +45,40 @@ function calculateMinutes(
       (
         new Date(endtime).getTime() -
         new Date(starttime).getTime()
-      ) / 60000
-    )
+      ) / 60000,
+    ),
   );
 }
 
+async function getCurrentUserId(): Promise<string> {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!user) {
+    throw new Error("You must be logged in.");
+  }
+
+  return user.id;
+}
 
 export async function startSleep(
-  bbyid: BabyId
+  babyId: string,
 ) {
   const current =
-    await getActiveSleep(bbyid);
+    await getActiveSleep(babyId);
 
   if (current) {
     return current;
   }
+
+  const userId =
+    await getCurrentUserId();
 
   const {
     data,
@@ -64,7 +86,8 @@ export async function startSleep(
   } = await supabase
     .from("sleep")
     .insert({
-      bbyid,
+      baby_id: babyId,
+
       sleep_type: "sleep",
 
       starttime:
@@ -73,20 +96,33 @@ export async function startSleep(
       endtime: null,
 
       durationminutes: null,
+
+      created_by_user_id:
+        userId,
+
+      updated_by_user_id:
+        userId,
+
+      deleted_at: null,
+      deleted_by_user_id: null,
     })
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return data as SleepRecord;
 }
 
-
 export async function stopSleep(
   sleepId: string,
-  starttime: string
+  starttime: string,
 ) {
+  const userId =
+    await getCurrentUserId();
+
   const endtime =
     new Date().toISOString();
 
@@ -101,33 +137,41 @@ export async function stopSleep(
       durationminutes:
         calculateMinutes(
           starttime,
-          endtime
+          endtime,
         ),
+
+      updated_by_user_id:
+        userId,
 
       updated_at:
         new Date().toISOString(),
     })
     .eq("id", sleepId)
+    .is("deleted_at", null)
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return data as SleepRecord;
 }
 
-
 export async function createManualSleep(
-  input: SleepInput
+  input: SleepInput,
 ) {
   if (
     new Date(input.endtime).getTime() <=
     new Date(input.starttime).getTime()
   ) {
     throw new Error(
-      "End time must be after start time."
+      "End time must be after start time.",
     );
   }
+
+  const userId =
+    await getCurrentUserId();
 
   const {
     data,
@@ -135,8 +179,8 @@ export async function createManualSleep(
   } = await supabase
     .from("sleep")
     .insert({
-      bbyid:
-        input.bbyid,
+      baby_id:
+        input.baby_id,
 
       sleep_type:
         "sleep",
@@ -153,35 +197,48 @@ export async function createManualSleep(
       durationminutes:
         calculateMinutes(
           input.starttime,
-          input.endtime
+          input.endtime,
         ),
 
       note:
         input.note ?? null,
+
+      created_by_user_id:
+        userId,
+
+      updated_by_user_id:
+        userId,
+
+      deleted_at: null,
+      deleted_by_user_id: null,
     })
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return data as SleepRecord;
 }
-
 
 export async function updateSleep(
   id: string,
   starttime: string,
   endtime: string,
-  rate?: string | null
+  rate?: string | null,
 ) {
   if (
     new Date(endtime).getTime() <=
     new Date(starttime).getTime()
   ) {
     throw new Error(
-      "End time must be after start time."
+      "End time must be after start time.",
     );
   }
+
+  const userId =
+    await getCurrentUserId();
 
   const {
     data,
@@ -195,43 +252,76 @@ export async function updateSleep(
       durationminutes:
         calculateMinutes(
           starttime,
-          endtime
+          endtime,
         ),
 
       ...(rate !== undefined
         ? { rate }
         : {}),
 
+      updated_by_user_id:
+        userId,
+
       updated_at:
         new Date().toISOString(),
     })
     .eq("id", id)
+    .is("deleted_at", null)
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return data as SleepRecord;
 }
 
-
+/**
+ * Soft delete.
+ *
+ * The sleep record remains in the database
+ * for audit/history purposes.
+ */
 export async function deleteSleep(
-  id: string
+  id: string,
 ) {
+  const userId =
+    await getCurrentUserId();
+
+  const now =
+    new Date().toISOString();
+
   const {
     error,
   } = await supabase
     .from("sleep")
-    .delete()
-    .eq("id", id);
+    .update({
+      deleted_at: now,
+      deleted_by_user_id:
+        userId,
+      updated_by_user_id:
+        userId,
+      updated_at: now,
+    })
+    .eq("id", id)
+    .is("deleted_at", null);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 }
 
-
+/**
+ * Existing database RPC.
+ *
+ * We keep this call for now.
+ * The underlying function will be reviewed
+ * separately for Sleepy 3.0.
+ */
 export async function splitSleep(
   id: string,
-  splitTime: string
+  splitTime: string,
 ) {
   const {
     data,
@@ -242,139 +332,20 @@ export async function splitSleep(
       {
         p_sleep_id: id,
         p_split_time: splitTime,
-      }
+      },
     );
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return (
     data ?? []
   ) as SleepRecord[];
 }
-
 
 export async function getActiveSleep(
-  bbyid: BabyId
-) {
-  const {
-    data,
-    error,
-  } = await supabase
-    .from("sleep")
-    .select("*")
-    .eq("bbyid", bbyid)
-    .is("endtime", null)
-    .order(
-      "starttime",
-      {
-        ascending: false,
-      }
-    )
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-
-  return data as SleepRecord | null;
-}
-
-
-export async function getLastCompletedSleep(
-  bbyid: BabyId
-) {
-  const {
-    data,
-    error,
-  } = await supabase
-    .from("sleep")
-    .select("*")
-    .eq("bbyid", bbyid)
-    .not(
-      "endtime",
-      "is",
-      null
-    )
-    .order(
-      "endtime",
-      {
-        ascending: false,
-      }
-    )
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-
-  return data as SleepRecord | null;
-}
-
-
-export async function getRecentSleeps(
-  bbyid: BabyId,
-  limit = 20
-) {
-  const {
-    data,
-    error,
-  } = await supabase
-    .from("sleep")
-    .select("*")
-    .eq("bbyid", bbyid)
-    .not(
-      "endtime",
-      "is",
-      null
-    )
-    .order(
-      "starttime",
-      {
-        ascending: false,
-      }
-    )
-    .limit(limit);
-
-  if (error) throw error;
-
-  return (
-    data ?? []
-  ) as SleepRecord[];
-}
-
-
-export async function getSleepsFromDate(
-  bbyid: BabyId,
-  fromDate: string
-) {
-  const {
-    data,
-    error,
-  } = await supabase
-    .from("sleep")
-    .select("*")
-    .eq("bbyid", bbyid)
-    .gte(
-      "starttime",
-      fromDate
-    )
-    .order(
-      "starttime",
-      {
-        ascending: true,
-      }
-    );
-
-  if (error) throw error;
-
-  return (
-    data ?? []
-  ) as SleepRecord[];
-}
-
-
-export async function getSleepsOverlappingPeriod(
-  bbyid: BabyId,
-  fromDate: string,
-  toDate: string
+  babyId: string,
 ) {
   const {
     data,
@@ -383,24 +354,185 @@ export async function getSleepsOverlappingPeriod(
     .from("sleep")
     .select("*")
     .eq(
-      "bbyid",
-      bbyid
+      "baby_id",
+      babyId,
     )
-    .lt(
+    .is(
+      "deleted_at",
+      null,
+    )
+    .is(
+      "endtime",
+      null,
+    )
+    .order(
       "starttime",
-      toDate
+      {
+        ascending: false,
+      },
     )
-    .or(
-      `endtime.is.null,endtime.gt.${fromDate}`
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as SleepRecord | null;
+}
+
+export async function getLastCompletedSleep(
+  babyId: string,
+) {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("sleep")
+    .select("*")
+    .eq(
+      "baby_id",
+      babyId,
+    )
+    .is(
+      "deleted_at",
+      null,
+    )
+    .not(
+      "endtime",
+      "is",
+      null,
+    )
+    .order(
+      "endtime",
+      {
+        ascending: false,
+      },
+    )
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as SleepRecord | null;
+}
+
+export async function getRecentSleeps(
+  babyId: string,
+  limit = 20,
+) {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("sleep")
+    .select("*")
+    .eq(
+      "baby_id",
+      babyId,
+    )
+    .is(
+      "deleted_at",
+      null,
+    )
+    .not(
+      "endtime",
+      "is",
+      null,
+    )
+    .order(
+      "starttime",
+      {
+        ascending: false,
+      },
+    )
+    .limit(limit);
+
+  if (error) {
+    throw error;
+  }
+
+  return (
+    data ?? []
+  ) as SleepRecord[];
+}
+
+export async function getSleepsFromDate(
+  babyId: string,
+  fromDate: string,
+) {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("sleep")
+    .select("*")
+    .eq(
+      "baby_id",
+      babyId,
+    )
+    .is(
+      "deleted_at",
+      null,
+    )
+    .gte(
+      "starttime",
+      fromDate,
     )
     .order(
       "starttime",
       {
         ascending: true,
-      }
+      },
     );
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
+
+  return (
+    data ?? []
+  ) as SleepRecord[];
+}
+
+export async function getSleepsOverlappingPeriod(
+  babyId: string,
+  fromDate: string,
+  toDate: string,
+) {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("sleep")
+    .select("*")
+    .eq(
+      "baby_id",
+      babyId,
+    )
+    .is(
+      "deleted_at",
+      null,
+    )
+    .lt(
+      "starttime",
+      toDate,
+    )
+    .or(
+      `endtime.is.null,endtime.gt.${fromDate}`,
+    )
+    .order(
+      "starttime",
+      {
+        ascending: true,
+      },
+    );
+
+  if (error) {
+    throw error;
+  }
 
   return (
     data ?? []

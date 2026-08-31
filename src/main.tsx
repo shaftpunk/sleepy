@@ -1,10 +1,23 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import "./index.css";
-import App from "./App";
 
-createRoot(document.getElementById("root")!).render(
+import App from "./App";
+import "./index.css";
+
+import { AuthProvider } from "./auth/AuthProvider";
+import AuthGate from "./components/AuthGate";
+import BabyLoader from "./components/BabyLoader";
+
+createRoot(
+  document.getElementById("root")!,
+).render(
   <StrictMode>
-    <App />
-  </StrictMode>
+    <AuthProvider>
+      <AuthGate>
+        <BabyLoader>
+          <App />
+        </BabyLoader>
+      </AuthGate>
+    </AuthProvider>
+  </StrictMode>,
 );

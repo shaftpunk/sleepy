@@ -1,31 +1,32 @@
 import { supabase } from "../lib/supabase";
-import type { BabyId } from "../stores/appStore";
 
 let subscriptionCounter = 0;
 
 export function subscribeToFeedChanges(
-  bbyid: BabyId,
-  onChange: () => void
+  babyId: string,
+  onChange: () => void,
 ) {
-  // See sleepRealtime.ts: unique topic per call avoids colliding with
-  // another concurrent subscriber on the same page.
+  // Each call gets its own channel topic so multiple subscribers
+  // can listen to the same baby independently.
   const channel = supabase
-    .channel(`feed-${bbyid}-${++subscriptionCounter}`)
+    .channel(
+      `feed-${babyId}-${++subscriptionCounter}`,
+    )
     .on(
       "postgres_changes",
       {
         event: "*",
         schema: "public",
         table: "feed",
-        filter: `bbyid=eq.${bbyid}`,
+        filter: `baby_id=eq.${babyId}`,
       },
       () => {
         onChange();
-      }
+      },
     )
     .subscribe();
 
   return () => {
-    supabase.removeChannel(channel);
+    void supabase.removeChannel(channel);
   };
 }
