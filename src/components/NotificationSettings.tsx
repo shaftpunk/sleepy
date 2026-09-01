@@ -131,7 +131,11 @@ export default function NotificationSettings({
     return () => {
       cancelled = true;
     };
-  }, [bbyid, t]);
+    // `t` is only read inside the catch block to word a fallback error
+    // message — it doesn't affect what to fetch, so it's intentionally not
+    // a dependency (translations are looked up fresh each call regardless).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bbyid]);
 
   async function handleEnablePush() {
     try {

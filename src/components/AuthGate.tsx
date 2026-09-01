@@ -63,7 +63,11 @@ export default function AuthGate({
         );
       }
     },
-    [session, t],
+    // `t` only phrases the fallback error message and doesn't affect
+    // whether the account needs re-checking, so it's intentionally not a
+    // dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [session],
   );
 
   useEffect(() => {

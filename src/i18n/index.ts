@@ -1,3 +1,5 @@
+import { useCallback } from "react";
+
 import no from "./no";
 import en from "./en";
 import type { Language, TranslationKey, Translations } from "./types";
@@ -46,9 +48,16 @@ export function translate(lang: Language, key: TranslationKey, params?: Params):
 export function useTranslation() {
   const lang = useAppStore((state) => state.language);
 
-  return {
-    t: (key: TranslationKey, params?: Params) => translate(lang, key, params),
-    lang,
-    locale: LOCALES[lang],
-  };
+  // Stable across renders as long as `lang` doesn't change — components
+  // that (correctly or not) list `t` in a useEffect/useCallback dependency
+  // array won't re-run on every render just because a new closure was
+  // created. Without this, any effect that both reads `t` and sets state
+  // unconditionally would loop forever (new render -> new `t` -> effect
+  // re-fires -> setState -> new render -> ...).
+  const t = useCallback(
+    (key: TranslationKey, params?: Params) => translate(lang, key, params),
+    [lang]
+  );
+
+  return { t, lang, locale: LOCALES[lang] };
 }

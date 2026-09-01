@@ -130,7 +130,11 @@ export default function FamilySettings() {
     return () => {
       mounted = false;
     };
-  }, [t]);
+    // Loads once on mount; `t` only phrases the fallback error message and
+    // isn't a real dependency (see NotificationSettings.tsx for the same
+    // pattern, and why including it here caused a render loop).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   async function handleCreateInvite() {
