@@ -48,6 +48,30 @@ export async function getMyBabies(): Promise<Baby[]> {
   return (data ?? []) as Baby[];
 }
 
+// Updates only the selected baby's own record (matched by its UUID
+// `babies.id` — never by the legacy Hamar/Drammen bbyid). `birthDate` is a
+// plain "YYYY-MM-DD" calendar-date string (or null to clear it) written
+// as-is to the `birth_date date` column — never converted through a UTC
+// timestamp. Relies on the existing RLS policy that already lets a
+// household member read/write their own babies.
+export async function updateBabyBirthDate(
+  babyId: string,
+  birthDate: string | null,
+): Promise<void> {
+  const { error } = await supabase
+    .from("babies")
+    .update({
+      birth_date: birthDate,
+    })
+    .eq("id", babyId);
+
+  if (error) {
+    throw new Error(
+      t("family.errorCouldNotUpdateBirthDate", { error: error.message }),
+    );
+  }
+}
+
 export async function createHouseholdWithBaby(
   householdName: string,
   babyName: string,

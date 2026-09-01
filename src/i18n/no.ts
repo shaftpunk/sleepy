@@ -40,6 +40,13 @@ const no = {
     sideLeft: "Venstre",
     sideRight: "Høyre",
     sideBoth: "Begge",
+    confidenceLow: "Lav sikkerhet",
+    confidenceMedium: "Middels sikkerhet",
+    confidenceHigh: "Høy sikkerhet",
+    notEnoughDataYet: "Ikke nok data ennå",
+    guidanceDisclaimer: "Kun veiledning – ikke en medisinsk vurdering.",
+    goToSettings: "Gå til innstillinger",
+    daysCount: "{{count}} dager",
   },
 
   nav: {
@@ -197,6 +204,64 @@ const no = {
       noFeedingYet: "Ingen mating registrert ennå.",
       typeOfFeeding: "Type mating",
     },
+
+    ageGuide: {
+      title: "Aldersbasert søvnguide",
+      ageRangeLabel: "Aldersintervall",
+      monthRange: "{{min}}–{{max}} mnd",
+      currentAge: "Nåværende alder",
+      ageInDays: "{{days}} dager",
+      ageInDaysAndMonths: "{{days}} dager ({{months}} mnd)",
+      last24hSleep: "Søvn siste 24 timer",
+      typicalTotalSleep: "Typisk total søvn",
+      napsLast24h: "Lurer siste 24 timer",
+      typicalNaps: "Typisk antall lurer",
+      medianWakeWindowLabel: "Median våkenvindu",
+      typicalWakeWindow: "Typisk våkenvindu",
+      statusWithin: "Innenfor typisk område",
+      statusBelow: "Under typisk område",
+      statusAbove: "Over typisk område",
+      noBirthDateTitle: "Legg til fødselsdato",
+      noBirthDateDescription:
+        "Legg til fødselsdato under innstillinger for å se aldersbasert søvnveiledning.",
+      tooOldTitle: "Guiden dekker første leveår",
+      tooOldDescription:
+        "Denne guiden dekker kun det første leveåret, og vises ikke lenger for denne alderen.",
+    },
+
+    personalProfile: {
+      title: "Personlig søvnprofil",
+      description: "Basert på babyens egen registrerte søvndata.",
+      historyAvailable: "Tilgjengelig historikk",
+      notEnoughData:
+        "Ikke nok registrert søvn ennå. Fortsett å registrere søvn for å se det personlige mønsteret.",
+      avgSleepPerDay: "Snitt søvn per dag",
+      avgNapsPerDay: "Snitt lurer per dag",
+      medianWakeWindow: "Median våkenvindu",
+      typicalBedtime: "Typisk leggetid",
+      typicalWakeTime: "Typisk oppvåkningstid",
+      confidenceLabel: "Sikkerhet",
+      comparisonAgeLabel: "Typisk for denne alderen",
+      comparisonPersonalLabel: "Personlig median siste {{days}} dager",
+      observedNote:
+        "Dette beskriver observert atferd, ikke en vurdering av hva som er sunt.",
+    },
+
+    prediction: {
+      title: "Neste sannsynlige søvn",
+      sleepingNowTitle: "Sover nå",
+      sleepingNowDescription: "En ny prediksjon blir tilgjengelig etter oppvåkning.",
+      unavailableTitle: "Ikke nok informasjon ennå",
+      unavailableDescription:
+        "Registrer flere søvner for å se en prediksjon for neste søvn.",
+      basedOn: "Basert på:",
+      lastWakeUpAt: "siste oppvåkning kl. {{time}}",
+      basisAgeGuideline: "typisk aldersbasert våkenvindu",
+      basisPersonalPattern: "personlig mønster fra de siste {{days}} dagene",
+      basisTimeOfDayPattern: "personlig mønster for denne tiden på dagen",
+      basisLimitedHistory: "basert på begrenset historikk ({{days}} dager)",
+      estimatedWakeWindow: "Anslått våkenvindu: {{duration}}",
+    },
   },
 
   settings: {
@@ -220,6 +285,11 @@ const no = {
     languageNote: "Velg språket Sleepy skal vises på.",
     aboutTitle: "Om",
     aboutVersion: "Sleepy 2.2.0 – migrering til flerbruker",
+    birthDateLabel: "Fødselsdato",
+    birthDateSave: "Lagre fødselsdato",
+    birthDateInvalid: "Ugyldig dato.",
+    birthDateFuture: "Fødselsdato kan ikke være i fremtiden.",
+    birthDateSaved: "Fødselsdato lagret.",
   },
 
   notifications: {
@@ -315,6 +385,7 @@ const no = {
     errorServerNoInvitation: "Serveren returnerte ikke en invitasjon.",
     errorCouldNotAcceptInvitation: "Kunne ikke godta invitasjonen: {{error}}",
     errorServerNoHousehold: "Serveren returnerte ikke husholdningen.",
+    errorCouldNotUpdateBirthDate: "Kunne ikke oppdatere fødselsdato: {{error}}",
   },
 
   onboarding: {

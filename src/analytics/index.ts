@@ -10,3 +10,8 @@ export * from "./day";
 export * from "./month";
 export * from "./feed";
 export * from "./insights";
+export * from "./localDate";
+export * from "./sleepGuidelines";
+export * from "./rolling24h";
+export * from "./personalSleepProfile";
+export * from "./sleepPrediction";

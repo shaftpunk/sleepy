@@ -1,16 +1,23 @@
 import { computeKpis, computeRhythmCard, computeWeeklyTrend, computeWindowAverage } from "../../analytics/overview";
+import { ageInDays } from "../../analytics/localDate";
+import { getGuidelineForAgeDays } from "../../analytics/sleepGuidelines";
 import { minutesToClockLabel } from "../../analytics/time";
 import { formatDuration } from "../../lib/format";
 import { useTranslation } from "../../i18n";
 import KpiCard from "../../components/analysis/KpiCard";
-import type { SleepSession } from "../../analytics/types";
+import AgeSleepGuideCard from "../../components/analysis/AgeSleepGuideCard";
+import PersonalSleepProfileCard from "../../components/analysis/PersonalSleepProfileCard";
+import NextSleepPredictionCard from "../../components/analysis/NextSleepPredictionCard";
+import type { ActiveSleep, SleepSession } from "../../analytics/types";
 
 type Props = {
   sessions: SleepSession[];
+  active: ActiveSleep | null;
+  birthDate: string | null;
   now: number;
 };
 
-export default function OverviewTab({ sessions, now }: Props) {
+export default function OverviewTab({ sessions, active, birthDate, now }: Props) {
   const { t, lang } = useTranslation();
 
   const sevenDayAvg = computeWindowAverage(sessions, now, 7);
@@ -18,8 +25,18 @@ export default function OverviewTab({ sessions, now }: Props) {
   const kpis = computeKpis(sessions, now);
   const rhythm = computeRhythmCard(sessions);
 
+  const ageDays = ageInDays(birthDate, now);
+  const guidelineLookup = getGuidelineForAgeDays(ageDays);
+  const guideline = guidelineLookup.status === "found" ? guidelineLookup.guideline : null;
+
   return (
     <div className="analysis-tab-content">
+      <AgeSleepGuideCard birthDate={birthDate} sessions={sessions} active={active} now={now} />
+
+      <PersonalSleepProfileCard sessions={sessions} guideline={guideline} now={now} />
+
+      <NextSleepPredictionCard sessions={sessions} active={active} now={now} ageDays={ageDays} />
+
       <section className="analysis-card">
         <div className="analysis-card-heading">
           <div>

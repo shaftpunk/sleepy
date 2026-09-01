@@ -263,3 +263,132 @@
 [data-theme="light"] .month-bar-empty {
   background: rgba(58, 39, 87, 0.06);
 }
+
+.age-guide-current-age {
+  margin-top: -8px;
+}
+
+.age-guide-metric-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.age-guide-metric-row {
+  padding: 12px;
+  border-radius: 16px;
+
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.age-guide-metric-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
+  margin-bottom: 8px;
+
+  font-size: 0.85rem;
+  color: #d8d0e6;
+  font-weight: 600;
+}
+
+.status-chip {
+  margin-top: 0;
+  white-space: nowrap;
+}
+
+.age-guide-metric-values {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.age-guide-metric-values strong {
+  font-size: 1.1rem;
+}
+
+.age-guide-metric-values small {
+  font-size: 0.78rem;
+  color: #9f96ad;
+}
+
+.age-guide-settings-link {
+  display: inline-block;
+  width: auto;
+  margin-top: 12px;
+  text-align: center;
+}
+
+.guidance-disclaimer {
+  margin: 14px 0 0;
+
+  font-size: 0.75rem;
+  color: #8f859c;
+  font-style: italic;
+}
+
+.personal-vs-guideline {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.personal-vs-guideline > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  padding: 12px;
+  border-radius: 16px;
+
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.personal-vs-guideline span {
+  font-size: 0.75rem;
+  color: #9f96ad;
+}
+
+.personal-profile-note {
+  margin-top: 14px;
+  font-size: 0.82rem;
+}
+
+.prediction-based-on-label {
+  margin: 14px 0 6px;
+  font-size: 0.82rem;
+}
+
+.prediction-basis-list {
+  margin: 0;
+  padding-left: 20px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  font-size: 0.88rem;
+  color: #d8d0e6;
+}
+
+[data-theme="light"] .age-guide-metric-row,
+[data-theme="light"] .personal-vs-guideline > div {
+  background: rgba(58, 39, 87, 0.05);
+}
+
+[data-theme="light"] .age-guide-metric-head,
+[data-theme="light"] .prediction-basis-list {
+  color: #30263c;
+}
+
+[data-theme="light"] .age-guide-metric-values small,
+[data-theme="light"] .personal-vs-guideline span,
+[data-theme="light"] .guidance-disclaimer {
+  color: #776d82;
+}

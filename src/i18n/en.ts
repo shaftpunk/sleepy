@@ -41,6 +41,13 @@ const en = {
     sideLeft: "Left",
     sideRight: "Right",
     sideBoth: "Both",
+    confidenceLow: "Low confidence",
+    confidenceMedium: "Medium confidence",
+    confidenceHigh: "High confidence",
+    notEnoughDataYet: "Not enough data yet",
+    guidanceDisclaimer: "Guidance only – not a medical assessment.",
+    goToSettings: "Go to Settings",
+    daysCount: "{{count}} days",
   },
 
   nav: {
@@ -198,6 +205,64 @@ const en = {
       noFeedingYet: "No feeds recorded yet.",
       typeOfFeeding: "Feeding type",
     },
+
+    ageGuide: {
+      title: "Age-based sleep guide",
+      ageRangeLabel: "Age interval",
+      monthRange: "{{min}}–{{max}} mo",
+      currentAge: "Current age",
+      ageInDays: "{{days}} days",
+      ageInDaysAndMonths: "{{days}} days ({{months}} mo)",
+      last24hSleep: "Sleep in the last 24 hours",
+      typicalTotalSleep: "Typical total sleep",
+      napsLast24h: "Naps in the last 24 hours",
+      typicalNaps: "Typical naps",
+      medianWakeWindowLabel: "Median wake window",
+      typicalWakeWindow: "Typical wake window",
+      statusWithin: "Within the typical range",
+      statusBelow: "Below the typical range",
+      statusAbove: "Above the typical range",
+      noBirthDateTitle: "Add a birth date",
+      noBirthDateDescription:
+        "Add a birth date in Settings to see age-based sleep guidance.",
+      tooOldTitle: "The guide covers the first year",
+      tooOldDescription:
+        "This guide only covers the first year of life, and no longer applies at this age.",
+    },
+
+    personalProfile: {
+      title: "Personal sleep profile",
+      description: "Based on the baby's own registered sleep data.",
+      historyAvailable: "History available",
+      notEnoughData:
+        "Not enough recorded sleep yet. Keep logging sleep to see the personal pattern.",
+      avgSleepPerDay: "Average sleep per day",
+      avgNapsPerDay: "Average naps per day",
+      medianWakeWindow: "Median wake window",
+      typicalBedtime: "Typical bedtime",
+      typicalWakeTime: "Typical wake time",
+      confidenceLabel: "Confidence",
+      comparisonAgeLabel: "Typical for this age",
+      comparisonPersonalLabel: "Personal median over the last {{days}} days",
+      observedNote:
+        "This describes observed behavior, not a judgment of what's healthy.",
+    },
+
+    prediction: {
+      title: "Next likely sleep",
+      sleepingNowTitle: "Sleeping now",
+      sleepingNowDescription: "A new prediction will be available after wake-up.",
+      unavailableTitle: "Not enough information yet",
+      unavailableDescription:
+        "Log a few more sleeps to see a prediction for the next sleep.",
+      basedOn: "Based on:",
+      lastWakeUpAt: "last wake-up at {{time}}",
+      basisAgeGuideline: "typical age-based wake window",
+      basisPersonalPattern: "personal pattern from the last {{days}} days",
+      basisTimeOfDayPattern: "personal pattern for this time of day",
+      basisLimitedHistory: "based on limited history ({{days}} days)",
+      estimatedWakeWindow: "Estimated wake window: {{duration}}",
+    },
   },
 
   settings: {
@@ -221,6 +286,11 @@ const en = {
     languageNote: "Choose the language Sleepy is displayed in.",
     aboutTitle: "About",
     aboutVersion: "Sleepy 2.2.0 - Multi-user migration",
+    birthDateLabel: "Date of birth",
+    birthDateSave: "Save birth date",
+    birthDateInvalid: "Invalid date.",
+    birthDateFuture: "Birth date cannot be in the future.",
+    birthDateSaved: "Birth date saved.",
   },
 
   notifications: {
@@ -316,6 +386,7 @@ const en = {
     errorServerNoInvitation: "The server did not return an invitation.",
     errorCouldNotAcceptInvitation: "Could not accept invitation: {{error}}",
     errorServerNoHousehold: "The server did not return the household.",
+    errorCouldNotUpdateBirthDate: "Could not update birth date: {{error}}",
   },
 
   onboarding: {

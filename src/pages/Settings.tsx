@@ -1,7 +1,11 @@
+import { useState } from "react";
+
 import { useAppStore } from "../stores/appStore";
 import NotificationSettings from "../components/NotificationSettings";
 import FamilySettings from "../components/FamilySettings";
 import { useTranslation } from "../i18n";
+import { isValidBirthDateInput } from "../analytics/localDate";
+import { updateBabyBirthDate } from "../services/householdService";
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -42,10 +46,76 @@ export default function Settings() {
     (state) => state.setLanguage,
   );
 
+  const setBabies = useAppStore(
+    (state) => state.setBabies,
+  );
+
   const selectedBaby =
     babies.find(
       (baby) => baby.id === currentBabyId,
     ) ?? null;
+
+  const [birthDateInput, setBirthDateInput] = useState(
+    selectedBaby?.birth_date ?? "",
+  );
+
+  const [birthDateError, setBirthDateError] = useState<string | null>(null);
+  const [birthDateMessage, setBirthDateMessage] = useState<string | null>(null);
+  const [savingBirthDate, setSavingBirthDate] = useState(false);
+
+  // Changing the selected profile must show THAT baby's own birth date, not
+  // whatever was left over in the input from the previous profile. Adjusted
+  // during render (React's recommended pattern for "reset state when a key
+  // prop changes") rather than in an effect, which would commit the stale
+  // value for one frame before resetting it.
+  const [renderedBabyId, setRenderedBabyId] = useState(currentBabyId);
+
+  if (renderedBabyId !== currentBabyId) {
+    setRenderedBabyId(currentBabyId);
+    setBirthDateInput(selectedBaby?.birth_date ?? "");
+    setBirthDateError(null);
+    setBirthDateMessage(null);
+  }
+
+  async function handleSaveBirthDate() {
+    if (!currentBabyId) return;
+
+    setBirthDateMessage(null);
+
+    if (!isValidBirthDateInput(birthDateInput, Date.now())) {
+      setBirthDateError(
+        birthDateInput
+          ? t("settings.birthDateFuture")
+          : t("settings.birthDateInvalid"),
+      );
+      return;
+    }
+
+    const normalized = birthDateInput || null;
+
+    try {
+      setSavingBirthDate(true);
+      setBirthDateError(null);
+
+      await updateBabyBirthDate(currentBabyId, normalized);
+
+      setBabies(
+        babies.map((baby) =>
+          baby.id === currentBabyId
+            ? { ...baby, birth_date: normalized }
+            : baby,
+        ),
+      );
+
+      setBirthDateMessage(t("settings.birthDateSaved"));
+    } catch (error) {
+      setBirthDateError(
+        error instanceof Error ? error.message : t("errors.generic"),
+      );
+    } finally {
+      setSavingBirthDate(false);
+    }
+  }
 
   return (
     <main className="settings-page">
@@ -68,12 +138,6 @@ export default function Settings() {
           <p className="muted">
             {t("settings.babyProfileNote")}
           </p>
-
-          {selectedBaby?.birth_date && (
-            <p className="muted">
-              {t("settings.dateOfBirth", { date: selectedBaby.birth_date })}
-            </p>
-          )}
         </div>
 
         {babies.length > 0 ? (
@@ -101,6 +165,46 @@ export default function Settings() {
           </p>
         )}
       </section>
+
+      {currentBabyId && (
+        <section className="settings-card">
+          <div className="setting-copy">
+            <p className="setting-title">
+              {t("settings.birthDateLabel")}
+            </p>
+
+            <label className="birth-date-field">
+              <input
+                type="date"
+                className="settings-select"
+                value={birthDateInput}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(event) => {
+                  setBirthDateInput(event.target.value);
+                  setBirthDateError(null);
+                  setBirthDateMessage(null);
+                }}
+              />
+            </label>
+
+            {birthDateError && (
+              <p className="settings-error">{birthDateError}</p>
+            )}
+
+            {birthDateMessage && (
+              <p className="muted">{birthDateMessage}</p>
+            )}
+          </div>
+
+          <button
+            className="secondary-button"
+            disabled={savingBirthDate}
+            onClick={handleSaveBirthDate}
+          >
+            {savingBirthDate ? t("common.saving") : t("settings.birthDateSave")}
+          </button>
+        </section>
+      )}
 
       <FamilySettings />
 

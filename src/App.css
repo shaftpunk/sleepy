@@ -346,6 +346,15 @@
   color: #17131f;
 }
 
+.birth-date-field {
+  display: block;
+  margin-top: 10px;
+}
+
+.birth-date-field .settings-select {
+  width: 100%;
+}
+
 /* LIGHT MODE */
 
 [data-theme="light"] .sleep-card {

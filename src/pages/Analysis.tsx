@@ -40,6 +40,7 @@ export default function Analysis() {
 
   const {
     sessions,
+    active,
     feeds,
     loading,
   } = useAnalyticsData(
@@ -116,6 +117,8 @@ export default function Analysis() {
           {tab === "overview" && (
             <OverviewTab
               sessions={sessions}
+              active={active}
+              birthDate={currentBaby?.birth_date ?? null}
               now={now}
             />
           )}
