@@ -42,24 +42,58 @@ export default {
 
       /*
        * Get all enabled feeding reminders.
+       *
+       * Sleepy 3.0:
+       * - baby_id identifies the baby
+       * - user_id identifies who owns the notification setting
        */
       const {
         data: settings,
         error: settingsError,
       } = await supabase
         .from("notification_settings")
-        .select("*")
-        .eq("feeding_reminder_enabled", true);
+        .select(
+          `
+          id,
+          baby_id,
+          user_id,
+          feeding_reminder_enabled,
+          feeding_reminder_minutes,
+          last_feeding_notification_for,
+          updated_at
+          `,
+        )
+        .eq("feeding_reminder_enabled", true)
+        .not("baby_id", "is", null)
+        .not("user_id", "is", null);
 
       if (settingsError) {
         throw settingsError;
       }
 
       let notificationsSent = 0;
+      let settingsChecked = 0;
 
       for (const setting of settings ?? []) {
+        settingsChecked++;
+
         /*
-         * Find latest feed for this profile.
+         * Safety check.
+         */
+        if (!setting.baby_id || !setting.user_id) {
+          console.warn(
+            "Skipping notification setting without baby_id/user_id:",
+            setting.id,
+          );
+
+          continue;
+        }
+
+        /*
+         * Find latest feed for this baby.
+         *
+         * Sleepy 3.0:
+         * use baby_id instead of legacy bbyid.
          */
         const {
           data: feeds,
@@ -67,9 +101,10 @@ export default {
         } = await supabase
           .from("feed")
           .select(
-            "id, starttime, endtime, feedtype, amountml",
+            "id, baby_id, starttime, endtime, feedtype, amountml",
           )
-          .eq("bbyid", setting.bbyid)
+          .eq("baby_id", setting.baby_id)
+          .is("deleted_at", null)
           .order("starttime", {
             ascending: false,
           })
@@ -77,8 +112,8 @@ export default {
 
         if (feedError) {
           console.error(
-            "Could not load feed:",
-            setting.bbyid,
+            "Could not load feed for baby:",
+            setting.baby_id,
             feedError,
           );
 
@@ -88,6 +123,11 @@ export default {
         const latestFeed = feeds?.[0];
 
         if (!latestFeed) {
+          console.log(
+            "No feed found for baby:",
+            setting.baby_id,
+          );
+
           continue;
         }
 
@@ -105,16 +145,45 @@ export default {
          * For completed feeds use endtime.
          * If there is no endtime, fall back to starttime.
          */
-        const feedTime = new Date(
+        const feedTimeValue =
           latestFeed.endtime ??
-            latestFeed.starttime,
+          latestFeed.starttime;
+
+        if (!feedTimeValue) {
+          console.warn(
+            "Feed has no usable timestamp:",
+            latestFeed.id,
+          );
+
+          continue;
+        }
+
+        const feedTime = new Date(
+          feedTimeValue,
         );
+
+        if (
+          Number.isNaN(
+            feedTime.getTime(),
+          )
+        ) {
+          console.warn(
+            "Invalid feed timestamp:",
+            latestFeed.id,
+            feedTimeValue,
+          );
+
+          continue;
+        }
 
         const elapsedMinutes =
           (Date.now() - feedTime.getTime()) /
           1000 /
           60;
 
+        /*
+         * Feeding is not old enough yet.
+         */
         if (
           elapsedMinutes <
           setting.feeding_reminder_minutes
@@ -123,7 +192,10 @@ export default {
         }
 
         /*
-         * Find push subscriptions for Hamar/Drammen.
+         * Find push subscriptions belonging
+         * to this USER.
+         *
+         * A user may have several devices.
          */
         const {
           data: subscriptions,
@@ -131,14 +203,27 @@ export default {
         } = await supabase
           .from("push_subscriptions")
           .select(
-            "id, endpoint, p256dh, auth",
+            "id, endpoint, p256dh, auth, user_id",
           )
-          .eq("bbyid", setting.bbyid);
+          .eq("user_id", setting.user_id);
 
         if (subscriptionError) {
           console.error(
-            "Could not load subscriptions:",
+            "Could not load subscriptions for user:",
+            setting.user_id,
             subscriptionError,
+          );
+
+          continue;
+        }
+
+        if (
+          !subscriptions ||
+          subscriptions.length === 0
+        ) {
+          console.log(
+            "No push subscriptions found for user:",
+            setting.user_id,
           );
 
           continue;
@@ -157,21 +242,34 @@ export default {
             ? `${hours}h ${minutes}m`
             : `${minutes}m`;
 
+        /*
+         * baby_id is used in the tag so that
+         * reminders for different babies
+         * remain separate.
+         */
         const payload = JSON.stringify({
           title: "Feeding reminder 🍼",
+
           body:
             `It has been ${elapsedText} since the last feeding.`,
+
           url: "/",
-          icon: "/icons/icon-192.png",
-          badge: "/icons/icon-192.png",
-          tag: `sleepy-feeding-${setting.bbyid}`,
+
+          icon:
+            "/icons/icon-192.png",
+
+          badge:
+            "/icons/icon-192.png",
+
+          tag:
+            `sleepy-feeding-${setting.baby_id}`,
         });
 
-        let sentForProfile = 0;
+        let sentForSetting = 0;
 
         for (
           const subscription of
-          subscriptions ?? []
+          subscriptions
         ) {
           try {
             await webpush.sendNotification(
@@ -187,15 +285,30 @@ export default {
                     subscription.auth,
                 },
               },
+
               payload,
             );
 
-            sentForProfile++;
+            sentForSetting++;
             notificationsSent++;
           } catch (error: any) {
             console.error(
               "Push failed:",
-              error,
+              {
+                subscriptionId:
+                  subscription.id,
+
+                userId:
+                  setting.user_id,
+
+                babyId:
+                  setting.baby_id,
+
+                statusCode:
+                  error?.statusCode,
+
+                error,
+              },
             );
 
             /*
@@ -205,40 +318,64 @@ export default {
               error?.statusCode === 404 ||
               error?.statusCode === 410
             ) {
-              await supabase
-                .from("push_subscriptions")
+              const {
+                error:
+                  deleteSubscriptionError,
+              } = await supabase
+                .from(
+                  "push_subscriptions",
+                )
                 .delete()
                 .eq(
                   "id",
                   subscription.id,
                 );
+
+              if (
+                deleteSubscriptionError
+              ) {
+                console.error(
+                  "Could not remove expired push subscription:",
+                  subscription.id,
+                  deleteSubscriptionError,
+                );
+              }
             }
           }
         }
 
         /*
-         * Only mark the feeding as notified if
-         * at least one push was successfully sent.
+         * Only mark the feeding as notified
+         * if at least one push was successfully sent.
          */
-        if (sentForProfile > 0) {
-          const { error: updateError } =
-            await supabase
-              .from(
-                "notification_settings",
-              )
-              .update({
-                last_feeding_notification_for:
-                  latestFeed.id,
+        if (sentForSetting > 0) {
+          const {
+            error: updateError,
+          } = await supabase
+            .from(
+              "notification_settings",
+            )
+            .update({
+              last_feeding_notification_for:
+                latestFeed.id,
 
-                updated_at:
-                  new Date().toISOString(),
-              })
-              .eq("id", setting.id);
+              updated_at:
+                new Date().toISOString(),
+            })
+            .eq(
+              "id",
+              setting.id,
+            );
 
           if (updateError) {
             console.error(
               "Could not update notification state:",
-              updateError,
+              {
+                settingId:
+                  setting.id,
+
+                updateError,
+              },
             );
           }
         }
@@ -247,8 +384,7 @@ export default {
       console.log(
         "Feeding reminder check complete:",
         {
-          profiles:
-            settings?.length ?? 0,
+          settingsChecked,
           notificationsSent,
         },
       );
@@ -256,8 +392,9 @@ export default {
       return new Response(
         JSON.stringify({
           success: true,
-          profilesChecked:
-            settings?.length ?? 0,
+
+          settingsChecked,
+
           notificationsSent,
         }),
         {
@@ -268,7 +405,10 @@ export default {
         },
       );
     } catch (error) {
-      console.error(error);
+      console.error(
+        "Feeding reminder check failed:",
+        error,
+      );
 
       return new Response(
         JSON.stringify({
