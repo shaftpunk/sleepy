@@ -1,73 +1,72 @@
+import { useTranslation } from "../i18n";
+
 export default function About() {
+    const { t } = useTranslation();
+
     return (
       <main className="about-page">
         <header className="page-header">
-          <p className="eyebrow">Sleepy</p>
-          <h1>About</h1>
+          <p className="eyebrow">{t("common.appName")}</p>
+          <h1>{t("about.pageTitle")}</h1>
           <p className="page-description">
-            A quiet little control center for sleep and feeding.
+            {t("about.pageDescription")}
           </p>
         </header>
-  
+
         <section className="about-hero">
           <div className="about-moon">☾</div>
           <h2>Sleepy 2.0</h2>
           <h2>v.2.2.0</h2>
-          <p>Sleep. Feed. Understand the rhythm.</p>
+          <p>{t("about.heroTagline")}</p>
         </section>
-  
+
         <section className="settings-card">
           <div className="setting-copy">
-            <p className="setting-title">Sleep tracking</p>
+            <p className="setting-title">{t("about.sleepTrackingTitle")}</p>
             <p className="muted">
-              Start and stop sleep with a live timer, realtime
-              synchronization and editable history.
+              {t("about.sleepTrackingDescription")}
             </p>
           </div>
         </section>
-  
+
         <section className="settings-card">
           <div className="setting-copy">
-            <p className="setting-title">Feeding</p>
+            <p className="setting-title">{t("about.feedingTitle")}</p>
             <p className="muted">
-              Register bottle, breastfeeding and food with
-              history and notes.
+              {t("about.feedingDescription")}
             </p>
           </div>
         </section>
-  
+
         <section className="settings-card">
           <div className="setting-copy">
-            <p className="setting-title">Analysis</p>
+            <p className="setting-title">{t("about.analysisTitle")}</p>
             <p className="muted">
-              Sleep totals, feeding totals and daily trends
-              based on live data.
+              {t("about.analysisDescription")}
             </p>
           </div>
         </section>
-  
+
         <section className="settings-card">
           <div className="setting-copy">
-            <p className="setting-title">Realtime</p>
+            <p className="setting-title">{t("about.realtimeTitle")}</p>
             <p className="muted">
-              Changes synchronize between connected devices
-              automatically.
+              {t("about.realtimeDescription")}
             </p>
           </div>
         </section>
-  
+
         <section className="settings-card">
           <div className="setting-copy">
-            <p className="setting-title">Profiles</p>
+            <p className="setting-title">{t("about.profilesTitle")}</p>
             <p className="muted">
-              Hamar and Drammen keep separate sleep and feeding
-              data.
+              {t("about.profilesDescription")}
             </p>
           </div>
         </section>
-  
+
         <p className="about-version">
-          Sleepy 2.0 · PWA
+          {t("about.footer")}
         </p>
       </main>
     );

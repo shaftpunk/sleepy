@@ -93,7 +93,7 @@ export function computeFeedsPerDayLast7(
   }));
 }
 
-export type FeedDistributionLabel = "venstre" | "høyre" | "begge" | "flaske" | "pumpet";
+export type FeedDistributionLabel = "left" | "right" | "both" | "bottle" | "pumped";
 
 export type FeedDistributionRow = {
   label: FeedDistributionLabel;
@@ -102,27 +102,27 @@ export type FeedDistributionRow = {
 };
 
 // Share denominator is ALL feeds (including "food", which gets no row of its
-// own). "pumpet" has no data source in this app today (no pumped feedtype)
+// own). "pumped" has no data source in this app today (no pumped feedtype)
 // so it's always 0 and skipped, same as any other empty row.
 export function computeFeedDistribution(feeds: FeedEvent[]): FeedDistributionRow[] {
   const total = feeds.length;
   if (total === 0) return [];
 
   const counts: Record<FeedDistributionLabel, number> = {
-    venstre: 0,
-    høyre: 0,
-    begge: 0,
-    flaske: 0,
-    pumpet: 0,
+    left: 0,
+    right: 0,
+    both: 0,
+    bottle: 0,
+    pumped: 0,
   };
 
   for (const f of feeds) {
     if (f.feedType === "breast") {
-      if (f.side === "left") counts.venstre++;
-      else if (f.side === "right") counts["høyre"]++;
-      else if (f.side === "both") counts.begge++;
+      if (f.side === "left") counts.left++;
+      else if (f.side === "right") counts.right++;
+      else if (f.side === "both") counts.both++;
     } else if (f.feedType === "bottle") {
-      counts.flaske++;
+      counts.bottle++;
     }
   }
 

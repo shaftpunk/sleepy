@@ -1,8 +1,11 @@
 import { useAppStore } from "../stores/appStore";
 import NotificationSettings from "../components/NotificationSettings";
 import FamilySettings from "../components/FamilySettings";
+import { useTranslation } from "../i18n";
 
 export default function Settings() {
+  const { t } = useTranslation();
+
   const currentBbyId = useAppStore(
     (state) => state.currentBbyId,
   );
@@ -31,6 +34,14 @@ export default function Settings() {
     (state) => state.setCurrentBabyId,
   );
 
+  const language = useAppStore(
+    (state) => state.language,
+  );
+
+  const setLanguage = useAppStore(
+    (state) => state.setLanguage,
+  );
+
   const selectedBaby =
     babies.find(
       (baby) => baby.id === currentBabyId,
@@ -39,31 +50,28 @@ export default function Settings() {
   return (
     <main className="settings-page">
       <header className="page-header">
-        <p className="eyebrow">Sleepy</p>
+        <p className="eyebrow">{t("common.appName")}</p>
 
-        <h1>Settings</h1>
+        <h1>{t("settings.pageTitle")}</h1>
 
         <p className="page-description">
-          Choose your baby, manage your family,
-          notifications and how Sleepy should
-          look on this device.
+          {t("settings.pageDescription")}
         </p>
       </header>
 
       <section className="settings-card">
         <div className="setting-copy">
           <p className="setting-title">
-            Baby
+            {t("settings.babyTitle")}
           </p>
 
           <p className="muted">
-            Sleepy 3.0 baby profile
+            {t("settings.babyProfileNote")}
           </p>
 
           {selectedBaby?.birth_date && (
             <p className="muted">
-              Date of birth:{" "}
-              {selectedBaby.birth_date}
+              {t("settings.dateOfBirth", { date: selectedBaby.birth_date })}
             </p>
           )}
         </div>
@@ -89,7 +97,7 @@ export default function Settings() {
           </select>
         ) : (
           <p className="muted">
-            No babies found.
+            {t("settings.noBabiesFound")}
           </p>
         )}
       </section>
@@ -99,13 +107,11 @@ export default function Settings() {
       <section className="settings-card">
         <div className="setting-copy">
           <p className="setting-title">
-            Location
+            {t("settings.locationTitle")}
           </p>
 
           <p className="muted">
-            Legacy Sleepy data profile.
-            This will be removed when the
-            migration is complete.
+            {t("settings.legacyProfileNote")}
           </p>
         </div>
 
@@ -133,14 +139,13 @@ export default function Settings() {
       <section className="settings-card">
         <div className="setting-copy">
           <p className="setting-title">
-            Appearance
+            {t("settings.appearanceTitle")}
           </p>
 
           <p className="muted">
-            Current theme:{" "}
-            {theme === "dark"
-              ? "Dark"
-              : "Light"}
+            {t("settings.currentTheme", {
+              theme: theme === "dark" ? t("settings.themeDark") : t("settings.themeLight"),
+            })}
           </p>
         </div>
 
@@ -149,9 +154,47 @@ export default function Settings() {
           onClick={toggleTheme}
         >
           {theme === "dark"
-            ? "Use light mode"
-            : "Use dark mode"}
+            ? t("settings.useLightMode")
+            : t("settings.useDarkMode")}
         </button>
+      </section>
+
+      <section className="settings-card">
+        <div className="setting-copy">
+          <p className="setting-title">
+            {t("settings.languageTitle")}
+          </p>
+
+          <p className="muted">
+            {t("settings.languageNote")}
+          </p>
+        </div>
+
+        <div className="side-buttons">
+          <button
+            type="button"
+            className={
+              language === "no"
+                ? "side-button active"
+                : "side-button"
+            }
+            onClick={() => setLanguage("no")}
+          >
+            Norsk
+          </button>
+
+          <button
+            type="button"
+            className={
+              language === "en"
+                ? "side-button active"
+                : "side-button"
+            }
+            onClick={() => setLanguage("en")}
+          >
+            English
+          </button>
+        </div>
       </section>
 
       <NotificationSettings
@@ -161,11 +204,11 @@ export default function Settings() {
       <section className="settings-card">
         <div className="setting-copy">
           <p className="setting-title">
-            About
+            {t("settings.aboutTitle")}
           </p>
 
           <p className="muted">
-            Sleepy 2.2.0 - Multi-user migration
+            {t("settings.aboutVersion")}
           </p>
         </div>
       </section>

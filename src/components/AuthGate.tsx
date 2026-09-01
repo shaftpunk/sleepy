@@ -8,6 +8,7 @@ import {
 import { useAuth } from "../auth/AuthProvider";
 import Auth from "../pages/Auth";
 import Onboarding from "../pages/Onboarding";
+import { useTranslation } from "../i18n";
 
 import {
   getMyHouseholds,
@@ -23,6 +24,8 @@ export default function AuthGate({
 }: {
   children: ReactNode;
 }) {
+  const { t } = useTranslation();
+
   const {
     session,
     loading: authLoading,
@@ -56,11 +59,11 @@ export default function AuthGate({
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Could not load your account.",
+            : t("errors.couldNotLoadAccount"),
         );
       }
     },
-    [session],
+    [session, t],
   );
 
   useEffect(() => {
@@ -74,10 +77,10 @@ export default function AuthGate({
       <main className="auth-page">
         <section className="auth-card">
           <p className="eyebrow">
-            Sleepy
+            {t("common.appName")}
           </p>
 
-          <h1>Loading...</h1>
+          <h1>{t("common.loading")}</h1>
         </section>
       </main>
     );
@@ -92,10 +95,10 @@ export default function AuthGate({
       <main className="auth-page">
         <section className="auth-card">
           <p className="eyebrow">
-            Sleepy
+            {t("common.appName")}
           </p>
 
-          <h1>Something went wrong</h1>
+          <h1>{t("common.somethingWentWrongHeading")}</h1>
 
           <p className="auth-message auth-message--error">
             {errorMessage}
@@ -107,7 +110,7 @@ export default function AuthGate({
               void checkAccount()
             }
           >
-            Try again
+            {t("common.retry")}
           </button>
         </section>
       </main>
@@ -121,10 +124,10 @@ export default function AuthGate({
       <main className="auth-page">
         <section className="auth-card">
           <p className="eyebrow">
-            Sleepy
+            {t("common.appName")}
           </p>
 
-          <h1>Loading family...</h1>
+          <h1>{t("family.loadingFamily")}</h1>
         </section>
       </main>
     );

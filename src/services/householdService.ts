@@ -1,5 +1,10 @@
 import { supabase } from "../lib/supabase";
-import type { Baby } from "../stores/appStore";
+import { useAppStore, type Baby } from "../stores/appStore";
+import { translate, type TranslationKey } from "../i18n";
+
+function t(key: TranslationKey, params?: Record<string, string | number>): string {
+  return translate(useAppStore.getState().language, key, params);
+}
 
 export interface Household {
   id: string;
@@ -19,7 +24,7 @@ export async function getMyHouseholds(): Promise<Household[]> {
 
   if (error) {
     throw new Error(
-      `Could not load households: ${error.message}`,
+      t("family.errorCouldNotLoadHouseholds", { error: error.message }),
     );
   }
 
@@ -36,7 +41,7 @@ export async function getMyBabies(): Promise<Baby[]> {
 
   if (error) {
     throw new Error(
-      `Could not load babies: ${error.message}`,
+      t("family.errorCouldNotLoadBabies", { error: error.message }),
     );
   }
 
@@ -65,13 +70,13 @@ export async function createHouseholdWithBaby(
 
   if (error) {
     throw new Error(
-      `Could not create family: ${error.message}`,
+      t("family.errorCouldNotCreateFamily", { error: error.message }),
     );
   }
 
   if (!data) {
     throw new Error(
-      "The server did not return the created family.",
+      t("family.errorServerNoFamily"),
     );
   }
 

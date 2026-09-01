@@ -5,6 +5,7 @@ import {
 } from "react";
 
 import { supabase } from "../lib/supabase";
+import { useTranslation } from "../i18n";
 
 type AuthMode =
   | "login"
@@ -14,6 +15,8 @@ type AuthMode =
 
 
 export default function Auth() {
+  const { t } = useTranslation();
+
   const [mode, setMode] =
     useState<AuthMode>("login");
 
@@ -96,7 +99,7 @@ export default function Auth() {
 
         if (!data.session) {
           setSuccessMessage(
-            "Account created. Check your email to confirm your account.",
+            t("auth.accountCreatedMessage"),
           );
         }
 
@@ -125,7 +128,7 @@ export default function Auth() {
 
         if (!cleanEmail) {
           throw new Error(
-            "Enter your email address.",
+            t("auth.enterEmailError"),
           );
         }
 
@@ -143,7 +146,7 @@ export default function Auth() {
         }
 
         setSuccessMessage(
-          "If an account exists for this email, a password reset link has been sent.",
+          t("auth.resetLinkSentMessage"),
         );
 
         return;
@@ -153,7 +156,7 @@ export default function Auth() {
       if (mode === "reset") {
         if (password.length < 6) {
           throw new Error(
-            "Password must contain at least 6 characters.",
+            t("auth.passwordMinLengthError"),
           );
         }
 
@@ -162,7 +165,7 @@ export default function Auth() {
           confirmPassword
         ) {
           throw new Error(
-            "The passwords do not match.",
+            t("auth.passwordsDontMatchError"),
           );
         }
 
@@ -179,7 +182,7 @@ export default function Auth() {
         setConfirmPassword("");
 
         setSuccessMessage(
-          "Password updated successfully.",
+          t("auth.passwordUpdatedMessage"),
         );
 
         /*
@@ -193,7 +196,7 @@ export default function Auth() {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Something went wrong.",
+          : t("errors.generic"),
       );
 
     } finally {
@@ -215,35 +218,35 @@ export default function Auth() {
 
   function getHeading() {
     if (mode === "register") {
-      return "Create your account";
+      return t("auth.createAccountHeading");
     }
 
     if (mode === "forgot") {
-      return "Reset your password";
+      return t("auth.resetPasswordHeading");
     }
 
     if (mode === "reset") {
-      return "Choose a new password";
+      return t("auth.chooseNewPasswordHeading");
     }
 
-    return "Welcome back";
+    return t("auth.welcomeBack");
   }
 
 
   function getDescription() {
     if (mode === "register") {
-      return "Create your Sleepy account to get started.";
+      return t("auth.createAccountDescription");
     }
 
     if (mode === "forgot") {
-      return "Enter your email and we'll send you a secure reset link.";
+      return t("auth.forgotDescription");
     }
 
     if (mode === "reset") {
-      return "Enter the new password you want to use for Sleepy.";
+      return t("auth.resetDescription");
     }
 
-    return "Sign in to continue to Sleepy.";
+    return t("auth.signInDescription");
   }
 
 
@@ -255,7 +258,7 @@ export default function Auth() {
         <div className="auth-brand">
 
           <p className="eyebrow">
-            Sleepy
+            {t("common.appName")}
           </p>
 
           <h1>
@@ -286,7 +289,7 @@ export default function Auth() {
                 changeMode("login")
               }
             >
-              Sign in
+              {t("auth.signInTab")}
             </button>
 
 
@@ -301,7 +304,7 @@ export default function Auth() {
                 changeMode("register")
               }
             >
-              Create account
+              {t("auth.createAccountTab")}
             </button>
 
           </div>
@@ -317,7 +320,7 @@ export default function Auth() {
             <label className="auth-field">
 
               <span>
-                Name
+                {t("auth.nameLabel")}
               </span>
 
               <input
@@ -330,7 +333,7 @@ export default function Auth() {
                 }
                 required
                 autoComplete="name"
-                placeholder="Your name"
+                placeholder={t("auth.namePlaceholder")}
               />
 
             </label>
@@ -341,7 +344,7 @@ export default function Auth() {
             <label className="auth-field">
 
               <span>
-                Email
+                {t("auth.emailLabel")}
               </span>
 
               <input
@@ -354,7 +357,7 @@ export default function Auth() {
                 }
                 required
                 autoComplete="email"
-                placeholder="name@example.com"
+                placeholder={t("auth.emailPlaceholder")}
               />
 
             </label>
@@ -368,7 +371,7 @@ export default function Auth() {
             <label className="auth-field">
 
               <span>
-                Password
+                {t("auth.passwordLabel")}
               </span>
 
               <input
@@ -398,7 +401,7 @@ export default function Auth() {
               <label className="auth-field">
 
                 <span>
-                  New password
+                  {t("auth.newPasswordLabel")}
                 </span>
 
                 <input
@@ -421,7 +424,7 @@ export default function Auth() {
               <label className="auth-field">
 
                 <span>
-                  Confirm password
+                  {t("auth.confirmPasswordLabel")}
                 </span>
 
                 <input
@@ -453,7 +456,7 @@ export default function Auth() {
                 changeMode("forgot")
               }
             >
-              Forgot password?
+              {t("auth.forgotPasswordLink")}
             </button>
           )}
 
@@ -478,14 +481,14 @@ export default function Auth() {
             disabled={loading}
           >
             {loading
-              ? "Please wait..."
+              ? t("auth.pleaseWait")
               : mode === "login"
-                ? "Sign in"
+                ? t("auth.signInTab")
                 : mode === "register"
-                  ? "Create account"
+                  ? t("auth.createAccountTab")
                   : mode === "forgot"
-                    ? "Send reset link"
-                    : "Update password"}
+                    ? t("auth.sendResetLink")
+                    : t("auth.updatePassword")}
           </button>
 
 
@@ -497,7 +500,7 @@ export default function Auth() {
                 changeMode("login")
               }
             >
-              Back to sign in
+              {t("auth.backToSignIn")}
             </button>
           )}
 

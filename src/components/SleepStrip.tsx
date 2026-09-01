@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { computeSleepStrip } from "../analytics/home";
 import { formatClock, formatDuration } from "../lib/format";
+import { useTranslation } from "../i18n";
 import type { ActiveSleep, SleepSession } from "../analytics/types";
 
 type Props = {
@@ -12,6 +13,7 @@ type Props = {
 const MINUTE_MS = 60000;
 
 export default function SleepStrip({ sessions, active }: Props) {
+  const { t, lang } = useTranslation();
   const [now, setNow] = useState(() => Date.now());
 
   // Redrawn on the minute boundary, not every second.
@@ -34,8 +36,8 @@ export default function SleepStrip({ sessions, active }: Props) {
             className={
               cell.isSleep ? "sleep-strip-cell sleep" : "sleep-strip-cell"
             }
-            title={`${formatClock(cell.startMs)} – ${formatClock(cell.endMs)}: ${
-              cell.isSleep ? "Sleep" : "No recorded sleep"
+            title={`${formatClock(cell.startMs, lang)} – ${formatClock(cell.endMs, lang)}: ${
+              cell.isSleep ? t("home.sleepStripSleep") : t("home.sleepStripNoRecordedSleep")
             }`}
           />
         ))}
@@ -43,11 +45,14 @@ export default function SleepStrip({ sessions, active }: Props) {
 
       <div className="sleep-strip-summary">
         <span>
-          {formatDuration(sleepMinutes)} sleep ({pct}%)
+          {t("home.sleepStripSummary", {
+            duration: formatDuration(sleepMinutes, lang),
+            pct,
+          })}
         </span>
 
         <span className="sleep-strip-times">
-          {formatClock(cells[0]?.startMs ?? now)} – {formatClock(now)}
+          {formatClock(cells[0]?.startMs ?? now, lang)} – {formatClock(now, lang)}
         </span>
       </div>
     </div>

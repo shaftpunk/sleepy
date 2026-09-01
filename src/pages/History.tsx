@@ -37,91 +37,13 @@ import SleepSplitModal
 import FeedModal
   from "../components/FeedModal";
 
-
-function formatDate(
-  date: string
-) {
-  return new Intl.DateTimeFormat(
-    "nb-NO",
-    {
-      weekday: "short",
-      day: "2-digit",
-      month: "short",
-    }
-  ).format(
-    new Date(date)
-  );
-}
-
-
-function formatTime(
-  date: string
-) {
-  return new Intl.DateTimeFormat(
-    "nb-NO",
-    {
-      hour: "2-digit",
-      minute: "2-digit",
-    }
-  ).format(
-    new Date(date)
-  );
-}
-
-
-function formatDuration(
-  minutes: number | null
-) {
-  if (minutes === null) {
-    return "";
-  }
-
-  const hours =
-    Math.floor(
-      minutes / 60
-    );
-
-  const rest =
-    minutes % 60;
-
-  if (!hours) {
-    return `${rest} min`;
-  }
-
-  return `${hours}h ${rest}m`;
-}
-
-
-function feedLabel(
-  feed: FeedRecord
-) {
-  if (
-    feed.feedtype ===
-    "bottle"
-  ) {
-    return `Bottle${
-      feed.amountml !== null
-        ? ` · ${feed.amountml} ml`
-        : ""
-    }`;
-  }
-
-  if (
-    feed.feedtype ===
-    "breast"
-  ) {
-    return `Breast${
-      feed.side
-        ? ` · ${feed.side}`
-        : ""
-    }`;
-  }
-
-  return "Food";
-}
+import { feedTypeLabel, formatClock, formatDuration, sideLabel } from "../lib/format";
+import { LOCALES, useTranslation } from "../i18n";
 
 
 export default function History() {
+  const { t, lang } = useTranslation();
+
   const currentBabyId =
     useAppStore(
       (state) =>
@@ -139,6 +61,29 @@ export default function History() {
       (baby) =>
         baby.id === currentBabyId
     ) ?? null;
+
+  function formatDate(date: string) {
+    return new Intl.DateTimeFormat(LOCALES[lang], {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+    }).format(new Date(date));
+  }
+
+  function feedLabel(feed: FeedRecord) {
+    const typeLabel = feedTypeLabel(feed.feedtype, lang);
+
+    if (feed.feedtype === "bottle") {
+      return `${typeLabel}${feed.amountml !== null ? ` · ${feed.amountml} ml` : ""}`;
+    }
+
+    if (feed.feedtype === "breast") {
+      const side = sideLabel(feed.side, lang);
+      return `${typeLabel}${side ? ` · ${side}` : ""}`;
+    }
+
+    return typeLabel;
+  }
 
 
   const [
@@ -284,15 +229,15 @@ export default function History() {
         <header className="page-header">
           <p className="eyebrow">
             {currentBaby?.name ??
-              "Sleepy"}
+              t("common.appName")}
           </p>
 
           <h1>
-            History
+            {t("history.pageTitle")}
           </h1>
 
           <p className="page-description">
-            Correct, split, add or remove registrations.
+            {t("history.pageDescription")}
           </p>
         </header>
 
@@ -301,7 +246,7 @@ export default function History() {
 
           <div className="section-heading">
             <h2>
-              Sleep
+              {t("common.sleep")}
             </h2>
 
             <button
@@ -311,7 +256,7 @@ export default function History() {
                 setNewSleep(true)
               }
             >
-              + Add
+              {t("common.addShort")}
             </button>
           </div>
 
@@ -341,17 +286,13 @@ export default function History() {
                   >
 
                     <strong>
-                      {formatTime(
-                        sleep.starttime
-                      )}
+                      {formatClock(new Date(sleep.starttime).getTime(), lang)}
 
                       {" – "}
 
                       {sleep.endtime
-                        ? formatTime(
-                            sleep.endtime
-                          )
-                        : "Sleeping"}
+                        ? formatClock(new Date(sleep.endtime).getTime(), lang)
+                        : t("common.sleeping")}
                     </strong>
 
 
@@ -363,7 +304,8 @@ export default function History() {
                       {sleep.durationminutes !==
                         null &&
                         ` · ${formatDuration(
-                          sleep.durationminutes
+                          sleep.durationminutes,
+                          lang
                         )}`}
                     </span>
 
@@ -382,7 +324,7 @@ export default function History() {
                     {sleep.endtime && (
                       <button
                         className="history-action-button"
-                        title="Split sleep"
+                        title={t("sleep.splitButton")}
                         onClick={() =>
                           setSplittingSleep(
                             sleep
@@ -400,7 +342,7 @@ export default function History() {
 
                         if (
                           !window.confirm(
-                            "Delete this sleep?"
+                            t("common.confirmDeleteSleep")
                           )
                         ) {
                           return;
@@ -431,7 +373,7 @@ export default function History() {
 
           <div className="section-heading">
             <h2>
-              Feeding
+              {t("common.feeding")}
             </h2>
 
             <button
@@ -441,7 +383,7 @@ export default function History() {
                 setNewFeed(true)
               }
             >
-              + Add
+              {t("common.addShort")}
             </button>
           </div>
 
@@ -487,9 +429,7 @@ export default function History() {
                         feed.starttime
                       )}
                       {" · "}
-                      {formatTime(
-                        feed.starttime
-                      )}
+                      {formatClock(new Date(feed.starttime).getTime(), lang)}
                     </span>
 
                     {feed.note && (
@@ -507,7 +447,7 @@ export default function History() {
 
                       if (
                         !window.confirm(
-                          "Delete this feeding?"
+                          t("common.confirmDeleteFeed")
                         )
                       ) {
                         return;

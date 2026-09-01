@@ -1,4 +1,10 @@
 import { supabase } from "../lib/supabase";
+import { useAppStore } from "../stores/appStore";
+import { translate, type TranslationKey } from "../i18n";
+
+function t(key: TranslationKey, params?: Record<string, string | number>): string {
+  return translate(useAppStore.getState().language, key, params);
+}
 
 export type HouseholdRole =
   | "parent"
@@ -35,13 +41,13 @@ export async function createHouseholdInvitation(
 
   if (error) {
     throw new Error(
-      `Could not create invitation: ${error.message}`,
+      t("family.errorCouldNotCreateInvitationDetailed", { error: error.message }),
     );
   }
 
   if (!data) {
     throw new Error(
-      "The server did not return an invitation.",
+      t("family.errorServerNoInvitation"),
     );
   }
 
@@ -55,7 +61,7 @@ export async function acceptHouseholdInvitation(
 
   if (!cleanToken) {
     throw new Error(
-      "Please enter an invitation code.",
+      t("family.errorEnterInvitationCode"),
     );
   }
 
@@ -68,13 +74,13 @@ export async function acceptHouseholdInvitation(
 
   if (error) {
     throw new Error(
-      `Could not accept invitation: ${error.message}`,
+      t("family.errorCouldNotAcceptInvitation", { error: error.message }),
     );
   }
 
   if (!data) {
     throw new Error(
-      "The server did not return the household.",
+      t("family.errorServerNoHousehold"),
     );
   }
 

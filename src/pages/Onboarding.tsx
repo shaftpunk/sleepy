@@ -10,6 +10,8 @@ import {
 import JoinHousehold
   from "../components/JoinHousehold";
 
+import { useTranslation } from "../i18n";
+
 
 interface OnboardingProps {
   onComplete: () => Promise<void>;
@@ -23,6 +25,8 @@ type OnboardingMode =
 export default function Onboarding({
   onComplete,
 }: OnboardingProps) {
+  const { t } = useTranslation();
+
   const [
     mode,
     setMode,
@@ -85,7 +89,7 @@ export default function Onboarding({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Something went wrong.",
+          : t("errors.generic"),
       );
 
     } finally {
@@ -107,19 +111,19 @@ export default function Onboarding({
         <div className="auth-brand">
 
           <p className="eyebrow">
-            Sleepy
+            {t("common.appName")}
           </p>
 
           <h1>
             {mode === "create"
-              ? "Create your family"
-              : "Join a family"}
+              ? t("onboarding.createFamilyHeading")
+              : t("onboarding.joinFamilyHeading")}
           </h1>
 
           <p className="muted">
             {mode === "create"
-              ? "Set up your family and first baby."
-              : "Use an invitation code to join an existing family."}
+              ? t("onboarding.createDescription")
+              : t("family.joinDescription")}
           </p>
 
         </div>
@@ -147,7 +151,7 @@ export default function Onboarding({
               setErrorMessage(null);
             }}
           >
-            Create family
+            {t("onboarding.createFamilyButton")}
           </button>
 
 
@@ -163,7 +167,7 @@ export default function Onboarding({
               setErrorMessage(null);
             }}
           >
-            Join family
+            {t("family.joinFamily")}
           </button>
 
         </div>
@@ -179,7 +183,7 @@ export default function Onboarding({
             <label className="auth-field">
 
               <span>
-                Family name
+                {t("onboarding.familyNameLabel")}
               </span>
 
               <input
@@ -192,7 +196,7 @@ export default function Onboarding({
                 }
                 required
                 maxLength={100}
-                placeholder="Strande family"
+                placeholder={t("onboarding.familyNamePlaceholder")}
               />
 
             </label>
@@ -201,7 +205,7 @@ export default function Onboarding({
             <label className="auth-field">
 
               <span>
-                Baby's name
+                {t("onboarding.babyNameLabel")}
               </span>
 
               <input
@@ -214,7 +218,7 @@ export default function Onboarding({
                 }
                 required
                 maxLength={100}
-                placeholder="Amalie"
+                placeholder={t("onboarding.babyNamePlaceholder")}
               />
 
             </label>
@@ -223,7 +227,7 @@ export default function Onboarding({
             <label className="auth-field">
 
               <span>
-                Date of birth
+                {t("onboarding.dateOfBirthLabel")}
               </span>
 
               <input
@@ -257,8 +261,8 @@ export default function Onboarding({
               disabled={loading}
             >
               {loading
-                ? "Creating..."
-                : "Create family"}
+                ? t("family.creating")
+                : t("onboarding.createFamilyButton")}
             </button>
 
           </form>

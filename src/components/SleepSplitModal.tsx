@@ -7,6 +7,8 @@ import {
   type SleepRecord,
 } from "../services/sleepService";
 
+import { LOCALES, useTranslation } from "../i18n";
+
 
 type Props = {
   sleep: SleepRecord;
@@ -41,19 +43,21 @@ export default function SleepSplitModal({
   onClose,
   onSaved,
 }: Props) {
-  if (!sleep.endtime) {
-    return null;
-  }
+  const { t, lang } = useTranslation();
 
   const startMs =
-    new Date(
-      sleep.starttime
-    ).getTime();
+    sleep.endtime
+      ? new Date(
+        sleep.starttime
+      ).getTime()
+      : 0;
 
   const endMs =
-    new Date(
-      sleep.endtime
-    ).getTime();
+    sleep.endtime
+      ? new Date(
+        sleep.endtime
+      ).getTime()
+      : 0;
 
   const middle =
     new Date(
@@ -83,6 +87,10 @@ export default function SleepSplitModal({
     setError,
   ] = useState("");
 
+  if (!sleep.endtime) {
+    return null;
+  }
+
 
   async function save() {
     try {
@@ -99,7 +107,7 @@ export default function SleepSplitModal({
         endMs
       ) {
         setError(
-          "Split time must be inside the sleep session."
+          t("errors.splitTimeOutsideSession")
         );
 
         return;
@@ -121,7 +129,7 @@ export default function SleepSplitModal({
       );
 
       setError(
-        "Could not split sleep session."
+        t("errors.couldNotSplitSleep")
       );
 
     } finally {
@@ -144,11 +152,11 @@ export default function SleepSplitModal({
         <div className="modal-header">
           <div>
             <p className="eyebrow">
-              Sleep
+              {t("sleep.eyebrow")}
             </p>
 
             <h2>
-              Split session
+              {t("sleep.splitSessionTitle")}
             </h2>
           </div>
 
@@ -166,7 +174,7 @@ export default function SleepSplitModal({
             {new Date(
               sleep.starttime
             ).toLocaleTimeString(
-              "nb-NO",
+              LOCALES[lang],
               {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -180,7 +188,7 @@ export default function SleepSplitModal({
             {new Date(
               sleep.endtime
             ).toLocaleTimeString(
-              "nb-NO",
+              LOCALES[lang],
               {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -192,7 +200,7 @@ export default function SleepSplitModal({
 
         <label className="form-field">
           <span>
-            Split at
+            {t("sleep.splitAt")}
           </span>
 
           <input
@@ -221,8 +229,8 @@ export default function SleepSplitModal({
           onClick={save}
         >
           {saving
-            ? "Splitting..."
-            : "Split sleep"}
+            ? t("sleep.splitting")
+            : t("sleep.splitButton")}
         </button>
       </div>
     </div>

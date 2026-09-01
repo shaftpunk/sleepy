@@ -1,6 +1,7 @@
 import { computeKpis, computeRhythmCard, computeWeeklyTrend, computeWindowAverage } from "../../analytics/overview";
 import { minutesToClockLabel } from "../../analytics/time";
 import { formatDuration } from "../../lib/format";
+import { useTranslation } from "../../i18n";
 import KpiCard from "../../components/analysis/KpiCard";
 import type { SleepSession } from "../../analytics/types";
 
@@ -10,6 +11,8 @@ type Props = {
 };
 
 export default function OverviewTab({ sessions, now }: Props) {
+  const { t, lang } = useTranslation();
+
   const sevenDayAvg = computeWindowAverage(sessions, now, 7);
   const trend = computeWeeklyTrend(sessions, now);
   const kpis = computeKpis(sessions, now);
@@ -20,13 +23,13 @@ export default function OverviewTab({ sessions, now }: Props) {
       <section className="analysis-card">
         <div className="analysis-card-heading">
           <div>
-            <p className="card-label">Siste 7 dager</p>
-            <h2>Snitt søvn</h2>
+            <p className="card-label">{t("analysis.overview.last7Days")}</p>
+            <h2>{t("analysis.overview.avgSleepTitle")}</h2>
           </div>
         </div>
 
         <div className="overview-average">
-          {sevenDayAvg.avgMinutes != null ? formatDuration(sevenDayAvg.avgMinutes) : "-"}
+          {sevenDayAvg.avgMinutes != null ? formatDuration(sevenDayAvg.avgMinutes, lang) : "-"}
         </div>
 
         {trend.direction !== "insufficient-history" && (
@@ -40,25 +43,32 @@ export default function OverviewTab({ sessions, now }: Props) {
             }
           >
             {trend.direction === "same" &&
-              "Omtrent som forrige uke"}
+              t("analysis.overview.trendSame")}
 
             {trend.direction === "more" &&
-              `▲ ${formatDuration(Math.abs(trend.diffMinutes))} mer enn forrige uke`}
+              t("analysis.overview.trendMore", {
+                duration: formatDuration(Math.abs(trend.diffMinutes), lang),
+              })}
 
             {trend.direction === "less" &&
-              `▼ ${formatDuration(Math.abs(trend.diffMinutes))} mindre enn forrige uke`}
+              t("analysis.overview.trendLess", {
+                duration: formatDuration(Math.abs(trend.diffMinutes), lang),
+              })}
           </div>
         )}
       </section>
 
       <section className="stats-grid">
-        <KpiCard label="Lengste søvn" value={formatDuration(kpis.longestMinutes)} />
         <KpiCard
-          label="Om natten"
+          label={t("analysis.overview.longestSleep")}
+          value={formatDuration(kpis.longestMinutes, lang)}
+        />
+        <KpiCard
+          label={t("analysis.overview.atNight")}
           value={kpis.atNightPct != null ? `${Math.round(kpis.atNightPct)}%` : "-"}
         />
         <KpiCard
-          label="Lurer per dag"
+          label={t("analysis.overview.napsPerDay")}
           value={kpis.napsPerDay != null ? kpis.napsPerDay.toFixed(1) : "-"}
         />
       </section>
@@ -66,31 +76,31 @@ export default function OverviewTab({ sessions, now }: Props) {
       <section className="analysis-card">
         <div className="analysis-card-heading">
           <div>
-            <p className="card-label">Rytme</p>
-            <h2>Leggetid og oppvåkning</h2>
+            <p className="card-label">{t("analysis.overview.rhythmLabel")}</p>
+            <h2>{t("analysis.overview.rhythmTitle")}</h2>
           </div>
         </div>
 
         <div className="mini-stats">
           <div>
-            <span>Leggetid</span>
+            <span>{t("analysis.overview.bedtime")}</span>
             <strong>
               {rhythm.bedtimeMin != null ? minutesToClockLabel(rhythm.bedtimeMin) : "-"}
             </strong>
           </div>
 
           <div>
-            <span>Våkner</span>
+            <span>{t("analysis.overview.wakeTime")}</span>
             <strong>
               {rhythm.wakeMin != null ? minutesToClockLabel(rhythm.wakeMin) : "-"}
             </strong>
           </div>
 
           <div>
-            <span>Våkenvindu</span>
+            <span>{t("analysis.overview.wakeWindow")}</span>
             <strong>
               {rhythm.medianWakeWindowMinutes != null
-                ? formatDuration(rhythm.medianWakeWindowMinutes)
+                ? formatDuration(rhythm.medianWakeWindowMinutes, lang)
                 : "-"}
             </strong>
           </div>

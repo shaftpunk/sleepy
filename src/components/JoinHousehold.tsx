@@ -6,6 +6,8 @@ import {
   acceptHouseholdInvitation,
 } from "../services/invitationService";
 
+import { useTranslation } from "../i18n";
+
 
 type Props = {
   onJoined: () => void;
@@ -15,6 +17,8 @@ type Props = {
 export default function JoinHousehold({
   onJoined,
 }: Props) {
+  const { t } = useTranslation();
+
   const [
     token,
     setToken,
@@ -50,7 +54,7 @@ export default function JoinHousehold({
 
     if (!cleanToken) {
       setError(
-        "Enter an invitation code."
+        t("family.errorEnterInvitationCode")
       );
 
       return;
@@ -67,7 +71,7 @@ export default function JoinHousehold({
         );
 
       setSuccess(
-        `You joined ${result.household_name}.`
+        t("family.joinedSuccess", { name: result.household_name })
       );
 
       setToken("");
@@ -88,7 +92,7 @@ export default function JoinHousehold({
       setError(
         err instanceof Error
           ? err.message
-          : "Could not join family."
+          : t("family.errorCouldNotJoin")
       );
 
     } finally {
@@ -103,24 +107,24 @@ export default function JoinHousehold({
       <div className="section-heading">
         <div>
           <p className="eyebrow">
-            Sleepy 3.0
+            {t("family.eyebrow")}
           </p>
 
           <h2>
-            Join family
+            {t("family.joinHeading")}
           </h2>
         </div>
       </div>
 
 
       <p className="page-description">
-        Enter an invitation code from a family member.
+        {t("family.joinDescription")}
       </p>
 
 
       <label className="settings-field">
         <span>
-          Invitation code
+          {t("family.invitationCode")}
         </span>
 
         <input
@@ -128,7 +132,7 @@ export default function JoinHousehold({
           value={token}
           autoComplete="off"
           spellCheck={false}
-          placeholder="Paste invitation code"
+          placeholder={t("family.pasteInvitationCode")}
           onChange={(event) => {
             setToken(
               event.target.value
@@ -152,8 +156,8 @@ export default function JoinHousehold({
         }
       >
         {loading
-          ? "Joining…"
-          : "Join family"}
+          ? t("family.joining")
+          : t("family.joinFamily")}
       </button>
 
 

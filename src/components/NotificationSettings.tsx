@@ -19,28 +19,37 @@ import {
   updateFeedingReminderMinutes,
 } from "../services/notificationSettingsService";
 
+import { useTranslation } from "../i18n";
+
 interface NotificationSettingsProps {
   bbyid: BabyId;
-}
-
-function formatMinutes(totalMinutes: number): string {
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  if (hours === 0) {
-    return `${minutes} min`;
-  }
-
-  if (minutes === 0) {
-    return `${hours} ${hours === 1 ? "hour" : "hours"}`;
-  }
-
-  return `${hours}h ${minutes}m`;
 }
 
 export default function NotificationSettings({
   bbyid,
 }: NotificationSettingsProps) {
+  const { t } = useTranslation();
+
+  function formatMinutes(totalMinutes: number): string {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours === 0) {
+      return t("notifications.durationMin", { minutes });
+    }
+
+    if (minutes === 0) {
+      return t(
+        hours === 1
+          ? "notifications.durationHourSingular"
+          : "notifications.durationHourPlural",
+        { hours },
+      );
+    }
+
+    return t("notifications.durationHoursMinutes", { hours, minutes });
+  }
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -107,7 +116,7 @@ export default function NotificationSettings({
           setMessage(
             error instanceof Error
               ? error.message
-              : "Could not load notification settings.",
+              : t("notifications.errorCouldNotLoad"),
           );
         }
       } finally {
@@ -122,7 +131,7 @@ export default function NotificationSettings({
     return () => {
       cancelled = true;
     };
-  }, [bbyid]);
+  }, [bbyid, t]);
 
   async function handleEnablePush() {
     try {
@@ -134,7 +143,7 @@ export default function NotificationSettings({
       setPushEnabled(true);
 
       setMessage(
-        "Push notifications enabled.",
+        t("notifications.messageEnabled"),
       );
     } catch (error) {
       console.error(error);
@@ -142,7 +151,7 @@ export default function NotificationSettings({
       setMessage(
         error instanceof Error
           ? error.message
-          : "Could not enable notifications.",
+          : t("notifications.errorCouldNotEnable"),
       );
     } finally {
       setSaving(false);
@@ -159,7 +168,7 @@ export default function NotificationSettings({
       setPushEnabled(false);
 
       setMessage(
-        "Push notifications disabled.",
+        t("notifications.messageDisabled"),
       );
     } catch (error) {
       console.error(error);
@@ -167,7 +176,7 @@ export default function NotificationSettings({
       setMessage(
         error instanceof Error
           ? error.message
-          : "Could not disable notifications.",
+          : t("notifications.errorCouldNotDisable"),
       );
     } finally {
       setSaving(false);
@@ -182,7 +191,7 @@ export default function NotificationSettings({
       await sendTestNotification(bbyid);
 
       setMessage(
-        "Test notification sent.",
+        t("notifications.messageTestSent"),
       );
     } catch (error) {
       console.error(error);
@@ -190,7 +199,7 @@ export default function NotificationSettings({
       setMessage(
         error instanceof Error
           ? error.message
-          : "Could not send test notification.",
+          : t("notifications.errorCouldNotSendTest"),
       );
     } finally {
       setSaving(false);
@@ -216,8 +225,8 @@ export default function NotificationSettings({
 
       setMessage(
         enabled
-          ? "Feeding reminder enabled."
-          : "Feeding reminder disabled.",
+          ? t("notifications.messageFeedingReminderEnabled")
+          : t("notifications.messageFeedingReminderDisabled"),
       );
     } catch (error) {
       console.error(error);
@@ -229,7 +238,7 @@ export default function NotificationSettings({
       setMessage(
         error instanceof Error
           ? error.message
-          : "Could not update feeding reminder.",
+          : t("notifications.errorCouldNotUpdateFeedingReminder"),
       );
     } finally {
       setSaving(false);
@@ -254,7 +263,7 @@ export default function NotificationSettings({
       );
 
       setMessage(
-        `Reminder set to ${formatMinutes(minutes)}.`,
+        t("notifications.messageReminderSetTo", { duration: formatMinutes(minutes) }),
       );
     } catch (error) {
       console.error(error);
@@ -266,7 +275,7 @@ export default function NotificationSettings({
       setMessage(
         error instanceof Error
           ? error.message
-          : "Could not update reminder interval.",
+          : t("notifications.errorCouldNotUpdateReminderInterval"),
       );
     } finally {
       setSaving(false);
@@ -276,9 +285,9 @@ export default function NotificationSettings({
   if (loading) {
     return (
       <section className="notification-settings">
-        <h2>Notifications</h2>
+        <h2>{t("notifications.heading")}</h2>
 
-        <p>Loading notification settings...</p>
+        <p>{t("notifications.loadingSettings")}</p>
       </section>
     );
   }
@@ -287,10 +296,10 @@ export default function NotificationSettings({
     <section className="notification-settings">
       <div className="notification-settings__header">
         <div>
-          <h2>Notifications</h2>
+          <h2>{t("notifications.heading")}</h2>
 
           <p>
-            Notifications for{" "}
+            {t("notifications.notificationsFor")}{" "}
             <strong>{bbyid}</strong>
           </p>
         </div>
@@ -305,19 +314,18 @@ export default function NotificationSettings({
           <span className="notification-status__dot" />
 
           {pushEnabled
-            ? "Enabled"
-            : "Disabled"}
+            ? t("notifications.enabled")
+            : t("notifications.disabled")}
         </div>
       </div>
 
       <div className="notification-settings__card">
         <div className="notification-setting-row">
           <div>
-            <strong>Push notifications</strong>
+            <strong>{t("notifications.pushNotifications")}</strong>
 
             <p>
-              Receive Sleepy notifications on
-              this device.
+              {t("notifications.pushDescription")}
             </p>
           </div>
 
@@ -327,7 +335,7 @@ export default function NotificationSettings({
               disabled={saving}
               onClick={handleDisablePush}
             >
-              Disable
+              {t("notifications.disableButton")}
             </button>
           ) : (
             <button
@@ -335,24 +343,23 @@ export default function NotificationSettings({
               disabled={saving}
               onClick={handleEnablePush}
             >
-              Enable
+              {t("notifications.enableButton")}
             </button>
           )}
         </div>
       </div>
 
       <div className="notification-settings__section-title">
-        Feeding
+        {t("common.feeding")}
       </div>
 
       <div className="notification-settings__card">
         <div className="notification-setting-row">
           <div>
-            <strong>Feeding reminder</strong>
+            <strong>{t("notifications.feedingReminderTitle")}</strong>
 
             <p>
-              Get a reminder when enough time
-              has passed since the last feeding.
+              {t("notifications.feedingReminderDescription")}
             </p>
           </div>
 
@@ -377,7 +384,7 @@ export default function NotificationSettings({
         {feedingReminderEnabled && (
           <div className="notification-reminder-time">
             <label htmlFor="feeding-reminder-time">
-              Remind me after
+              {t("notifications.remindMeAfter")}
             </label>
 
             <select
@@ -409,8 +416,7 @@ export default function NotificationSettings({
             </select>
 
             <p>
-              You will receive one reminder
-              after each feeding.
+              {t("notifications.oneReminderNote")}
             </p>
           </div>
         )}
@@ -419,9 +425,7 @@ export default function NotificationSettings({
       {!pushEnabled &&
         feedingReminderEnabled && (
           <div className="notification-settings__warning">
-            Feeding reminders are enabled, but
-            push notifications are disabled on
-            this device.
+            {t("notifications.warningPushDisabled")}
           </div>
         )}
 
@@ -432,7 +436,7 @@ export default function NotificationSettings({
           disabled={saving}
           onClick={handleTestNotification}
         >
-          Send test notification
+          {t("notifications.sendTestButton")}
         </button>
       )}
 

@@ -14,7 +14,7 @@ import type { Insight, SleepSession } from "./types";
 
 export type BedtimeConsistency = {
   stddevMinutes: number;
-  label: "svært stabil" | "varierer noe" | "varierer mye";
+  label: "stable" | "somewhat-variable" | "highly-variable";
 };
 
 export type QualityDistributionRow = {
@@ -46,7 +46,7 @@ export function computeQualityDistribution(sessions: SleepSession[]): QualityDis
 }
 
 export type NightDaySplitRow = {
-  label: "Natt" | "Dagsøvn";
+  label: "night" | "day";
   totalMinutes: number;
   sessionCount: number;
   sharePct: number;
@@ -58,7 +58,7 @@ export function computeNightVsDayBreakdown(sessions: SleepSession[]): NightDaySp
   const night = sessions.filter((s) => resolveSleepType(s) === "night");
   const day = sessions.filter((s) => resolveSleepType(s) === "nap");
 
-  const row = (label: "Natt" | "Dagsøvn", arr: SleepSession[]): NightDaySplitRow => {
+  const row = (label: "night" | "day", arr: SleepSession[]): NightDaySplitRow => {
     const minutes = arr.reduce((sum, s) => sum + s.durationMin, 0);
     return {
       label,
@@ -68,7 +68,7 @@ export function computeNightVsDayBreakdown(sessions: SleepSession[]): NightDaySp
     };
   };
 
-  return [row("Natt", night), row("Dagsøvn", day)];
+  return [row("night", night), row("day", day)];
 }
 
 // Unwraps each bedtime around the dataset's own circular mean before taking
@@ -96,7 +96,7 @@ export function computeBedtimeConsistency(
   const stddevMinutes = Math.sqrt(variance);
 
   const label =
-    stddevMinutes <= 20 ? "svært stabil" : stddevMinutes <= 45 ? "varierer noe" : "varierer mye";
+    stddevMinutes <= 20 ? "stable" : stddevMinutes <= 45 ? "somewhat-variable" : "highly-variable";
 
   return { stddevMinutes, label };
 }

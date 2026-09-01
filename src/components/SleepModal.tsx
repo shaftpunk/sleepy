@@ -7,6 +7,7 @@ import {
 } from "../services/sleepService";
 
 import { useAppStore } from "../stores/appStore";
+import { useTranslation } from "../i18n";
 
 type Props = {
   sleep?: SleepRecord | null;
@@ -28,6 +29,8 @@ export default function SleepModal({
   onClose,
   onSaved,
 }: Props) {
+  const { t } = useTranslation();
+
   const currentBabyId = useAppStore(
     (state) => state.currentBabyId,
   );
@@ -74,7 +77,7 @@ export default function SleepModal({
 
   async function save() {
     if (!currentBabyId) {
-      setError("No baby selected.");
+      setError(t("errors.noBabySelected"));
       return;
     }
 
@@ -93,7 +96,7 @@ export default function SleepModal({
         new Date(starttime)
       ) {
         setError(
-          "End time must be after start time.",
+          t("errors.endTimeAfterStart"),
         );
 
         return;
@@ -126,7 +129,7 @@ export default function SleepModal({
       console.error(err);
 
       setError(
-        "Could not save sleep.",
+        t("errors.couldNotSaveSleep"),
       );
     } finally {
       setSaving(false);
@@ -148,13 +151,13 @@ export default function SleepModal({
           <div>
             <p className="eyebrow">
               {currentBaby?.name ??
-                "Sleepy"}
+                t("common.appName")}
             </p>
 
             <h2>
               {sleep
-                ? "Edit sleep"
-                : "Add sleep"}
+                ? t("sleep.editTitle")
+                : t("sleep.addTitle")}
             </h2>
           </div>
 
@@ -167,7 +170,7 @@ export default function SleepModal({
         </div>
 
         <label className="form-field">
-          <span>Fell asleep</span>
+          <span>{t("sleep.fellAsleep")}</span>
 
           <input
             className="datetime-input"
@@ -182,7 +185,7 @@ export default function SleepModal({
         </label>
 
         <label className="form-field">
-          <span>Woke up</span>
+          <span>{t("sleep.wokeUp")}</span>
 
           <input
             className="datetime-input"
@@ -197,7 +200,7 @@ export default function SleepModal({
         </label>
 
         <div className="form-field">
-          <span>Quality</span>
+          <span>{t("sleep.quality")}</span>
 
           <div className="star-picker">
             {[1, 2, 3, 4, 5].map(
@@ -218,11 +221,7 @@ export default function SleepModal({
                         : value,
                     )
                   }
-                  aria-label={`Rate ${value} star${
-                    value === 1
-                      ? ""
-                      : "s"
-                  }`}
+                  aria-label={t("sleep.rateAria", { value })}
                 >
                   ★
                 </button>
@@ -246,10 +245,10 @@ export default function SleepModal({
           }
         >
           {saving
-            ? "Saving..."
+            ? t("common.saving")
             : sleep
-              ? "Save changes"
-              : "Add sleep"}
+              ? t("common.saveChanges")
+              : t("sleep.addTitle")}
         </button>
       </div>
     </div>

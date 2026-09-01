@@ -1,4 +1,10 @@
 import { supabase } from "../lib/supabase";
+import { useAppStore } from "../stores/appStore";
+import { translate, type TranslationKey } from "../i18n";
+
+function t(key: TranslationKey): string {
+  return translate(useAppStore.getState().language, key);
+}
 
 export type SleepRecord = {
   id: string;
@@ -61,7 +67,7 @@ async function getCurrentUserId(): Promise<string> {
   }
 
   if (!user) {
-    throw new Error("You must be logged in.");
+    throw new Error(t("errors.mustBeLoggedIn"));
   }
 
   return user.id;
@@ -166,7 +172,7 @@ export async function createManualSleep(
     new Date(input.starttime).getTime()
   ) {
     throw new Error(
-      "End time must be after start time.",
+      t("errors.endTimeAfterStart"),
     );
   }
 
@@ -233,7 +239,7 @@ export async function updateSleep(
     new Date(starttime).getTime()
   ) {
     throw new Error(
-      "End time must be after start time.",
+      t("errors.endTimeAfterStart"),
     );
   }
 

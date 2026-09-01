@@ -1,4 +1,5 @@
 import "./SplashScreen.css";
+import { useTranslation } from "../i18n";
 
 type SplashScreenProps = {
   onFinished: () => void;
@@ -7,6 +8,8 @@ type SplashScreenProps = {
 export default function SplashScreen({
   onFinished,
 }: SplashScreenProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="splash-screen">
       <div className="splash-content">
@@ -21,7 +24,7 @@ export default function SplashScreen({
           onEnded={onFinished}
         />
 
-        <div className="loading-dots" aria-label="Loading">
+        <div className="loading-dots" aria-label={t("common.loading")}>
           <span />
           <span />
           <span />

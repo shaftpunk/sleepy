@@ -2,89 +2,78 @@ import {
     deleteFeed,
     type FeedRecord,
   } from "../services/feedService";
-  
+
+  import { feedTypeLabel, formatClock, sideLabel } from "../lib/format";
+  import { LOCALES, useTranslation } from "../i18n";
+
   type FeedHistoryProps = {
     feeds: FeedRecord[];
     onChanged: () => void;
   };
-  
-  function formatTime(date: string) {
-    return new Intl.DateTimeFormat(
-      "nb-NO",
-      {
-        hour: "2-digit",
-        minute: "2-digit",
-      }
-    ).format(new Date(date));
-  }
-  
-  function formatDate(date: string) {
-    return new Intl.DateTimeFormat(
-      "nb-NO",
-      {
-        day: "2-digit",
-        month: "short",
-      }
-    ).format(new Date(date));
-  }
-  
-  function feedDescription(
-    feed: FeedRecord
-  ) {
-    if (feed.feedtype === "bottle") {
-      return feed.amountml !== null
-        ? `${feed.amountml} ml`
-        : "Bottle";
-    }
-  
-    if (feed.feedtype === "breast") {
-      const side =
-        feed.side === "left"
-          ? "Left"
-          : feed.side === "right"
-            ? "Right"
-            : feed.side === "both"
-              ? "Both"
-              : "";
-  
-      return `Breast${
-        side ? ` · ${side}` : ""
-      }`;
-    }
-  
-    return "Food";
-  }
-  
-  function iconForFeed(
-    feed: FeedRecord
-  ) {
-    if (feed.feedtype === "bottle") {
-      return "🍼";
-    }
-  
-    if (feed.feedtype === "breast") {
-      return "♡";
-    }
-  
-    return "🥣";
-  }
-  
+
   export default function FeedHistory({
     feeds,
     onChanged,
   }: FeedHistoryProps) {
+    const { t, lang } = useTranslation();
+
+    function formatDate(date: string) {
+      return new Intl.DateTimeFormat(
+        LOCALES[lang],
+        {
+          day: "2-digit",
+          month: "short",
+        }
+      ).format(new Date(date));
+    }
+
+    function feedDescription(
+      feed: FeedRecord
+    ) {
+      if (feed.feedtype === "bottle") {
+        return feed.amountml !== null
+          ? `${feed.amountml} ml`
+          : feedTypeLabel("bottle", lang);
+      }
+
+      if (feed.feedtype === "breast") {
+        const side = sideLabel(feed.side, lang);
+        const typeLabel = feedTypeLabel("breast", lang);
+
+        return `${typeLabel}${
+          side ? ` · ${side}` : ""
+        }`;
+      }
+
+      return feedTypeLabel("food", lang);
+    }
+
+    function iconForFeed(
+      feed: FeedRecord
+    ) {
+      if (feed.feedtype === "bottle") {
+        return "🍼";
+      }
+
+      if (feed.feedtype === "breast") {
+        return "♡";
+      }
+
+      return "🥣";
+    }
+
     async function handleDelete(
       feed: FeedRecord
     ) {
       const confirmed =
         window.confirm(
-          "Delete this feeding?"
+          t("common.confirmDeleteFeed")
         );
-  
+
       if (!confirmed) {
         return;
       }
-  
+
       try {
         await deleteFeed(feed.id);
         onChanged();
@@ -95,21 +84,21 @@ import {
         );
       }
     }
-  
+
     if (feeds.length === 0) {
       return (
         <div className="empty-card">
           <div className="feed-empty-icon">
             🍼
           </div>
-  
+
           <p>
-            No feeding registrations yet.
+            {t("analysis.feed.noFeedingYet")}
           </p>
         </div>
       );
     }
-  
+
     return (
       <div className="history-list">
         {feeds.map((feed) => (
@@ -120,29 +109,29 @@ import {
             <div className="history-icon">
               {iconForFeed(feed)}
             </div>
-  
+
             <div className="history-content">
               <strong>
                 {feedDescription(feed)}
               </strong>
-  
+
               <span>
                 {formatDate(feed.starttime)}
                 {" · "}
-                {formatTime(feed.starttime)}
+                {formatClock(new Date(feed.starttime).getTime(), lang)}
               </span>
-  
+
               {feed.note && (
                 <p>{feed.note}</p>
               )}
             </div>
-  
+
             <button
               className="history-delete"
               onClick={() =>
                 handleDelete(feed)
               }
-              aria-label="Delete feeding"
+              aria-label={t("common.deleteFeedingAria")}
             >
               ×
             </button>

@@ -1,6 +1,7 @@
 import { computeHourlyDistribution, computeSleepPerDayLast7, computeWakeWindowsThroughDay } from "../../analytics/day";
 import { dayKeyOf, two } from "../../analytics/time";
 import { formatDuration } from "../../lib/format";
+import { LOCALES, useTranslation, type Language } from "../../i18n";
 import BarList, { type BarRow, type BarRowTone } from "../../components/analysis/BarList";
 import type { SleepSession } from "../../analytics/types";
 
@@ -9,13 +10,13 @@ type Props = {
   now: number;
 };
 
-function dayBarLabel(dayKey: string, now: number): string {
-  if (dayKey === dayKeyOf(now)) return "I dag";
+function dayBarLabel(dayKey: string, now: number, lang: Language, todayLabel: string): string {
+  if (dayKey === dayKeyOf(now)) return todayLabel;
 
   const [y, m, d] = dayKey.split("-").map(Number);
   const date = new Date(y, m - 1, d);
 
-  return new Intl.DateTimeFormat("nb-NO", { weekday: "short" }).format(date);
+  return new Intl.DateTimeFormat(LOCALES[lang], { weekday: "short" }).format(date);
 }
 
 function toneForDayBar(totalMinutes: number, pctOfMax: number): BarRowTone {
@@ -25,24 +26,28 @@ function toneForDayBar(totalMinutes: number, pctOfMax: number): BarRowTone {
   return "warning";
 }
 
-const WAKE_WINDOW_GROUP_LABELS: Record<string, string> = {
-  "1st": "1. vindu",
-  "2nd": "2. vindu",
-  "3rd": "3. vindu",
-  "4th+": "4.+ vindu",
-};
-
 export default function DayTab({ sessions, now }: Props) {
+  const { t, lang } = useTranslation();
+
+  const windowGroupLabels: Record<string, string> = {
+    "1st": t("analysis.day.windowGroup1"),
+    "2nd": t("analysis.day.windowGroup2"),
+    "3rd": t("analysis.day.windowGroup3"),
+    "4th+": t("analysis.day.windowGroup4plus"),
+  };
+
   const perDay = computeSleepPerDayLast7(sessions, now);
   const buckets = computeHourlyDistribution(sessions, now);
   const wakeThroughDay = computeWakeWindowsThroughDay(sessions);
 
+  const todayLabel = t("common.today");
+
   const perDayRows: BarRow[] = perDay.map((day) => ({
     key: day.dayKey,
-    label: dayBarLabel(day.dayKey, now),
+    label: dayBarLabel(day.dayKey, now, lang, todayLabel),
     pctOfMax: day.pctOfMax,
-    valueText: day.totalMinutes > 0 ? formatDuration(day.totalMinutes) : "-",
-    detailText: `${day.sessionCount} økter`,
+    valueText: day.totalMinutes > 0 ? formatDuration(day.totalMinutes, lang) : "-",
+    detailText: t("analysis.day.sessionsCount", { count: day.sessionCount }),
     tone: toneForDayBar(day.totalMinutes, day.pctOfMax),
   }));
 
@@ -60,44 +65,44 @@ export default function DayTab({ sessions, now }: Props) {
       <section className="analysis-card">
         <div className="analysis-card-heading">
           <div>
-            <p className="card-label">Siste 7 dager</p>
-            <h2>Søvn per dag</h2>
+            <p className="card-label">{t("analysis.overview.last7Days")}</p>
+            <h2>{t("analysis.day.sleepPerDay")}</h2>
           </div>
         </div>
 
-        <BarList rows={perDayRows} emptyText="Ingen søvn registrert ennå." />
+        <BarList rows={perDayRows} emptyText={t("analysis.day.noSleepYet")} />
       </section>
 
       <section className="analysis-card">
         <div className="analysis-card-heading">
           <div>
-            <p className="card-label">Siste 30 dager</p>
-            <h2>Når de pleier å sove</h2>
+            <p className="card-label">{t("analysis.day.last30Days")}</p>
+            <h2>{t("analysis.day.whenTheyUsuallySleep")}</h2>
           </div>
         </div>
 
-        <BarList rows={bucketRows} emptyText="Ingen søvn registrert ennå." />
+        <BarList rows={bucketRows} emptyText={t("analysis.day.noSleepYet")} />
       </section>
 
       <section className="analysis-card">
         <div className="analysis-card-heading">
           <div>
-            <p className="card-label">Gjennom dagen</p>
-            <h2>Våkenvinduer</h2>
+            <p className="card-label">{t("analysis.day.throughTheDay")}</p>
+            <h2>{t("analysis.day.wakeWindows")}</h2>
           </div>
         </div>
 
         {wakeThroughDay.groups.every((g) => g.count === 0) ? (
-          <div className="empty-card">Ikke nok data ennå.</div>
+          <div className="empty-card">{t("analysis.day.notEnoughData")}</div>
         ) : (
           <div className="wake-window-rows">
             {wakeThroughDay.groups.map((group) => (
               <div className="wake-window-row" key={group.label}>
-                <span>{WAKE_WINDOW_GROUP_LABELS[group.label]}</span>
+                <span>{windowGroupLabels[group.label]}</span>
                 <strong>
-                  {group.medianMinutes != null ? formatDuration(group.medianMinutes) : "-"}
+                  {group.medianMinutes != null ? formatDuration(group.medianMinutes, lang) : "-"}
                 </strong>
-                <small>{group.count} ganger</small>
+                <small>{t("analysis.day.timesCount", { count: group.count })}</small>
               </div>
             ))}
           </div>

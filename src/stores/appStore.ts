@@ -1,5 +1,7 @@
 import { create } from "zustand";
 
+import type { Language } from "../i18n/types";
+
 export type BabyId = "Hamar" | "Drammen";
 export type ThemeMode = "dark" | "light";
 
@@ -23,6 +25,10 @@ type AppState = {
 
   setBabies: (babies: Baby[]) => void;
   setCurrentBabyId: (babyId: string) => void;
+
+  // i18n
+  language: Language;
+  setLanguage: (lang: Language) => void;
 };
 
 const savedBbyId =
@@ -33,6 +39,11 @@ const savedTheme =
 
 const savedBabyId =
   localStorage.getItem("sleepy_current_baby_id");
+
+// Norwegian is the default for a fresh install and for any existing user
+// with no saved preference.
+const savedLanguage =
+  (localStorage.getItem("sleepy_language") as Language) || "no";
 
 export const useAppStore = create<AppState>((set) => ({
   // --------------------------------------------------
@@ -87,6 +98,20 @@ export const useAppStore = create<AppState>((set) => ({
 
     set({
       currentBabyId: babyId,
+    });
+  },
+
+  // --------------------------------------------------
+  // i18n
+  // --------------------------------------------------
+
+  language: savedLanguage,
+
+  setLanguage: (lang) => {
+    localStorage.setItem("sleepy_language", lang);
+
+    set({
+      language: lang,
     });
   },
 }));

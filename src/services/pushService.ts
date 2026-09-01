@@ -1,5 +1,10 @@
 import { supabase } from "../lib/supabase";
-import type { BabyId } from "../stores/appStore";
+import { useAppStore, type BabyId } from "../stores/appStore";
+import { translate, type TranslationKey } from "../i18n";
+
+function t(key: TranslationKey, params?: Record<string, string | number>): string {
+  return translate(useAppStore.getState().language, key, params);
+}
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
@@ -55,13 +60,13 @@ export async function enablePushNotifications(
 ): Promise<PushSubscription> {
   if (!pushSupported()) {
     throw new Error(
-      "Push notifications are not supported on this device.",
+      t("notifications.errorPushNotSupported"),
     );
   }
 
   if (!VAPID_PUBLIC_KEY) {
     throw new Error(
-      "VITE_VAPID_PUBLIC_KEY is missing.",
+      t("notifications.errorVapidKeyMissing"),
     );
   }
 
@@ -74,7 +79,7 @@ export async function enablePushNotifications(
 
   if (permission !== "granted") {
     throw new Error(
-      "Notification permission was not granted.",
+      t("notifications.errorPermissionDenied"),
     );
   }
 
@@ -108,7 +113,7 @@ export async function enablePushNotifications(
     !subscriptionJson.keys?.auth
   ) {
     throw new Error(
-      "The browser returned an invalid push subscription.",
+      t("notifications.errorInvalidPushSubscription"),
     );
   }
 
@@ -135,7 +140,7 @@ export async function enablePushNotifications(
 
   if (error) {
     throw new Error(
-      `Could not save push subscription: ${error.message}`,
+      t("notifications.errorCouldNotSaveSubscription", { error: error.message }),
     );
   }
 
@@ -171,7 +176,7 @@ export async function disablePushNotifications(): Promise<void> {
 
   if (error) {
     throw new Error(
-      `Could not remove push subscription: ${error.message}`,
+      t("notifications.errorCouldNotRemoveSubscription", { error: error.message }),
     );
   }
 
@@ -217,8 +222,8 @@ export async function sendTestNotification(
     {
       body: {
         bbyid,
-        title: "Sleepy 🌙",
-        body: "Push notifications are working!",
+        title: t("notifications.testTitle"),
+        body: t("notifications.testBody"),
         url: "/",
       },
     },
@@ -226,13 +231,13 @@ export async function sendTestNotification(
 
   if (error) {
     throw new Error(
-      `Could not send test notification: ${error.message}`,
+      t("notifications.errorCouldNotSendTestDetailed", { error: error.message }),
     );
   }
 
   if (data?.error) {
     throw new Error(
-      `Could not send test notification: ${data.error}`,
+      t("notifications.errorCouldNotSendTestDetailed", { error: data.error }),
     );
   }
 

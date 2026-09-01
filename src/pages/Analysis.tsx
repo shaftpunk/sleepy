@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { useAppStore } from "../stores/appStore";
 import { useAnalyticsData } from "../hooks/useAnalyticsData";
+import { useTranslation } from "../i18n";
 
 import OverviewTab from "./analysis/OverviewTab";
 import DayTab from "./analysis/DayTab";
@@ -18,33 +19,9 @@ type TabKey =
   | "insight"
   | "feed";
 
-const TABS: {
-  key: TabKey;
-  label: string;
-}[] = [
-  {
-    key: "overview",
-    label: "Oversikt",
-  },
-  {
-    key: "day",
-    label: "Dag",
-  },
-  {
-    key: "month",
-    label: "Måned",
-  },
-  {
-    key: "insight",
-    label: "Innsikt",
-  },
-  {
-    key: "feed",
-    label: "Mating",
-  },
-];
-
 export default function Analysis() {
+  const { t } = useTranslation();
+
   const currentBabyId = useAppStore(
     (state) => state.currentBabyId,
   );
@@ -89,42 +66,50 @@ export default function Analysis() {
       );
   }, []);
 
+  const tabs: { key: TabKey; label: string }[] = [
+    { key: "overview", label: t("analysis.tabOverview") },
+    { key: "day", label: t("analysis.tabDay") },
+    { key: "month", label: t("analysis.tabMonth") },
+    { key: "insight", label: t("analysis.tabInsight") },
+    { key: "feed", label: t("common.feeding") },
+  ];
+
   return (
     <main className="analysis-page">
       <header className="page-header">
         <p className="eyebrow">
           {currentBaby?.name ??
-            "Sleepy"}
+            t("common.appName")}
         </p>
 
-        <h1>Analyse</h1>
+        <h1>{t("analysis.pageTitle")}</h1>
 
         <p className="page-description">
-          Søvn, oppvåkning og mating over tid.
+          {t("analysis.pageDescription")}
         </p>
       </header>
 
       <div className="analysis-tab-bar">
-        {TABS.map((t) => (
+        {tabs.map((tabItem) => (
           <button
-            key={t.key}
+            key={tabItem.key}
             className={
-              tab === t.key
+              tab === tabItem.key
                 ? "analysis-tab active"
                 : "analysis-tab"
             }
             onClick={() =>
-              setTab(t.key)
+              setTab(tabItem.key)
             }
           >
-            {t.label}
+            {tabItem.label}
           </button>
         ))}
       </div>
 
       {loading ? (
         <div className="empty-card">
-          Laster...
+          {t("common.loading")}
         </div>
       ) : (
         <>

@@ -13,8 +13,12 @@ import {
   type Household,
 } from "../services/householdService";
 
+import { LOCALES, useTranslation } from "../i18n";
+
 
 export default function FamilySettings() {
+  const { t, lang } = useTranslation();
+
   const [
     households,
     setHouseholds,
@@ -110,7 +114,7 @@ export default function FamilySettings() {
           setError(
             err instanceof Error
               ? err.message
-              : "Could not load family."
+              : t("family.errorCouldNotLoad")
           );
         }
 
@@ -126,7 +130,7 @@ export default function FamilySettings() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [t]);
 
 
   async function handleCreateInvite() {
@@ -165,7 +169,7 @@ export default function FamilySettings() {
       setError(
         err instanceof Error
           ? err.message
-          : "Could not create invitation."
+          : t("family.errorCouldNotCreateInvitation")
       );
 
     } finally {
@@ -200,7 +204,7 @@ export default function FamilySettings() {
       );
 
       setError(
-        "Could not copy invitation code."
+        t("family.errorCouldNotCopyCode")
       );
     }
   }
@@ -210,11 +214,11 @@ export default function FamilySettings() {
     return (
       <section className="settings-section">
         <h2>
-          Family
+          {t("family.heading")}
         </h2>
 
         <p>
-          Loading family…
+          {t("family.loadingFamily")}
         </p>
       </section>
     );
@@ -227,30 +231,30 @@ export default function FamilySettings() {
       <div className="section-heading">
         <div>
           <p className="eyebrow">
-            Sleepy 3.0
+            {t("family.eyebrow")}
           </p>
 
           <h2>
-            Family
+            {t("family.heading")}
           </h2>
         </div>
       </div>
 
 
       <p className="page-description">
-        Invite another person to share the same baby and history.
+        {t("family.description")}
       </p>
 
 
       {households.length === 0 ? (
         <p>
-          No family found.
+          {t("family.noFamilyFound")}
         </p>
       ) : (
         <>
           <label className="settings-field">
             <span>
-              Family
+              {t("family.familyLabel")}
             </span>
 
             <select
@@ -288,7 +292,7 @@ export default function FamilySettings() {
 
           <label className="settings-field">
             <span>
-              Access
+              {t("family.accessLabel")}
             </span>
 
             <select
@@ -301,15 +305,15 @@ export default function FamilySettings() {
               }
             >
               <option value="parent">
-                Parent
+                {t("family.roleParent")}
               </option>
 
               <option value="caregiver">
-                Caregiver
+                {t("family.roleCaregiver")}
               </option>
 
               <option value="viewer">
-                Viewer
+                {t("family.roleViewer")}
               </option>
             </select>
           </label>
@@ -326,8 +330,8 @@ export default function FamilySettings() {
             }
           >
             {creating
-              ? "Creating…"
-              : "Create invitation"}
+              ? t("family.creating")
+              : t("family.createInvitation")}
           </button>
         </>
       )}
@@ -344,7 +348,7 @@ export default function FamilySettings() {
         <div className="settings-card">
 
           <strong>
-            Invitation code
+            {t("family.invitationCode")}
           </strong>
 
           <p
@@ -364,27 +368,28 @@ export default function FamilySettings() {
             }
           >
             {copied
-              ? "Copied"
-              : "Copy invitation code"}
+              ? t("family.copied")
+              : t("family.copyInvitationCode")}
           </button>
 
 
           {expiresAt && (
             <p className="page-description">
-              Expires{" "}
-              {new Intl.DateTimeFormat(
-                "nb-NO",
-                {
-                  day: "2-digit",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }
-              ).format(
-                new Date(
-                  expiresAt
-                )
-              )}
+              {t("family.expires", {
+                date: new Intl.DateTimeFormat(
+                  LOCALES[lang],
+                  {
+                    day: "2-digit",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }
+                ).format(
+                  new Date(
+                    expiresAt
+                  )
+                ),
+              })}
             </p>
           )}
 

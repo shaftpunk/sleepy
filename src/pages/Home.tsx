@@ -37,7 +37,8 @@ import { useAnalyticsData } from "../hooks/useAnalyticsData";
 import { computeNextFeedSide, computeNextSleepHint, computeTodayTotals } from "../analytics/home";
 import { computeWakeWindows } from "../analytics/wakeWindows";
 import { median } from "../analytics/time";
-import { formatClock, formatDuration, stars } from "../lib/format";
+import { feedTypeLabel, formatClock, formatDuration, sideLabel, stars } from "../lib/format";
+import { useTranslation } from "../i18n";
 
 function durationFrom(
   dateString: string
@@ -80,116 +81,9 @@ function durationFrom(
   ].join(":");
 }
 
-function formatTime(
-  dateString: string
-) {
-  return new Intl.DateTimeFormat(
-    "nb-NO",
-    {
-      hour: "2-digit",
-      minute: "2-digit",
-    }
-  ).format(
-    new Date(dateString)
-  );
-}
-
-function formatMinutes(
-  minutes: number | null
-) {
-  if (minutes === null) {
-    return "";
-  }
-
-  const h =
-    Math.floor(minutes / 60);
-
-  const m =
-    minutes % 60;
-
-  if (!h) {
-    return `${m} min`;
-  }
-
-  if (!m) {
-    return `${h} t`;
-  }
-
-  return `${h} t ${m} min`;
-}
-
-function relativeTime(
-  dateString: string
-) {
-  const minutes =
-    Math.max(
-      0,
-      Math.floor(
-        (
-          Date.now() -
-          new Date(
-            dateString
-          ).getTime()
-        ) / 60000
-      )
-    );
-
-  if (minutes < 1) {
-    return "Just now";
-  }
-
-  if (minutes < 60) {
-    return `${minutes}m ago`;
-  }
-
-  const h =
-    Math.floor(minutes / 60);
-
-  const m =
-    minutes % 60;
-
-  if (!m) {
-    return `${h}h ago`;
-  }
-
-  return `${h}h ${m}m ago`;
-}
-
-function feedDescription(
-  feed: FeedRecord
-) {
-  if (
-    feed.feedtype ===
-    "bottle"
-  ) {
-    return feed.amountml !== null
-      ? `Bottle · ${feed.amountml} ml`
-      : "Bottle";
-  }
-
-  if (
-    feed.feedtype ===
-    "breast"
-  ) {
-    if (feed.side === "left") {
-      return "Breast · Left";
-    }
-
-    if (feed.side === "right") {
-      return "Breast · Right";
-    }
-
-    if (feed.side === "both") {
-      return "Breast · Both";
-    }
-
-    return "Breast";
-  }
-
-  return "Food";
-}
-
 export default function Home() {
+  const { t, lang } = useTranslation();
+
   const currentBabyId =
     useAppStore(
       (state) =>
@@ -207,6 +101,38 @@ export default function Home() {
       (baby) =>
         baby.id === currentBabyId
     );
+
+  function relativeTime(dateString: string) {
+    const minutes = Math.max(
+      0,
+      Math.floor((now - new Date(dateString).getTime()) / 60000)
+    );
+
+    if (minutes < 1) return t("common.justNow");
+    if (minutes < 60) return t("common.minutesAgo", { minutes });
+
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+
+    if (!m) return t("common.hoursAgo", { hours: h });
+
+    return t("common.hoursMinutesAgo", { hours: h, minutes: m });
+  }
+
+  function feedDescription(feed: FeedRecord) {
+    const typeLabel = feedTypeLabel(feed.feedtype, lang);
+
+    if (feed.feedtype === "bottle") {
+      return feed.amountml !== null ? `${typeLabel} · ${feed.amountml} ml` : typeLabel;
+    }
+
+    if (feed.feedtype === "breast") {
+      const side = sideLabel(feed.side, lang);
+      return side ? `${typeLabel} · ${side}` : typeLabel;
+    }
+
+    return typeLabel;
+  }
 
   const [
     activeSleep,
@@ -536,28 +462,28 @@ export default function Home() {
         <header className="home-header">
           <div>
             <p className="eyebrow">
-              Sleepy
+              {t("common.appName")}
             </p>
 
             <h1>
-              {currentBaby?.name ?? "Sleepy"}
+              {currentBaby?.name ?? t("common.appName")}
             </h1>
           </div>
 
           <div className="status-pill">
             {loading
-              ? "Loading..."
+              ? t("common.loading")
               : activeSleep
-                ? "Sleeping"
-                : "Awake"}
+                ? t("common.sleeping")
+                : t("common.awake")}
           </div>
         </header>
 
         <section className="sleep-card">
           <p className="sleep-label">
             {activeSleep
-              ? "Sleeping for"
-              : "Awake for"}
+              ? t("home.sleepingFor")
+              : t("home.awakeFor")}
           </p>
 
           <div className="sleep-timer">
@@ -566,14 +492,10 @@ export default function Home() {
 
           <p className="sleep-subtitle">
             {activeSleep
-              ? `Started ${formatTime(
-                activeSleep.starttime
-              )}`
+              ? t("home.startedAt", { time: formatClock(new Date(activeSleep.starttime).getTime(), lang) })
               : lastSleep?.endtime
-                ? `Woke up ${formatTime(
-                  lastSleep.endtime
-                )}`
-                : "Ready for the next nap"}
+                ? t("home.wokeUpAt", { time: formatClock(new Date(lastSleep.endtime).getTime(), lang) })
+                : t("home.readyForNextNap")}
           </p>
 
           <button
@@ -587,39 +509,39 @@ export default function Home() {
             }
           >
             {saving
-              ? "Saving..."
+              ? t("common.saving")
               : activeSleep
-                ? "Stop sleep"
-                : "Start sleep"}
+                ? t("home.stopSleep")
+                : t("home.startSleep")}
           </button>
         </section>
 
         {!activeSleep && nextSleepHint && (
           <p className="next-sleep-hint">
             {nextSleepHint.kind === "predicted" &&
-              `Pleier å sovne rundt kl. ${formatClock(nextSleepHint.predictedTs)}`}
+              t("home.nextSleepPredicted", { time: formatClock(nextSleepHint.predictedTs, lang) })}
 
             {nextSleepHint.kind === "about-usual" &&
-              "Har vært våken omtrent så lenge den pleier"}
+              t("home.nextSleepAboutUsual")}
 
             {nextSleepHint.kind === "longer-than-usual" &&
-              `Våken lenger enn vanlig (+${formatDuration(nextSleepHint.overMinutes)})`}
+              t("home.nextSleepLonger", { duration: formatDuration(nextSleepHint.overMinutes, lang) })}
           </p>
         )}
 
         <section className="today-stats">
           <div>
-            <span>Sleep today</span>
-            <strong>{formatDuration(todayStats.totalMinutes)}</strong>
+            <span>{t("home.sleepToday")}</span>
+            <strong>{formatDuration(todayStats.totalMinutes, lang)}</strong>
           </div>
 
           <div>
-            <span>Sessions</span>
+            <span>{t("home.sessions")}</span>
             <strong>{todayStats.sessionCount}</strong>
           </div>
 
           <div>
-            <span>Avg quality</span>
+            <span>{t("home.avgQuality")}</span>
             <strong>{stars(todayStats.avgRating)}</strong>
           </div>
         </section>
@@ -632,7 +554,7 @@ export default function Home() {
         <section className="feed-card">
           <div>
             <p className="card-label">
-              Last fed
+              {t("home.lastFed")}
             </p>
 
             <h2>
@@ -640,7 +562,7 @@ export default function Home() {
                 ? relativeTime(
                   lastFeed.starttime
                 )
-                : "Not registered"}
+                : t("common.notRegistered")}
             </h2>
 
             <p className="muted">
@@ -648,12 +570,14 @@ export default function Home() {
                 ? feedDescription(
                   lastFeed
                 )
-                : "No feeding yet"}
+                : t("home.noFeedingYet")}
             </p>
 
             {nextFeedSide && (
               <p className="muted">
-                neste: {nextFeedSide === "left" ? "venstre" : "høyre"}
+                {t("home.nextFeedSide", {
+                  side: (sideLabel(nextFeedSide, lang) ?? "").toLowerCase(),
+                })}
               </p>
             )}
           </div>
@@ -666,7 +590,7 @@ export default function Home() {
               )
             }
           >
-            Register
+            {t("common.register")}
           </button>
         </section>
 
@@ -674,10 +598,10 @@ export default function Home() {
           <div className="section-heading">
             <div>
               <p className="card-label">
-                Recent
+                {t("common.recent")}
               </p>
 
-              <h2>Sleep</h2>
+              <h2>{t("common.sleep")}</h2>
             </div>
           </div>
 
@@ -689,8 +613,7 @@ export default function Home() {
               </div>
 
               <p>
-                No sleep
-                registrations yet.
+                {t("home.noSleepYet")}
               </p>
             </div>
           ) : (
@@ -705,21 +628,17 @@ export default function Home() {
                   >
                     <div>
                       <strong>
-                        {formatTime(
-                          sleep.starttime
-                        )}
+                        {formatClock(new Date(sleep.starttime).getTime(), lang)}
                         {" – "}
                         {sleep.endtime
-                          ? formatTime(
-                            sleep.endtime
-                          )
-                          : "Sleeping"}
+                          ? formatClock(new Date(sleep.endtime).getTime(), lang)
+                          : t("common.sleeping")}
                       </strong>
 
                       <p className="muted">
-                        {formatMinutes(
-                          sleep.durationminutes
-                        )}
+                        {sleep.durationminutes != null
+                          ? formatDuration(sleep.durationminutes, lang)
+                          : ""}
                       </p>
                     </div>
 
@@ -737,10 +656,10 @@ export default function Home() {
           <div className="section-heading">
             <div>
               <p className="card-label">
-                Recent
+                {t("common.recent")}
               </p>
 
-              <h2>Feeding</h2>
+              <h2>{t("common.feeding")}</h2>
             </div>
 
             {recentFeeds.length >
@@ -755,8 +674,8 @@ export default function Home() {
                   }
                 >
                   {showAllFeeds
-                    ? "Show less"
-                    : "View all"}
+                    ? t("common.showLess")
+                    : t("common.viewAll")}
                 </button>
               )}
           </div>

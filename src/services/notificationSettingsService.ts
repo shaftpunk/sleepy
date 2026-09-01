@@ -1,5 +1,10 @@
 import { supabase } from "../lib/supabase";
-import type { BabyId } from "../stores/appStore";
+import { useAppStore, type BabyId } from "../stores/appStore";
+import { translate, type TranslationKey } from "../i18n";
+
+function t(key: TranslationKey, params?: Record<string, string | number>): string {
+  return translate(useAppStore.getState().language, key, params);
+}
 
 export interface NotificationSettings {
   id: string;
@@ -22,7 +27,7 @@ export async function getNotificationSettings(
 
   if (error) {
     throw new Error(
-      `Could not load notification settings: ${error.message}`,
+      t("notifications.errorCouldNotLoadDetailed", { error: error.message }),
     );
   }
 
@@ -43,7 +48,7 @@ export async function getNotificationSettings(
 
   if (createError) {
     throw new Error(
-      `Could not create notification settings: ${createError.message}`,
+      t("notifications.errorCouldNotCreateSettings", { error: createError.message }),
     );
   }
 
@@ -64,7 +69,7 @@ export async function updateFeedingReminder(
 
   if (error) {
     throw new Error(
-      `Could not update feeding reminder: ${error.message}`,
+      t("notifications.errorCouldNotUpdateFeedingReminderDetailed", { error: error.message }),
     );
   }
 }
@@ -83,7 +88,7 @@ export async function updateFeedingReminderMinutes(
 
   if (error) {
     throw new Error(
-      `Could not update reminder interval: ${error.message}`,
+      t("notifications.errorCouldNotUpdateReminderIntervalDetailed", { error: error.message }),
     );
   }
 }

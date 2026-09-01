@@ -16,8 +16,10 @@ import About from "./pages/About";
 import SplashScreen from "./components/SplashScreen";
 
 import { useAppStore } from "./stores/appStore";
+import { useTranslation } from "./i18n";
 
 function App() {
+  const { t } = useTranslation();
   const theme = useAppStore((state) => state.theme);
   const [showSplash, setShowSplash] = useState(true);
 
@@ -45,22 +47,22 @@ function App() {
         <nav className="bottom-nav">
           <NavLink to="/">
             <span className="nav-icon">⌂</span>
-            <span>Home</span>
+            <span>{t("nav.home")}</span>
           </NavLink>
 
           <NavLink to="/history">
             <span className="nav-icon">◷</span>
-            <span>History</span>
+            <span>{t("nav.history")}</span>
           </NavLink>
 
           <NavLink to="/analysis">
             <span className="nav-icon">⌁</span>
-            <span>Analysis</span>
+            <span>{t("nav.analysis")}</span>
           </NavLink>
 
           <NavLink to="/settings">
             <span className="nav-icon">⚙</span>
-            <span>Settings</span>
+            <span>{t("nav.settings")}</span>
           </NavLink>
         </nav>
       </BrowserRouter>

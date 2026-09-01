@@ -1,3 +1,5 @@
+import { useTranslation } from "../../i18n";
+
 export type BarRowTone = "success" | "info" | "warning" | "neutral";
 
 export type BarRow = {
@@ -15,8 +17,10 @@ type Props = {
 };
 
 export default function BarList({ rows, emptyText }: Props) {
+  const { t } = useTranslation();
+
   if (rows.length === 0) {
-    return <div className="empty-card">{emptyText ?? "Ingen data ennå."}</div>;
+    return <div className="empty-card">{emptyText ?? t("analysis.day.noSleepYet")}</div>;
   }
 
   return (

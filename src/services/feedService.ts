@@ -1,4 +1,10 @@
 import { supabase } from "../lib/supabase";
+import { useAppStore } from "../stores/appStore";
+import { translate, type TranslationKey } from "../i18n";
+
+function t(key: TranslationKey): string {
+  return translate(useAppStore.getState().language, key);
+}
 
 export type FeedType = "bottle" | "breast" | "food";
 export type FeedSide = "left" | "right" | "both" | null;
@@ -50,7 +56,7 @@ async function getCurrentUserId(): Promise<string> {
   }
 
   if (!user) {
-    throw new Error("You must be logged in.");
+    throw new Error(t("errors.mustBeLoggedIn"));
   }
 
   return user.id;

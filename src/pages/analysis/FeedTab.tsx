@@ -7,8 +7,10 @@ import {
 } from "../../analytics/feed";
 import { dayKeyOf } from "../../analytics/time";
 import { formatDuration } from "../../lib/format";
+import { LOCALES, useTranslation, type Language } from "../../i18n";
 import BarList, { type BarRow, type BarRowTone } from "../../components/analysis/BarList";
 import KpiCard from "../../components/analysis/KpiCard";
+import type { FeedDistributionLabel } from "../../analytics/feed";
 import type { FeedEvent } from "../../analytics/types";
 
 type Props = {
@@ -16,35 +18,39 @@ type Props = {
   now: number;
 };
 
-function dayBarLabel(dayKey: string, now: number): string {
-  if (dayKey === dayKeyOf(now)) return "I dag";
+function dayBarLabel(dayKey: string, now: number, lang: Language, todayLabel: string): string {
+  if (dayKey === dayKeyOf(now)) return todayLabel;
 
   const [y, m, d] = dayKey.split("-").map(Number);
-  return new Intl.DateTimeFormat("nb-NO", { weekday: "short" }).format(new Date(y, m - 1, d));
+  return new Intl.DateTimeFormat(LOCALES[lang], { weekday: "short" }).format(new Date(y, m - 1, d));
 }
 
-const DISTRIBUTION_LABELS: Record<string, string> = {
-  venstre: "Venstre",
-  høyre: "Høyre",
-  begge: "Begge",
-  flaske: "Flaske",
-  pumpet: "Pumpet",
-};
-
-function toneForDistribution(label: string): BarRowTone {
-  return label === "venstre" || label === "høyre" ? "success" : "info";
+function toneForDistribution(label: FeedDistributionLabel): BarRowTone {
+  return label === "left" || label === "right" ? "success" : "info";
 }
 
 export default function FeedTab({ feeds, now }: Props) {
+  const { t, lang } = useTranslation();
+
+  const distributionLabels: Record<FeedDistributionLabel, string> = {
+    left: t("common.sideLeft"),
+    right: t("common.sideRight"),
+    both: t("common.sideBoth"),
+    bottle: t("common.feedTypeBottle"),
+    pumped: t("common.feedTypePumped"),
+  };
+
   const feedsPerDayAvg = computeFeedsPerDayAvg(feeds, now);
   const interval = computeTypicalFeedInterval(feeds);
   const atNightPct = computeAtNightFeedPct(feeds);
   const perDay = computeFeedsPerDayLast7(feeds, now);
   const distribution = computeFeedDistribution(feeds);
 
+  const todayLabel = t("common.today");
+
   const perDayRows: BarRow[] = perDay.map((day) => ({
     key: day.dayKey,
-    label: dayBarLabel(day.dayKey, now),
+    label: dayBarLabel(day.dayKey, now, lang, todayLabel),
     pctOfMax: day.pctOfMax,
     valueText: day.count > 0 ? String(day.count) : "-",
   }));
@@ -54,7 +60,7 @@ export default function FeedTab({ feeds, now }: Props) {
     const maxCount = Math.max(...distribution.map((r) => r.count));
     return {
       key: row.label,
-      label: DISTRIBUTION_LABELS[row.label],
+      label: distributionLabels[row.label],
       pctOfMax: maxCount > 0 ? (row.count / maxCount) * 100 : 0,
       valueText: String(row.count),
       detailText: `${Math.round(row.sharePct)}%`,
@@ -66,15 +72,15 @@ export default function FeedTab({ feeds, now }: Props) {
     <div className="analysis-tab-content">
       <section className="stats-grid">
         <KpiCard
-          label="Mating per dag"
+          label={t("analysis.feed.perDay")}
           value={feedsPerDayAvg != null ? feedsPerDayAvg.toFixed(1) : "-"}
         />
         <KpiCard
-          label="Typisk intervall"
-          value={interval.medianMinutes != null ? formatDuration(interval.medianMinutes) : "-"}
+          label={t("analysis.feed.typicalInterval")}
+          value={interval.medianMinutes != null ? formatDuration(interval.medianMinutes, lang) : "-"}
         />
         <KpiCard
-          label="Om natten"
+          label={t("analysis.overview.atNight")}
           value={atNightPct != null ? `${Math.round(atNightPct)}%` : "-"}
         />
       </section>
@@ -82,24 +88,24 @@ export default function FeedTab({ feeds, now }: Props) {
       <section className="analysis-card">
         <div className="analysis-card-heading">
           <div>
-            <p className="card-label">Siste 7 dager</p>
-            <h2>Mating per dag</h2>
+            <p className="card-label">{t("analysis.overview.last7Days")}</p>
+            <h2>{t("analysis.feed.perDay")}</h2>
           </div>
         </div>
 
-        <BarList rows={perDayRows} emptyText="Ingen mating registrert ennå." />
+        <BarList rows={perDayRows} emptyText={t("analysis.feed.noFeedingYet")} />
       </section>
 
       <section className="analysis-card">
         <div className="analysis-card-heading">
           <div>
-            <p className="card-label">Fordeling</p>
-            <h2>Type mating</h2>
+            <p className="card-label">{t("analysis.insight.distributionLabel")}</p>
+            <h2>{t("analysis.feed.typeOfFeeding")}</h2>
           </div>
         </div>
 
         {totalFeeds === 0 ? (
-          <div className="empty-card">Ingen mating registrert ennå.</div>
+          <div className="empty-card">{t("analysis.feed.noFeedingYet")}</div>
         ) : (
           <BarList rows={distributionRows} />
         )}

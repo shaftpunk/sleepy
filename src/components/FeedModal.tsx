@@ -9,6 +9,8 @@ import {
 } from "../services/feedService";
 
 import { useAppStore } from "../stores/appStore";
+import { feedTypeLabel, sideLabel } from "../lib/format";
+import { useTranslation } from "../i18n";
 
 type Props = {
   feed?: FeedRecord | null;
@@ -30,6 +32,8 @@ export default function FeedModal({
   onClose,
   onSaved,
 }: Props) {
+  const { t, lang } = useTranslation();
+
   const currentBabyId = useAppStore(
     (state) => state.currentBabyId,
   );
@@ -120,6 +124,17 @@ export default function FeedModal({
     }
   }
 
+  const feedTypeOptions: {
+    value: FeedType;
+    icon: string;
+  }[] = [
+    { value: "bottle", icon: "🍼" },
+    { value: "breast", icon: "♡" },
+    { value: "food", icon: "🥣" },
+  ];
+
+  const sideOptions: FeedSide[] = ["left", "right", "both"];
+
   return (
     <div
       className="modal-backdrop"
@@ -135,13 +150,13 @@ export default function FeedModal({
           <div>
             <p className="eyebrow">
               {currentBaby?.name ??
-                "Sleepy"}
+                t("common.appName")}
             </p>
 
             <h2>
               {feed
-                ? "Edit feeding"
-                : "Register feeding"}
+                ? t("feeding.editTitle")
+                : t("feeding.registerTitle")}
             </h2>
           </div>
 
@@ -154,24 +169,8 @@ export default function FeedModal({
         </div>
 
         <div className="feed-type-grid">
-          {[
-            [
-              "bottle",
-              "🍼",
-              "Bottle",
-            ],
-            [
-              "breast",
-              "♡",
-              "Breast",
-            ],
-            [
-              "food",
-              "🥣",
-              "Food",
-            ],
-          ].map(
-            ([value, icon, label]) => (
+          {feedTypeOptions.map(
+            ({ value, icon }) => (
               <button
                 key={value}
                 className={
@@ -180,20 +179,18 @@ export default function FeedModal({
                     : "feed-type-button"
                 }
                 onClick={() =>
-                  setFeedType(
-                    value as FeedType,
-                  )
+                  setFeedType(value)
                 }
               >
                 {icon}
-                <span>{label}</span>
+                <span>{feedTypeLabel(value, lang)}</span>
               </button>
             ),
           )}
         </div>
 
         <label className="form-field">
-          <span>Date and time</span>
+          <span>{t("feeding.dateAndTime")}</span>
 
           <input
             className="datetime-input"
@@ -209,7 +206,7 @@ export default function FeedModal({
 
         {feedType === "bottle" && (
           <label className="form-field">
-            <span>Amount</span>
+            <span>{t("feeding.amount")}</span>
 
             <div className="amount-input">
               <input
@@ -232,15 +229,11 @@ export default function FeedModal({
 
         {feedType === "breast" && (
           <div className="form-field">
-            <span>Side</span>
+            <span>{t("feeding.side")}</span>
 
             <div className="side-buttons">
-              {[
-                ["left", "Left"],
-                ["right", "Right"],
-                ["both", "Both"],
-              ].map(
-                ([value, label]) => (
+              {sideOptions.map(
+                (value) => (
                   <button
                     key={value}
                     className={
@@ -249,12 +242,10 @@ export default function FeedModal({
                         : "side-button"
                     }
                     onClick={() =>
-                      setSide(
-                        value as FeedSide,
-                      )
+                      setSide(value)
                     }
                   >
-                    {label}
+                    {sideLabel(value, lang)}
                   </button>
                 ),
               )}
@@ -263,10 +254,10 @@ export default function FeedModal({
         )}
 
         <label className="form-field">
-          <span>Note</span>
+          <span>{t("feeding.note")}</span>
 
           <textarea
-            placeholder="Optional note..."
+            placeholder={t("feeding.notePlaceholder")}
             value={note}
             onChange={(event) =>
               setNote(
@@ -286,10 +277,10 @@ export default function FeedModal({
           }
         >
           {saving
-            ? "Saving..."
+            ? t("common.saving")
             : feed
-              ? "Save changes"
-              : "Save feeding"}
+              ? t("common.saveChanges")
+              : t("feeding.saveButton")}
         </button>
       </div>
     </div>
