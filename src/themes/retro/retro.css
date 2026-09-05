@@ -1,0 +1,377 @@
+/*
+ * Retro 1994 - an OPTIONAL alternate skin, scoped entirely under
+ * [data-visual-theme="retro"]. Nothing in here is allowed to affect the
+ * default theme: every selector below is prefixed, so this file is inert
+ * (loaded or not) unless that attribute is present on the page.
+ *
+ * This file only restyles the SAME classNames the app already uses
+ * everywhere (cards, buttons, forms, nav, status pills, bar fills) - no
+ * page was duplicated or restructured to build this theme.
+ */
+
+[data-visual-theme="retro"] {
+  --retro-bg-deep: #0c0e24;
+  --retro-bg: #141a3d;
+  --retro-panel: #1e2550;
+  --retro-panel-raised: #262f68;
+  --retro-border-light: #9aa5e8;
+  --retro-border-dark: #06071a;
+  --retro-ink: #dbe0ff;
+  --retro-ink-dim: #7c86c9;
+  --retro-gold: #ffd98e;
+  --retro-gold-dim: #caa15f;
+  --retro-green: #57c97b;
+  --retro-green-dim: #234a30;
+  --retro-red: #ff6b81;
+  --retro-amber: #f0b05a;
+  --retro-shadow: 0 0 0 2px var(--retro-border-dark), 4px 4px 0 var(--retro-border-dark);
+
+  min-height: 100%;
+  background: var(--retro-bg-deep);
+  color: var(--retro-ink);
+
+  font-family: "Courier New", ui-monospace, "Cascadia Mono", "Consolas", monospace;
+}
+
+[data-visual-theme="retro"] body,
+[data-visual-theme="retro"] .app-shell,
+[data-visual-theme="retro"] .home-page,
+[data-visual-theme="retro"] .history-page,
+[data-visual-theme="retro"] .analysis-page,
+[data-visual-theme="retro"] .settings-page,
+[data-visual-theme="retro"] .about-page,
+[data-visual-theme="retro"] .auth-page {
+  background:
+    radial-gradient(2px 2px at 10% 15%, rgba(255, 255, 255, 0.55) 0, transparent 60%),
+    radial-gradient(1.5px 1.5px at 80% 8%, rgba(255, 255, 255, 0.4) 0, transparent 60%),
+    radial-gradient(1.5px 1.5px at 60% 25%, rgba(255, 255, 255, 0.35) 0, transparent 60%),
+    radial-gradient(2px 2px at 30% 40%, rgba(255, 255, 255, 0.3) 0, transparent 60%),
+    radial-gradient(1.5px 1.5px at 90% 60%, rgba(255, 255, 255, 0.3) 0, transparent 60%),
+    radial-gradient(1.5px 1.5px at 15% 70%, rgba(255, 255, 255, 0.3) 0, transparent 60%),
+    var(--retro-bg-deep);
+  color: var(--retro-ink);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Typography                                                             */
+/* ---------------------------------------------------------------------- */
+
+[data-visual-theme="retro"] h1,
+[data-visual-theme="retro"] h2,
+[data-visual-theme="retro"] .setting-title,
+[data-visual-theme="retro"] .card-label,
+[data-visual-theme="retro"] .eyebrow {
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--retro-gold);
+  text-shadow: 2px 2px 0 var(--retro-border-dark);
+}
+
+[data-visual-theme="retro"] .card-label,
+[data-visual-theme="retro"] .eyebrow {
+  color: var(--retro-ink-dim);
+  text-shadow: none;
+  font-weight: 700;
+}
+
+[data-visual-theme="retro"] .page-description,
+[data-visual-theme="retro"] .muted {
+  color: var(--retro-ink-dim);
+}
+
+[data-visual-theme="retro"] a {
+  color: inherit;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Pixel panel treatment - reused for every card-like surface in the app  */
+/* ---------------------------------------------------------------------- */
+
+[data-visual-theme="retro"] .sleep-card,
+[data-visual-theme="retro"] .feed-card,
+[data-visual-theme="retro"] .empty-card,
+[data-visual-theme="retro"] .today-stats,
+[data-visual-theme="retro"] .sleep-strip,
+[data-visual-theme="retro"] .analysis-card,
+[data-visual-theme="retro"] .stat-card,
+[data-visual-theme="retro"] .settings-card,
+[data-visual-theme="retro"] .settings-section,
+[data-visual-theme="retro"] .auth-card,
+[data-visual-theme="retro"] .history-item,
+[data-visual-theme="retro"] .about-hero,
+[data-visual-theme="retro"] .notification-settings,
+[data-visual-theme="retro"] .notification-settings__card,
+[data-visual-theme="retro"] .wake-window-row,
+[data-visual-theme="retro"] .personal-vs-guideline > div,
+[data-visual-theme="retro"] .age-guide-metric-row {
+  background: var(--retro-panel);
+  border: 2px solid var(--retro-border-light);
+  border-radius: 2px;
+  box-shadow: var(--retro-shadow);
+}
+
+[data-visual-theme="retro"] .sleep-list-item,
+[data-visual-theme="retro"] .month-footer > div {
+  background: var(--retro-panel-raised);
+  border: 1px solid var(--retro-border-light);
+  border-radius: 2px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Buttons - chunky pixel-bevel look                                      */
+/* ---------------------------------------------------------------------- */
+
+[data-visual-theme="retro"] .primary-button,
+[data-visual-theme="retro"] .secondary-button,
+[data-visual-theme="retro"] .auth-submit,
+[data-visual-theme="retro"] .notification-settings__test {
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 2px;
+  border: 2px solid var(--retro-border-dark);
+}
+
+[data-visual-theme="retro"] .primary-button {
+  background: var(--retro-gold-dim);
+  color: var(--retro-border-dark);
+  box-shadow: 3px 3px 0 var(--retro-border-dark);
+}
+
+[data-visual-theme="retro"] .primary-button:active {
+  box-shadow: 1px 1px 0 var(--retro-border-dark);
+  transform: translate(2px, 2px);
+}
+
+[data-visual-theme="retro"] .secondary-button,
+[data-visual-theme="retro"] .notification-settings__test {
+  background: var(--retro-panel-raised);
+  color: var(--retro-ink);
+  box-shadow: 3px 3px 0 var(--retro-border-dark);
+}
+
+[data-visual-theme="retro"] .secondary-button:active {
+  box-shadow: 1px 1px 0 var(--retro-border-dark);
+  transform: translate(2px, 2px);
+}
+
+[data-visual-theme="retro"] .text-button,
+[data-visual-theme="retro"] .auth-link-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--retro-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+[data-visual-theme="retro"]
+  .side-button,
+[data-visual-theme="retro"] .feed-type-button,
+[data-visual-theme="retro"] .auth-tab {
+  font-family: inherit;
+  text-transform: uppercase;
+  border-radius: 2px;
+  border: 2px solid var(--retro-border-light);
+  background: var(--retro-panel);
+  color: var(--retro-ink-dim);
+}
+
+[data-visual-theme="retro"] .side-button.active,
+[data-visual-theme="retro"] .feed-type-button.active,
+[data-visual-theme="retro"] .auth-tab.auth-tab--active,
+[data-visual-theme="retro"] .analysis-tab.active {
+  background: var(--retro-gold-dim);
+  color: var(--retro-border-dark);
+  border-color: var(--retro-border-dark);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Bottom nav - RPG menu list feel, kept in its existing (mobile-friendly) */
+/* horizontal position rather than the reference's vertical desktop menu  */
+/* ---------------------------------------------------------------------- */
+
+[data-visual-theme="retro"] .bottom-nav {
+  background: var(--retro-panel);
+  border-top: 2px solid var(--retro-border-light);
+  box-shadow: 0 -4px 0 var(--retro-border-dark);
+}
+
+[data-visual-theme="retro"] .bottom-nav a {
+  text-transform: uppercase;
+  color: var(--retro-ink-dim);
+  position: relative;
+}
+
+[data-visual-theme="retro"] .bottom-nav a.active {
+  color: var(--retro-gold);
+}
+
+[data-visual-theme="retro"] .bottom-nav a.active::before {
+  content: "\25b6";
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--retro-gold);
+  animation: retro-cursor-blink 1s steps(1) infinite;
+}
+
+@keyframes retro-cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Status pill / chips / progress-bar-like elements                       */
+/* ---------------------------------------------------------------------- */
+
+[data-visual-theme="retro"] .status-pill {
+  border-radius: 2px;
+  border: 2px solid var(--retro-border-dark);
+  background: var(--retro-panel-raised);
+  color: var(--retro-gold);
+  text-transform: uppercase;
+}
+
+[data-visual-theme="retro"] .trend-chip,
+[data-visual-theme="retro"] .status-chip {
+  border-radius: 2px;
+  border: 1px solid var(--retro-border-dark);
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+[data-visual-theme="retro"] .trend-chip.positive,
+[data-visual-theme="retro"] .status-chip.positive {
+  background: var(--retro-green-dim);
+  color: var(--retro-green);
+}
+
+[data-visual-theme="retro"] .trend-chip.warning,
+[data-visual-theme="retro"] .status-chip.warning {
+  background: #4a3720;
+  color: var(--retro-amber);
+}
+
+[data-visual-theme="retro"] .trend-chip.neutral {
+  background: var(--retro-panel-raised);
+  color: var(--retro-ink-dim);
+}
+
+[data-visual-theme="retro"] .bar-list-track,
+[data-visual-theme="retro"] .bar-list-fill,
+[data-visual-theme="retro"] .month-bar,
+[data-visual-theme="retro"] .sleep-strip-cell {
+  border-radius: 1px;
+}
+
+[data-visual-theme="retro"] .bar-list-track {
+  background: var(--retro-panel-raised);
+  border: 1px solid var(--retro-border-dark);
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0 6px,
+    var(--retro-border-dark) 6px 7px
+  );
+}
+
+[data-visual-theme="retro"] .bar-list-fill,
+[data-visual-theme="retro"] .sleep-strip-cell.sleep,
+[data-visual-theme="retro"] .sleep-clock-segment.sleep {
+  background: var(--retro-green) !important;
+}
+
+[data-visual-theme="retro"] .bar-list-fill.warning {
+  background: var(--retro-amber) !important;
+}
+
+[data-visual-theme="retro"] .bar-list-fill.neutral,
+[data-visual-theme="retro"] .sleep-strip-cell,
+[data-visual-theme="retro"] .sleep-clock-segment {
+  background: var(--retro-panel-raised) !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Forms                                                                   */
+/* ---------------------------------------------------------------------- */
+
+[data-visual-theme="retro"] .settings-select,
+[data-visual-theme="retro"] .datetime-input,
+[data-visual-theme="retro"] input[type="text"],
+[data-visual-theme="retro"] input[type="email"],
+[data-visual-theme="retro"] input[type="password"],
+[data-visual-theme="retro"] input[type="number"],
+[data-visual-theme="retro"] input[type="date"],
+[data-visual-theme="retro"] .amount-input,
+[data-visual-theme="retro"] textarea,
+[data-visual-theme="retro"] .auth-field input {
+  font-family: inherit;
+  border-radius: 2px;
+  border: 2px solid var(--retro-border-light);
+  background: var(--retro-bg);
+  color: var(--retro-ink);
+}
+
+[data-visual-theme="retro"] .settings-select option {
+  color: #17131f;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Modals                                                                  */
+/* ---------------------------------------------------------------------- */
+
+[data-visual-theme="retro"] .feed-modal {
+  background: var(--retro-panel);
+  border: 2px solid var(--retro-border-light);
+  border-radius: 2px;
+  box-shadow: var(--retro-shadow);
+}
+
+[data-visual-theme="retro"] .modal-close {
+  color: var(--retro-ink);
+}
+
+[data-visual-theme="retro"] .form-error,
+[data-visual-theme="retro"] .settings-error {
+  color: var(--retro-red);
+}
+
+[data-visual-theme="retro"] .star-button.active {
+  color: var(--retro-gold);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Splash                                                                  */
+/* ---------------------------------------------------------------------- */
+
+[data-visual-theme="retro"] .splash-screen {
+  background: var(--retro-bg-deep);
+}
+
+[data-visual-theme="retro"] .splash-content h1 {
+  color: var(--retro-gold);
+}
+
+[data-visual-theme="retro"] .loading-dots span {
+  border-radius: 0;
+  background: var(--retro-gold);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Pixel decoration helpers (used by PixelIcon / BabySprite)               */
+/* ---------------------------------------------------------------------- */
+
+[data-visual-theme="retro"] .pixel-icon,
+[data-visual-theme="retro"] .baby-sprite {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+[data-visual-theme="retro"] .baby-sprite-panel {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0;
+}

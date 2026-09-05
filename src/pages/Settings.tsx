@@ -50,6 +50,14 @@ export default function Settings() {
     (state) => state.setBabies,
   );
 
+  const visualTheme = useAppStore(
+    (state) => state.visualTheme,
+  );
+
+  const setVisualTheme = useAppStore(
+    (state) => state.setVisualTheme,
+  );
+
   const selectedBaby =
     babies.find(
       (baby) => baby.id === currentBabyId,
@@ -240,27 +248,67 @@ export default function Settings() {
         </select>
       </section>
 
-      <section className="settings-card">
-        <div className="setting-copy">
-          <p className="setting-title">
-            {t("settings.appearanceTitle")}
-          </p>
+      <section className="settings-card appearance-card">
+        <div className="appearance-row">
+          <div className="setting-copy">
+            <p className="setting-title">
+              {t("settings.appearanceTitle")}
+            </p>
 
-          <p className="muted">
-            {t("settings.currentTheme", {
-              theme: theme === "dark" ? t("settings.themeDark") : t("settings.themeLight"),
-            })}
-          </p>
+            <p className="muted">
+              {t("settings.currentTheme", {
+                theme: theme === "dark" ? t("settings.themeDark") : t("settings.themeLight"),
+              })}
+            </p>
+          </div>
+
+          <button
+            className="secondary-button"
+            onClick={toggleTheme}
+          >
+            {theme === "dark"
+              ? t("settings.useLightMode")
+              : t("settings.useDarkMode")}
+          </button>
         </div>
 
-        <button
-          className="secondary-button"
-          onClick={toggleTheme}
-        >
-          {theme === "dark"
-            ? t("settings.useLightMode")
-            : t("settings.useDarkMode")}
-        </button>
+        <div className="appearance-row">
+          <div className="setting-copy">
+            <p className="setting-title">
+              {t("settings.visualThemeTitle")}
+            </p>
+
+            <p className="muted">
+              {t("settings.visualThemeNote")}
+            </p>
+          </div>
+
+          <div className="side-buttons">
+            <button
+              type="button"
+              className={
+                visualTheme === "default"
+                  ? "side-button active"
+                  : "side-button"
+              }
+              onClick={() => setVisualTheme("default")}
+            >
+              {t("settings.visualThemeDefault")}
+            </button>
+
+            <button
+              type="button"
+              className={
+                visualTheme === "retro"
+                  ? "side-button active"
+                  : "side-button"
+              }
+              onClick={() => setVisualTheme("retro")}
+            >
+              {t("settings.visualThemeRetro")}
+            </button>
+          </div>
+        </div>
       </section>
 
       <section className="settings-card">

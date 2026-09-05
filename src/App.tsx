@@ -10,6 +10,7 @@ import "./App.css";
 
 import { useAppStore } from "./stores/appStore";
 import { useTranslation } from "./i18n";
+import PixelIcon from "./themes/retro/PixelIcon";
 
 // Route-level code splitting: the default route (Home) no longer needs to
 // download/parse the Analysis page's code (5 tabs plus the age-guide/
@@ -24,6 +25,11 @@ const About = lazy(() => import("./pages/About"));
 function App() {
   const { t } = useTranslation();
   const theme = useAppStore((state) => state.theme);
+  const isRetro = useAppStore((state) => state.visualTheme) === "retro";
+
+  function navIcon(name: "home" | "history" | "analysis" | "settings", glyph: string) {
+    return isRetro ? <PixelIcon name={name} /> : glyph;
+  }
 
   return (
     <div data-theme={theme}>
@@ -42,22 +48,22 @@ function App() {
 
         <nav className="bottom-nav">
           <NavLink to="/">
-            <span className="nav-icon">⌂</span>
+            <span className="nav-icon">{navIcon("home", "⌂")}</span>
             <span>{t("nav.home")}</span>
           </NavLink>
 
           <NavLink to="/history">
-            <span className="nav-icon">◷</span>
+            <span className="nav-icon">{navIcon("history", "◷")}</span>
             <span>{t("nav.history")}</span>
           </NavLink>
 
           <NavLink to="/analysis">
-            <span className="nav-icon">⌁</span>
+            <span className="nav-icon">{navIcon("analysis", "⌁")}</span>
             <span>{t("nav.analysis")}</span>
           </NavLink>
 
           <NavLink to="/settings">
-            <span className="nav-icon">⚙</span>
+            <span className="nav-icon">{navIcon("settings", "⚙")}</span>
             <span>{t("nav.settings")}</span>
           </NavLink>
         </nav>

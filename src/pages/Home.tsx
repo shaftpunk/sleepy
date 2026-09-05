@@ -32,6 +32,7 @@ import {
 import FeedModal from "../components/FeedModal";
 import FeedHistory from "../components/FeedHistory";
 import SleepStrip from "../components/SleepStrip";
+import BabySprite from "../themes/retro/BabySprite";
 
 import { useAnalyticsData } from "../hooks/useAnalyticsData";
 import { computeNextFeedSide, computeNextSleepHint, computeTodayTotals } from "../analytics/home";
@@ -95,6 +96,12 @@ export default function Home() {
       (state) =>
         state.babies
     );
+
+  const isRetro =
+    useAppStore(
+      (state) =>
+        state.visualTheme
+    ) === "retro";
 
   const currentBaby =
     babies.find(
@@ -480,6 +487,12 @@ export default function Home() {
         </header>
 
         <section className="sleep-card">
+          {isRetro && (
+            <div className="baby-sprite-panel">
+              <BabySprite asleep={Boolean(activeSleep)} />
+            </div>
+          )}
+
           <p className="sleep-label">
             {activeSleep
               ? t("home.sleepingFor")
