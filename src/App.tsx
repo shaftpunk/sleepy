@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense } from "react";
 import {
   BrowserRouter,
   NavLink,
@@ -8,40 +8,36 @@ import {
 
 import "./App.css";
 
-import Home from "./pages/Home";
-import History from "./pages/History";
-import Analysis from "./pages/Analysis";
-import Settings from "./pages/Settings";
-import About from "./pages/About";
-import SplashScreen from "./components/SplashScreen";
-
 import { useAppStore } from "./stores/appStore";
 import { useTranslation } from "./i18n";
+
+// Route-level code splitting: the default route (Home) no longer needs to
+// download/parse the Analysis page's code (5 tabs plus the age-guide/
+// personal-profile/prediction analytics, its heaviest surface) just to
+// render. Each page becomes its own chunk, fetched on first visit.
+const Home = lazy(() => import("./pages/Home"));
+const History = lazy(() => import("./pages/History"));
+const Analysis = lazy(() => import("./pages/Analysis"));
+const Settings = lazy(() => import("./pages/Settings"));
+const About = lazy(() => import("./pages/About"));
 
 function App() {
   const { t } = useTranslation();
   const theme = useAppStore((state) => state.theme);
-  const [showSplash, setShowSplash] = useState(true);
-
-  if (showSplash) {
-    return (
-      <SplashScreen
-        onFinished={() => setShowSplash(false)}
-      />
-    );
-  }
 
   return (
     <div data-theme={theme}>
       <BrowserRouter>
         <div className="app-shell">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/history" element={<History />} />
-            <Route path="/analysis" element={<Analysis />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/about" element={<About />} />
-          </Routes>
+          <Suspense fallback={<div className="empty-card">{t("common.loading")}</div>}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/history" element={<History />} />
+              <Route path="/analysis" element={<Analysis />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/about" element={<About />} />
+            </Routes>
+          </Suspense>
         </div>
 
         <nav className="bottom-nav">

@@ -1,13 +1,12 @@
 import "./SplashScreen.css";
 import { useTranslation } from "../i18n";
 
-type SplashScreenProps = {
-  onFinished: () => void;
-};
-
-export default function SplashScreen({
-  onFinished,
-}: SplashScreenProps) {
+// A brief branding overlay only - it is not, and must not become, a gate on
+// app readiness (see main.tsx for why: it's shown concurrently with the
+// real auth/data loading, for a short fixed duration, not in sequence
+// before or after it). The video autoplays for atmosphere but nothing waits
+// on it finishing.
+export default function SplashScreen() {
   const { t } = useTranslation();
 
   return (
@@ -21,7 +20,6 @@ export default function SplashScreen({
           autoPlay
           muted
           playsInline
-          onEnded={onFinished}
         />
 
         <div className="loading-dots" aria-label={t("common.loading")}>
