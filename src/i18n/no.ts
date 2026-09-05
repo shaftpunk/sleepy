@@ -47,6 +47,7 @@ const no = {
     guidanceDisclaimer: "Kun veiledning – ikke en medisinsk vurdering.",
     goToSettings: "Gå til innstillinger",
     daysCount: "{{count}} dager",
+    now: "Nå",
   },
 
   nav: {
@@ -107,6 +108,9 @@ const no = {
   history: {
     pageTitle: "Historikk",
     pageDescription: "Korriger, del, legg til eller fjern registreringer.",
+    sleepClockTitle: "Siste døgn",
+    sleepClockDescription: "Søvn og våken tid siste 24 timer, vist på en klokke.",
+    sleepClockPercentOfDay: "{{pct}}% av døgnet",
   },
 
   analysis: {

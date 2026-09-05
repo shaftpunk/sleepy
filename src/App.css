@@ -1679,3 +1679,109 @@
   font-size: 0.9rem;
   line-height: 1.4;
 }
+
+.sleep-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+
+  margin-top: 12px;
+}
+
+.sleep-clock-svg {
+  width: 100%;
+  max-width: 260px;
+  height: auto;
+}
+
+.sleep-clock-segment {
+  fill: rgba(255, 255, 255, 0.06);
+}
+
+.sleep-clock-segment.sleep {
+  fill: #8f74df;
+}
+
+.sleep-clock-tick {
+  stroke: rgba(255, 255, 255, 0.22);
+  stroke-width: 1.5;
+}
+
+.sleep-clock-tick-label {
+  fill: #8f859c;
+  font-size: 11px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.sleep-clock-now-dot {
+  fill: #f0b05a;
+  stroke: #17131f;
+  stroke-width: 2;
+}
+
+.sleep-clock-center-value {
+  fill: #f5efff;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.sleep-clock-center-pct {
+  fill: #9f96ad;
+  font-size: 12px;
+}
+
+.sleep-clock-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+
+  font-size: 0.78rem;
+  color: #9f96ad;
+}
+
+.sleep-clock-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sleep-clock-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.sleep-clock-legend-dot.sleep {
+  background: #8f74df;
+}
+
+.sleep-clock-legend-dot.now {
+  background: #f0b05a;
+}
+
+[data-theme="light"] .sleep-clock-segment {
+  fill: rgba(58, 39, 87, 0.08);
+}
+
+[data-theme="light"] .sleep-clock-tick {
+  stroke: rgba(58, 39, 87, 0.18);
+}
+
+[data-theme="light"] .sleep-clock-tick-label,
+[data-theme="light"] .sleep-clock-center-pct,
+[data-theme="light"] .sleep-clock-legend {
+  fill: #776d82;
+  color: #776d82;
+}
+
+[data-theme="light"] .sleep-clock-center-value {
+  fill: #2c2238;
+}
+
+[data-theme="light"] .sleep-clock-now-dot {
+  stroke: #f8f5fc;
+}

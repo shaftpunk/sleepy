@@ -37,6 +37,10 @@ import SleepSplitModal
 import FeedModal
   from "../components/FeedModal";
 
+import SleepClock
+  from "../components/history/SleepClock";
+
+import { useAnalyticsData } from "../hooks/useAnalyticsData";
 import { feedTypeLabel, formatClock, formatDuration, sideLabel } from "../lib/format";
 import { LOCALES, useTranslation } from "../i18n";
 
@@ -61,6 +65,18 @@ export default function History() {
       (baby) =>
         baby.id === currentBabyId
     ) ?? null;
+
+  const {
+    sessions,
+    active,
+  } = useAnalyticsData(currentBabyId);
+
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), 60000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   function formatDate(date: string) {
     return new Intl.DateTimeFormat(LOCALES[lang], {
@@ -240,6 +256,22 @@ export default function History() {
             {t("history.pageDescription")}
           </p>
         </header>
+
+
+        {currentBabyId && (
+          <section className="analysis-card">
+            <div className="analysis-card-heading">
+              <div>
+                <p className="card-label">{t("common.sleep")}</p>
+                <h2>{t("history.sleepClockTitle")}</h2>
+              </div>
+            </div>
+
+            <p className="muted">{t("history.sleepClockDescription")}</p>
+
+            <SleepClock sessions={sessions} active={active} now={now} />
+          </section>
+        )}
 
 
         <section className="history-section">

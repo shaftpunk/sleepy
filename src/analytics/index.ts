@@ -15,3 +15,4 @@ export * from "./sleepGuidelines";
 export * from "./rolling24h";
 export * from "./personalSleepProfile";
 export * from "./sleepPrediction";
+export * from "./sleepClock";

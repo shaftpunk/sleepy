@@ -48,6 +48,7 @@ const en = {
     guidanceDisclaimer: "Guidance only – not a medical assessment.",
     goToSettings: "Go to Settings",
     daysCount: "{{count}} days",
+    now: "Now",
   },
 
   nav: {
@@ -108,6 +109,9 @@ const en = {
   history: {
     pageTitle: "History",
     pageDescription: "Correct, split, add or remove registrations.",
+    sleepClockTitle: "Last 24 hours",
+    sleepClockDescription: "Sleep and awake time over the last 24 hours, shown on a clock.",
+    sleepClockPercentOfDay: "{{pct}}% of the day",
   },
 
   analysis: {

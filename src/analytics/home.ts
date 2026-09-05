@@ -79,17 +79,20 @@ export type SleepStripCell = {
 };
 
 const STRIP_CELL_MINUTES = 10;
-const STRIP_CELL_COUNT = 72; // 12h / 10min
+const STRIP_DEFAULT_WINDOW_HOURS = 12;
 
 // A cell counts as "sleep" if >=50% of its span is covered by any completed
-// session or the currently-active one.
+// session or the currently-active one. `windowHours` defaults to 12 (the
+// Home screen's strip); src/analytics/sleepClock.ts reuses this with 24h.
 export function computeSleepStrip(
   sessions: SleepSession[],
   active: ActiveSleep | null,
-  now: number
+  now: number,
+  windowHours: number = STRIP_DEFAULT_WINDOW_HOURS
 ): SleepStripCell[] {
   const cellMs = STRIP_CELL_MINUTES * 60000;
-  const windowStart = now - STRIP_CELL_COUNT * cellMs;
+  const cellCount = Math.round((windowHours * 60) / STRIP_CELL_MINUTES);
+  const windowStart = now - cellCount * cellMs;
 
   const intervals: { start: number; end: number }[] = sessions
     .filter((s) => s.endMs > windowStart && s.startMs < now)
@@ -101,7 +104,7 @@ export function computeSleepStrip(
 
   const cells: SleepStripCell[] = [];
 
-  for (let i = 0; i < STRIP_CELL_COUNT; i++) {
+  for (let i = 0; i < cellCount; i++) {
     const cellStart = windowStart + i * cellMs;
     const cellEnd = cellStart + cellMs;
 
