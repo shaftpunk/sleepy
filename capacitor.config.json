@@ -1,0 +1,9 @@
+{
+  "appId": "no.larsmarius.sleepy",
+  "appName": "Sleepy",
+  "webDir": "dist-ios",
+  "ios": {
+    "contentInset": "automatic",
+    "backgroundColor": "#17131f"
+  }
+}
