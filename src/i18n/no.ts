@@ -2,6 +2,17 @@
 // of truth: en.ts is written `satisfies Translations` against `typeof
 // noTranslations`, so a missing/extra key there is a compile error.
 const no = {
+  sound: {
+    title: "Lydovervåking", privacy: "Lyd analyseres på denne enheten og tas ikke opp. Bare tidspunkter og lydnivå lagres.",
+    sensitivity: "Følsomhet", low: "Lav", medium: "Middels", high: "Høy",
+    limitation: "Lytter bare på hjemskjermen under aktiv søvn. Overvåking stopper når du bytter side, appen går i bakgrunnen eller skjermen låses. Start igjen på hjemskjermen.",
+    notAlarm: "Dette er en lydlogg, ikke en babyalarm eller gråtdetektor. Bare én enhet bør lytte per søvnøkt.",
+    off: "Av", starting: "Ber om mikrofontilgang …", listening: "Lytter – rolig", detected: "Lyd registrert",
+    blocked: "Mikrofontilgang er blokkert. Søvnregistrering fungerer fortsatt.", unsupported: "Mikrofon krever HTTPS og en støttet nettleser.",
+    paused: "Overvåking er satt på pause", error: "Mikrofonen kunne ikke startes", restart: "Start lydovervåking",
+    level: "Relativt lydnivå", saveError: "Lydhendelser kunne ikke lagres. Overvåking er stoppet. Prøv igjen før du laster siden på nytt; usendte hendelser ligger bare i minnet.",
+    retrySave: "Prøv lagring igjen", saving: "Lagrer lydhendelser …",
+  },
   common: {
     appName: "Sleepy",
     save: "Lagre",

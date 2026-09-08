@@ -3,6 +3,17 @@ import type { Translations } from "./types";
 // English — mirrors no.ts's shape exactly. `satisfies Translations` makes a
 // missing or extra key here a compile error.
 const en = {
+  sound: {
+    title: "Sound monitoring", privacy: "Audio is analyzed on this device and is not recorded. Only timestamps and sound levels are stored.",
+    sensitivity: "Sensitivity", low: "Low", medium: "Medium", high: "High",
+    limitation: "Listens only on Home during active sleep. Monitoring stops on navigation, backgrounding or screen lock. Restart on Home.",
+    notAlarm: "This is a sound log, not a baby alarm or cry detector. Only one device should listen per sleep session.",
+    off: "Off", starting: "Requesting microphone …", listening: "Listening – quiet", detected: "Sound detected",
+    blocked: "Microphone access is blocked. Sleep tracking still works.", unsupported: "Microphone requires HTTPS and a supported browser.",
+    paused: "Monitoring paused", error: "Could not start microphone", restart: "Start sound monitoring",
+    level: "Relative sound level", saveError: "Sound events could not be saved. Monitoring stopped. Retry before reloading; unsent events are held only in memory.",
+    retrySave: "Retry saving", saving: "Saving sound events …",
+  },
   common: {
     appName: "Sleepy",
     save: "Save",

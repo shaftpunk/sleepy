@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { useAppStore } from "../stores/appStore";
 import NotificationSettings from "../components/NotificationSettings";
+import SoundMonitoringSettings from "../components/SoundMonitoringSettings";
 import FamilySettings from "../components/FamilySettings";
 import { useTranslation } from "../i18n";
 import { isValidBirthDateInput } from "../analytics/localDate";
@@ -136,6 +137,8 @@ export default function Settings() {
           {t("settings.pageDescription")}
         </p>
       </header>
+
+      <SoundMonitoringSettings />
 
       <section className="settings-card">
         <div className="setting-copy">

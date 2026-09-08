@@ -30,6 +30,7 @@ import {
 } from "../services/feedRealtime";
 
 import FeedModal from "../components/FeedModal";
+import SoundMonitorPanel from "../components/SoundMonitorPanel";
 import FeedHistory from "../components/FeedHistory";
 import SleepStrip from "../components/SleepStrip";
 import BabySprite from "../themes/retro/BabySprite";
@@ -528,6 +529,8 @@ export default function Home() {
                 : t("home.startSleep")}
           </button>
         </section>
+
+        <SoundMonitorPanel sleep={activeSleep} />
 
         {!activeSleep && nextSleepHint && (
           <p className="next-sleep-hint">
