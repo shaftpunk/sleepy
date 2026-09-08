@@ -42,6 +42,7 @@ import { median } from "../analytics/time";
 import { feedTypeLabel, formatClock, formatDuration, sideLabel, stars } from "../lib/format";
 import { useTranslation } from "../i18n";
 import "./SleepButton.css";
+import SleepStartOptions from "../components/SleepStartOptions";
 
 function durationFrom(
   dateString: string
@@ -435,8 +436,12 @@ export default function Home() {
       );
   }, []);
 
-  async function handleSleep() {
+  const [sleepActionError, setSleepActionError] = useState<string | null>(null);
+
+  async function handleSleep(minutesAgo = 0) {
+    if (saving) return;
     try {
+      setSleepActionError(null);
       setSaving(true);
 
       if (activeSleep) {
@@ -450,12 +455,14 @@ export default function Home() {
         }
 
         await startSleep(
-          currentBabyId
+          currentBabyId,
+          minutesAgo
         );
       }
 
       await loadSleepData();
     } catch (error) {
+      setSleepActionError(error instanceof Error ? error.message : t("errors.generic"));
       console.error(
         "Sleep action failed:",
         error
@@ -513,10 +520,10 @@ export default function Home() {
                 : t("home.readyForNextNap")}
           </p>
 
-          <button
+          {activeSleep ? <button
             className={activeSleep ? "primary-button sleep-action is-sleeping" : "primary-button sleep-action"}
             onClick={
-              handleSleep
+              () => void handleSleep()
             }
             disabled={
               loading ||
@@ -533,7 +540,9 @@ export default function Home() {
               : activeSleep
                 ? t("home.stopSleep")
                 : t("home.startSleep")}</span>
-          </button>
+          </button> : <SleepStartOptions key={currentBabyId}
+            disabled={loading || saving || !currentBabyId} saving={saving} onStart={handleSleep} />}
+          {sleepActionError && <p role="alert">{sleepActionError}</p>}
         </section>
 
         <SoundMonitorPanel sleep={activeSleep} />

@@ -1,0 +1,8 @@
+.sleep-start-options { display: flex; flex-direction: column; gap: 12px; }
+.sleep-start-options p { margin: 0; font-size: .9rem; }
+.sleep-start-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.sleep-start-presets button { flex: 1 0 auto; min-height: 44px; padding: 10px; }
+.sleep-start-presets button[aria-pressed="true"] { outline: 2px solid currentColor; outline-offset: -3px; font-weight: 800; }
+.sleep-start-custom { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; font-size: .9rem; }
+.sleep-start-custom input { width: 90px; min-height: 44px; box-sizing: border-box; padding: 8px; font: inherit; font-size: 16px; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 8px; }
+[data-visual-theme="retro"] .sleep-start-custom input { border-radius: 2px; }

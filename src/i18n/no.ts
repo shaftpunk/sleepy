@@ -2,6 +2,11 @@
 // of truth: en.ts is written `satisfies Translations` against `typeof
 // noTranslations`, so a missing/extra key there is a compile error.
 const no = {
+  sleepStart: {
+    question: "Når sovnet babyen?", now: "Nå", preset: "{{minutes}} min",
+    custom: "Antall minutter siden", invalid: "Skriv et gyldig helt antall minutter, 0 eller mer.",
+    overlap: "Starttidspunktet overlapper forrige søvnøkt. Velg færre minutter eller korriger forrige økt i historikken.",
+  },
   sound: {
     title: "Lydovervåking", privacy: "Lyd analyseres på denne enheten og tas ikke opp. Bare tidspunkter og lydnivå lagres.",
     sensitivity: "Følsomhet", low: "Lav", medium: "Middels", high: "Høy",

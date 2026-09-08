@@ -75,12 +75,25 @@ async function getCurrentUserId(): Promise<string> {
 
 export async function startSleep(
   babyId: string,
+  minutesAgo = 0,
 ) {
+  // Anchor to the click time, before the asynchronous checks.
+  const started = new Date(Date.now() - minutesAgo * 60000);
+  if (!Number.isSafeInteger(minutesAgo) || minutesAgo < 0 || !Number.isFinite(started.getTime())) {
+    throw new Error(t("sleepStart.invalid"));
+  }
   const current =
     await getActiveSleep(babyId);
 
   if (current) {
     return current;
+  }
+
+  if (minutesAgo > 0) {
+    const previous = await getLastCompletedSleep(babyId);
+    if (previous?.endtime && started.getTime() < Date.parse(previous.endtime)) {
+      throw new Error(t("sleepStart.overlap"));
+    }
   }
 
   const userId =
@@ -96,8 +109,7 @@ export async function startSleep(
 
       sleep_type: "sleep",
 
-      starttime:
-        new Date().toISOString(),
+      starttime: started.toISOString(),
 
       endtime: null,
 

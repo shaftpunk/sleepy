@@ -3,6 +3,11 @@ import type { Translations } from "./types";
 // English — mirrors no.ts's shape exactly. `satisfies Translations` makes a
 // missing or extra key here a compile error.
 const en = {
+  sleepStart: {
+    question: "When did your baby fall asleep?", now: "Now", preset: "{{minutes}} min",
+    custom: "Minutes ago", invalid: "Enter a valid whole number of minutes, 0 or more.",
+    overlap: "The start time overlaps the previous sleep session. Choose fewer minutes or correct the previous session in history.",
+  },
   sound: {
     title: "Sound monitoring", privacy: "Audio is analyzed on this device and is not recorded. Only timestamps and sound levels are stored.",
     sensitivity: "Sensitivity", low: "Low", medium: "Medium", high: "High",
