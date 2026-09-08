@@ -1,0 +1,59 @@
+.primary-button.sleep-action {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  transition: background-color 240ms ease, color 240ms ease;
+}
+
+.primary-button.sleep-action.is-sleeping {
+  background: #c6bce8;
+  color: #29213f;
+  box-shadow: 0 8px 24px rgba(151, 134, 205, 0.2);
+}
+
+.sleep-action-zzz {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.sleep-action-zzz span {
+  display: inline-block;
+  animation: sleepy-button-drift 3s ease-in-out infinite;
+}
+.sleep-action-zzz span:nth-child(1) { font-size: .8em; }
+.sleep-action-zzz span:nth-child(2) { font-size: 1.1em; animation-delay: .35s; }
+.sleep-action-zzz span:nth-child(3) { font-size: 1.3em; animation-delay: .7s; }
+
+@keyframes sleepy-button-drift {
+  0%, 100% { transform: translateY(1px); opacity: .65; }
+  50% { transform: translateY(-3px); opacity: 1; }
+}
+
+.primary-button.sleep-action:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 4px;
+}
+.primary-button.sleep-action:disabled { cursor: wait; }
+.primary-button.sleep-action:disabled .sleep-action-zzz span { animation-play-state: paused; }
+
+/* Specificity keeps the active color when the retro stylesheet loads later.
+   Preserve the existing pixel bevel and pressed transform. */
+[data-visual-theme="retro"] .primary-button.sleep-action.is-sleeping {
+  background: #b8acd9;
+  color: var(--retro-border-dark, #21192f);
+  box-shadow: 3px 3px 0 var(--retro-border-dark, #21192f);
+}
+[data-visual-theme="retro"] .primary-button.sleep-action.is-sleeping:active {
+  box-shadow: 1px 1px 0 var(--retro-border-dark, #21192f);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primary-button.sleep-action { transition: none; }
+  .sleep-action-zzz span { animation: none; opacity: 1; }
+}

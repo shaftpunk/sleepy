@@ -41,6 +41,7 @@ import { computeWakeWindows } from "../analytics/wakeWindows";
 import { median } from "../analytics/time";
 import { feedTypeLabel, formatClock, formatDuration, sideLabel, stars } from "../lib/format";
 import { useTranslation } from "../i18n";
+import "./SleepButton.css";
 
 function durationFrom(
   dateString: string
@@ -513,7 +514,7 @@ export default function Home() {
           </p>
 
           <button
-            className="primary-button"
+            className={activeSleep ? "primary-button sleep-action is-sleeping" : "primary-button sleep-action"}
             onClick={
               handleSleep
             }
@@ -522,11 +523,16 @@ export default function Home() {
               saving
             }
           >
-            {saving
+            {activeSleep && !saving && (
+              <span className="sleep-action-zzz" aria-hidden="true">
+                <span>z</span><span>Z</span><span>z</span>
+              </span>
+            )}
+            <span>{saving
               ? t("common.saving")
               : activeSleep
                 ? t("home.stopSleep")
-                : t("home.startSleep")}
+                : t("home.startSleep")}</span>
           </button>
         </section>
 
