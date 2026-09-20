@@ -1,4 +1,11 @@
-import { circularMeanTimeOfDay, dayKeyOf, lastNLocalDayKeys, median, minutesSinceLocalMidnight } from "./time";
+import {
+  circularMeanTimeOfDay,
+  dayKeyOf,
+  lastNLocalDayKeys,
+  median,
+  minutesSinceLocalMidnight,
+  splitMinutesByLocalDay,
+} from "./time";
 import { resolveSleepType } from "./sleepType";
 import { computeWakeWindows } from "./wakeWindows";
 import type { SleepSession } from "./types";
@@ -21,9 +28,10 @@ export function computeWindowAverage(
   const totals = new Map<string, number>();
 
   for (const s of sessions) {
-    const key = dayKeyOf(s.startMs);
-    if (!keys.has(key)) continue;
-    totals.set(key, (totals.get(key) ?? 0) + s.durationMin);
+    for (const frag of splitMinutesByLocalDay(s.startMs, s.endMs)) {
+      if (!keys.has(frag.dayKey)) continue;
+      totals.set(frag.dayKey, (totals.get(frag.dayKey) ?? 0) + frag.minutes);
+    }
   }
 
   const daysWithData = totals.size;

@@ -2,11 +2,14 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  build: {
+    outDir: mode === "native" ? "dist-ios" : "dist",
+  },
   plugins: [
     react(),
 
-    VitePWA({
+    mode !== "native" && VitePWA({
       strategies: "injectManifest",
 
       srcDir: "src",
@@ -58,4 +61,4 @@ export default defineConfig({
       },
     }),
   ],
-});
+}));

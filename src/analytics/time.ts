@@ -45,6 +45,31 @@ export function lastNLocalDayKeys(now: number, n: number): string[] {
   return out;
 }
 
+export type DayMinutesFragment = { dayKey: string; minutes: number };
+
+// Splits a session's duration across every local calendar day it spans, so a
+// session starting at 22:00 and ending at 06:00 the next day contributes ~2h
+// to the start day and ~6h to the following day, instead of crediting the
+// whole duration to whichever day it started on.
+export function splitMinutesByLocalDay(startMs: number, endMs: number): DayMinutesFragment[] {
+  const fragments: DayMinutesFragment[] = [];
+  let cursor = startMs;
+
+  while (cursor < endMs) {
+    const nextMidnight = startOfLocalDay(cursor) + 24 * 60 * 60 * 1000;
+    const chunkEnd = Math.min(nextMidnight, endMs);
+
+    fragments.push({
+      dayKey: dayKeyOf(cursor),
+      minutes: (chunkEnd - cursor) / 60000,
+    });
+
+    cursor = chunkEnd;
+  }
+
+  return fragments;
+}
+
 export function minutesSinceLocalMidnight(ms: number): number {
   const d = new Date(ms);
   return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;

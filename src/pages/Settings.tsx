@@ -11,12 +11,11 @@ import { updateBabyBirthDate } from "../services/householdService";
 export default function Settings() {
   const { t } = useTranslation();
 
+  // Still read (not shown in the UI anymore, see below) because
+  // NotificationSettings/notification_settings and push_subscriptions are
+  // still keyed by this legacy id, not the Sleepy 3.0 baby_id.
   const currentBbyId = useAppStore(
     (state) => state.currentBbyId,
-  );
-
-  const setBbyId = useAppStore(
-    (state) => state.setBbyId,
   );
 
   const theme = useAppStore(
@@ -218,38 +217,6 @@ export default function Settings() {
       )}
 
       <FamilySettings />
-
-      <section className="settings-card">
-        <div className="setting-copy">
-          <p className="setting-title">
-            {t("settings.locationTitle")}
-          </p>
-
-          <p className="muted">
-            {t("settings.legacyProfileNote")}
-          </p>
-        </div>
-
-        <select
-          className="settings-select"
-          value={currentBbyId}
-          onChange={(event) =>
-            setBbyId(
-              event.target.value as
-                | "Hamar"
-                | "Drammen",
-            )
-          }
-        >
-          <option value="Hamar">
-            Hamar
-          </option>
-
-          <option value="Drammen">
-            Drammen
-          </option>
-        </select>
-      </section>
 
       <section className="settings-card appearance-card">
         <div className="appearance-row">

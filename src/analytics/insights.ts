@@ -5,6 +5,7 @@ import {
   lastNLocalDayKeys,
   median,
   minutesSinceLocalMidnight,
+  splitMinutesByLocalDay,
 } from "./time";
 import { resolveSleepType } from "./sleepType";
 import { computeWakeWindows, groupWakeWindows } from "./wakeWindows";
@@ -104,8 +105,9 @@ export function computeBedtimeConsistency(
 function groupSumByLocalDay(sessions: SleepSession[]): Map<string, number> {
   const totals = new Map<string, number>();
   for (const s of sessions) {
-    const key = dayKeyOf(s.startMs);
-    totals.set(key, (totals.get(key) ?? 0) + s.durationMin);
+    for (const frag of splitMinutesByLocalDay(s.startMs, s.endMs)) {
+      totals.set(frag.dayKey, (totals.get(frag.dayKey) ?? 0) + frag.minutes);
+    }
   }
   return totals;
 }

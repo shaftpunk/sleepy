@@ -1,4 +1,4 @@
-import { dayKeyOf, lastNLocalDayKeys } from "./time";
+import { dayKeyOf, lastNLocalDayKeys, splitMinutesByLocalDay } from "./time";
 import { computeBucketDistribution, DEFAULT_BUCKET_WINDOW_DAYS, type BucketDistribution } from "./buckets";
 import { computeWakeWindows, groupWakeWindows, type WakeWindowGroup } from "./wakeWindows";
 import type { SleepSession } from "./types";
@@ -21,11 +21,19 @@ export function computeSleepPerDayLast7(
   for (const key of keys) byDay.set(key, { totalMinutes: 0, sessionCount: 0 });
 
   for (const s of sessions) {
-    const key = dayKeyOf(s.startMs);
-    const bucket = byDay.get(key);
-    if (!bucket) continue;
-    bucket.totalMinutes += s.durationMin;
-    bucket.sessionCount += 1;
+    // A session's minutes are split across every calendar day it actually
+    // spans (so an overnight sleep counts toward both days' totals), but
+    // sessionCount is a discrete "sleep started this day" tally that stays
+    // on the start day only - it doesn't make sense to split a single event
+    // in two.
+    for (const frag of splitMinutesByLocalDay(s.startMs, s.endMs)) {
+      const bucket = byDay.get(frag.dayKey);
+      if (!bucket) continue;
+      bucket.totalMinutes += frag.minutes;
+    }
+
+    const startBucket = byDay.get(dayKeyOf(s.startMs));
+    if (startBucket) startBucket.sessionCount += 1;
   }
 
   const maxMinutes = Math.max(1, ...[...byDay.values()].map((d) => d.totalMinutes));

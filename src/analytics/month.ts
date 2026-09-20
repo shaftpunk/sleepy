@@ -1,4 +1,4 @@
-import { dayKeyOf, lastNLocalDayKeys } from "./time";
+import { lastNLocalDayKeys, splitMinutesByLocalDay } from "./time";
 import type { SleepSession } from "./types";
 
 export type MonthBarTier = "high" | "low" | "empty";
@@ -20,9 +20,10 @@ export function computeMonthlyBars(
   for (const key of keys) totals.set(key, 0);
 
   for (const s of sessions) {
-    const key = dayKeyOf(s.startMs);
-    if (!totals.has(key)) continue;
-    totals.set(key, (totals.get(key) ?? 0) + s.durationMin);
+    for (const frag of splitMinutesByLocalDay(s.startMs, s.endMs)) {
+      if (!totals.has(frag.dayKey)) continue;
+      totals.set(frag.dayKey, (totals.get(frag.dayKey) ?? 0) + frag.minutes);
+    }
   }
 
   const maxMinutes = Math.max(1, ...totals.values());

@@ -375,6 +375,37 @@ export default function Home() {
     };
   }, [currentBabyId]);
 
+  // Mobile/PWA browsers commonly suspend JS execution and silently drop the
+  // realtime WebSocket connection while the app is backgrounded (screen
+  // locked, app-switched away from, etc.). Supabase Realtime does not replay
+  // postgres_changes events that happened while disconnected, so without
+  // this, reopening the app could keep showing a stale "active sleep" (e.g.
+  // one that was actually stopped, or started, on another device in the
+  // meantime) until some unrelated event happened to trigger a refetch.
+  // Refetch straight from the database whenever the page becomes visible
+  // again, regardless of what the realtime channel did.
+  //
+  // loadAllData/loadSleepData/loadFeedData are plain functions (not
+  // memoized) closing over currentBabyId, so they're intentionally omitted
+  // here - re-running only when currentBabyId itself changes still picks up
+  // a correct, current closure (same pattern as the mount effect above).
+  useEffect(() => {
+    function refetchIfVisible() {
+      if (document.visibilityState === "visible") {
+        void loadAllData();
+      }
+    }
+
+    document.addEventListener("visibilitychange", refetchIfVisible);
+    window.addEventListener("focus", refetchIfVisible);
+
+    return () => {
+      document.removeEventListener("visibilitychange", refetchIfVisible);
+      window.removeEventListener("focus", refetchIfVisible);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentBabyId]);
+
   useEffect(() => {
     function update() {
       if (activeSleep) {

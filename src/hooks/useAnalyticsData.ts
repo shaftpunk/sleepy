@@ -173,6 +173,30 @@ export function useAnalyticsData(
     loadFeeds,
   ]);
 
+  // The heartbeat above bounds staleness to 60s while the app stays in the
+  // foreground, but backgrounding (locked screen, app-switch) can silently
+  // drop the realtime connection for much longer than that, and Supabase
+  // does not replay missed events on reconnect. Force a fresh fetch as soon
+  // as the page is visible again instead of waiting out the heartbeat.
+  useEffect(() => {
+    if (!babyId) return;
+
+    function refetchIfVisible() {
+      if (document.visibilityState === "visible") {
+        void loadSessions();
+        void loadFeeds();
+      }
+    }
+
+    document.addEventListener("visibilitychange", refetchIfVisible);
+    window.addEventListener("focus", refetchIfVisible);
+
+    return () => {
+      document.removeEventListener("visibilitychange", refetchIfVisible);
+      window.removeEventListener("focus", refetchIfVisible);
+    };
+  }, [babyId, loadSessions, loadFeeds]);
+
   const normalizedSleep =
     useMemo(
       () =>

@@ -1,4 +1,4 @@
-import { average, startOfLocalDay } from "./time";
+import { average, dayKeyOf, splitMinutesByLocalDay, startOfLocalDay } from "./time";
 import type { ActiveSleep, FeedEvent, SleepSession } from "./types";
 
 export type TodayTotals = {
@@ -7,21 +7,39 @@ export type TodayTotals = {
   avgRating: number | null;
 };
 
-// Sessions are attributed to "today" by START_TS only; the full duration is
-// counted even if a session extends past local midnight (not clipped).
+// totalMinutes only counts the portion of each session that actually falls
+// on today's calendar date - an overnight session that started yesterday at
+// 22:00 and ended today at 06:00 contributes just those 6 morning hours, and
+// a session that starts today but is still ongoing past midnight tomorrow
+// would (once completed) contribute only its pre-midnight portion. This
+// requires looking at any session overlapping today at all, not just ones
+// that started today.
+//
+// sessionCount/avgRating stay keyed to sessions that STARTED today - a
+// discrete "how many sleeps began today" tally isn't something that makes
+// sense to split across a midnight crossing.
 export function computeTodayTotals(
   sessions: SleepSession[],
   now: number
 ): TodayTotals {
   const todayStart = startOfLocalDay(now);
-  const todaySessions = sessions.filter((s) => s.startMs >= todayStart && s.startMs <= now);
+  const todayKey = dayKeyOf(now);
 
-  const totalMinutes = todaySessions.reduce((sum, s) => sum + s.durationMin, 0);
-  const rated = todaySessions.filter((s) => s.rate != null).map((s) => s.rate as number);
+  const overlappingToday = sessions.filter((s) => s.endMs > todayStart && s.startMs <= now);
+
+  let totalMinutes = 0;
+  for (const s of overlappingToday) {
+    for (const frag of splitMinutesByLocalDay(s.startMs, Math.min(s.endMs, now))) {
+      if (frag.dayKey === todayKey) totalMinutes += frag.minutes;
+    }
+  }
+
+  const startedToday = sessions.filter((s) => s.startMs >= todayStart && s.startMs <= now);
+  const rated = startedToday.filter((s) => s.rate != null).map((s) => s.rate as number);
 
   return {
-    totalMinutes,
-    sessionCount: todaySessions.length,
+    totalMinutes: Math.round(totalMinutes),
+    sessionCount: startedToday.length,
     avgRating: rated.length ? Math.round(average(rated) * 10) / 10 : null,
   };
 }
