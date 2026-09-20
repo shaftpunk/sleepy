@@ -7,6 +7,9 @@ const no = {
     custom: "Antall minutter siden", invalid: "Skriv et gyldig helt antall minutter, 0 eller mer.",
     overlap: "Starttidspunktet overlapper forrige søvnøkt. Velg færre minutter eller korriger forrige økt i historikken.",
   },
+  sleepStop: {
+    question: "Når våknet babyen?", now: "Nå", custom: "Antall minutter siden",
+  },
   sound: {
     title: "Lydovervåking", privacy: "Lyd analyseres på denne enheten og tas ikke opp. Bare tidspunkter og lydnivå lagres.",
     sensitivity: "Følsomhet", low: "Lav", medium: "Middels", high: "Høy",

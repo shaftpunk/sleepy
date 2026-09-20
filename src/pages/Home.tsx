@@ -43,6 +43,7 @@ import { feedTypeLabel, formatClock, formatDuration, sideLabel, stars } from "..
 import { useTranslation } from "../i18n";
 import "./SleepButton.css";
 import SleepStartOptions from "../components/SleepStartOptions";
+import SleepStopOptions from "../components/SleepStopOptions";
 
 function durationFrom(
   dateString: string
@@ -478,7 +479,8 @@ export default function Home() {
       if (activeSleep) {
         await stopSleep(
           activeSleep.id,
-          activeSleep.starttime
+          activeSleep.starttime,
+          minutesAgo
         );
       } else {
         if (!currentBabyId) {
@@ -551,27 +553,8 @@ export default function Home() {
                 : t("home.readyForNextNap")}
           </p>
 
-          {activeSleep ? <button
-            className={activeSleep ? "primary-button sleep-action is-sleeping" : "primary-button sleep-action"}
-            onClick={
-              () => void handleSleep()
-            }
-            disabled={
-              loading ||
-              saving
-            }
-          >
-            {activeSleep && !saving && (
-              <span className="sleep-action-zzz" aria-hidden="true">
-                <span>z</span><span>Z</span><span>z</span>
-              </span>
-            )}
-            <span>{saving
-              ? t("common.saving")
-              : activeSleep
-                ? t("home.stopSleep")
-                : t("home.startSleep")}</span>
-          </button> : <SleepStartOptions key={currentBabyId}
+          {activeSleep ? <SleepStopOptions key={currentBabyId}
+            disabled={loading || saving} saving={saving} onStop={handleSleep} /> : <SleepStartOptions key={currentBabyId}
             disabled={loading || saving || !currentBabyId} saving={saving} onStart={handleSleep} />}
           {sleepActionError && <p role="alert">{sleepActionError}</p>}
         </section>

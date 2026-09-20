@@ -137,12 +137,23 @@ export async function startSleep(
 export async function stopSleep(
   sleepId: string,
   starttime: string,
+  minutesAgo = 0,
 ) {
+  // Anchor to the click time, before the asynchronous checks (mirrors startSleep).
+  const ended = new Date(Date.now() - minutesAgo * 60000);
+  if (!Number.isSafeInteger(minutesAgo) || minutesAgo < 0 || !Number.isFinite(ended.getTime())) {
+    throw new Error(t("sleepStart.invalid"));
+  }
+
+  if (ended.getTime() <= new Date(starttime).getTime()) {
+    throw new Error(t("errors.endTimeAfterStart"));
+  }
+
   const userId =
     await getCurrentUserId();
 
   const endtime =
-    new Date().toISOString();
+    ended.toISOString();
 
   const {
     data,
