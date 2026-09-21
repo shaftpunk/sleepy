@@ -296,9 +296,6 @@ const en = {
     babyProfileNote: "Sleepy 3.0 baby profile",
     dateOfBirth: "Date of birth: {{date}}",
     noBabiesFound: "No babies found.",
-    locationTitle: "Location",
-    legacyProfileNote:
-      "Legacy Sleepy data profile. This will be removed when the migration is complete.",
     appearanceTitle: "Appearance",
     currentTheme: "Current theme: {{theme}}",
     themeDark: "Dark",
@@ -318,6 +315,10 @@ const en = {
     birthDateInvalid: "Invalid date.",
     birthDateFuture: "Birth date cannot be in the future.",
     birthDateSaved: "Birth date saved.",
+    accountTitle: "Account",
+    logoutButton: "Log out",
+    loggingOut: "Logging out…",
+    logoutError: "Could not log out.",
   },
 
   notifications: {

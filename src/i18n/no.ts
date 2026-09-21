@@ -295,9 +295,6 @@ const no = {
     babyProfileNote: "Sleepy 3.0 babyprofil",
     dateOfBirth: "Fødselsdato: {{date}}",
     noBabiesFound: "Ingen babyer funnet.",
-    locationTitle: "Sted",
-    legacyProfileNote:
-      "Gammel Sleepy-dataprofil. Denne fjernes når migreringen er fullført.",
     appearanceTitle: "Utseende",
     currentTheme: "Nåværende tema: {{theme}}",
     themeDark: "Mørkt",
@@ -317,6 +314,10 @@ const no = {
     birthDateInvalid: "Ugyldig dato.",
     birthDateFuture: "Fødselsdato kan ikke være i fremtiden.",
     birthDateSaved: "Fødselsdato lagret.",
+    accountTitle: "Konto",
+    logoutButton: "Logg ut",
+    loggingOut: "Logger ut…",
+    logoutError: "Kunne ikke logge ut.",
   },
 
   notifications: {

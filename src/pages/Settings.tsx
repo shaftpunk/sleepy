@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { useAppStore } from "../stores/appStore";
+import { useAuth } from "../auth/AuthProvider";
 import NotificationSettings from "../components/NotificationSettings";
 import SleepEventNotificationSettings from "../components/SleepEventNotificationSettings";
 import SoundMonitoringSettings from "../components/SoundMonitoringSettings";
@@ -11,6 +12,7 @@ import { updateBabyBirthDate } from "../services/householdService";
 
 export default function Settings() {
   const { t } = useTranslation();
+  const { signOut } = useAuth();
 
   // Still read (not shown in the UI anymore, see below) because
   // NotificationSettings/notification_settings and push_subscriptions are
@@ -86,6 +88,23 @@ export default function Settings() {
     setBirthDateMessage(null);
   }
 
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+
+  async function handleLogout() {
+    setLogoutError(null);
+
+    try {
+      setLoggingOut(true);
+      await signOut();
+    } catch (error) {
+      setLogoutError(
+        error instanceof Error ? error.message : t("settings.logoutError"),
+      );
+      setLoggingOut(false);
+    }
+  }
+
   async function handleSaveBirthDate() {
     if (!currentBabyId) return;
 
@@ -137,8 +156,6 @@ export default function Settings() {
           {t("settings.pageDescription")}
         </p>
       </header>
-
-      <SoundMonitoringSettings />
 
       <section className="settings-card">
         <div className="setting-copy">
@@ -332,6 +349,8 @@ export default function Settings() {
         />
       )}
 
+      <SoundMonitoringSettings />
+
       <section className="settings-card">
         <div className="setting-copy">
           <p className="setting-title">
@@ -342,6 +361,27 @@ export default function Settings() {
             {t("settings.aboutVersion")}
           </p>
         </div>
+      </section>
+
+      <section className="settings-card">
+        <div className="setting-copy">
+          <p className="setting-title">
+            {t("settings.accountTitle")}
+          </p>
+
+          {logoutError && (
+            <p className="settings-error">{logoutError}</p>
+          )}
+        </div>
+
+        <button
+          type="button"
+          className="secondary-button"
+          disabled={loggingOut}
+          onClick={handleLogout}
+        >
+          {loggingOut ? t("settings.loggingOut") : t("settings.logoutButton")}
+        </button>
       </section>
     </main>
   );
