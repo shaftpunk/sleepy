@@ -118,6 +118,17 @@ export async function enablePushNotifications(
   }
 
   /*
+   * user_id attributes this device's subscription to the signed-in user -
+   * required for both the existing feeding reminders and the new sleep
+   * start/wake-up notifications to find the right recipient's devices, and
+   * for this row to remain reachable under this table's per-user RLS
+   * policies (see the 20260921120000_sleep_event_notifications migration).
+   */
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  /*
    * Save/update the subscription in Supabase.
    *
    * endpoint is unique in push_subscriptions, so the same
@@ -128,6 +139,7 @@ export async function enablePushNotifications(
     .upsert(
       {
         bbyid,
+        user_id: user?.id ?? null,
         endpoint: subscriptionJson.endpoint,
         p256dh: subscriptionJson.keys.p256dh,
         auth: subscriptionJson.keys.auth,

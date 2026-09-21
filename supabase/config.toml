@@ -20,3 +20,12 @@ entrypoint = "./functions/check-feeding-reminders/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/check-feeding-reminders/*.html" ]
+
+[functions.sleep-notify]
+enabled = true
+# Invoked only by the sleep table's database trigger (via pg_net), which
+# has no Supabase Auth JWT to present. Authorization instead comes from the
+# x-sleepy-webhook-secret header, checked inside the function itself.
+verify_jwt = false
+import_map = "./functions/sleep-notify/deno.json"
+entrypoint = "./functions/sleep-notify/index.ts"

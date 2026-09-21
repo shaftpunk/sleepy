@@ -374,6 +374,11 @@ const en = {
     errorCouldNotRemoveSubscription:
       "Could not remove push subscription: {{error}}",
     errorCouldNotSendTestDetailed: "Could not send test notification: {{error}}",
+    errorCouldNotUpdateDetailed: "Could not update notification settings: {{error}}",
+    sleepEventsTitle: "Sleep notifications",
+    sleepEventsLoading: "Loading sleep notifications…",
+    notifyFallsAsleep: "Notify me when {{name}} falls asleep",
+    notifyWakesUp: "Notify me when {{name}} wakes up",
   },
 
   family: {

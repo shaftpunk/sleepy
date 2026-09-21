@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { useAppStore } from "../stores/appStore";
 import NotificationSettings from "../components/NotificationSettings";
+import SleepEventNotificationSettings from "../components/SleepEventNotificationSettings";
 import SoundMonitoringSettings from "../components/SoundMonitoringSettings";
 import FamilySettings from "../components/FamilySettings";
 import { useTranslation } from "../i18n";
@@ -322,6 +323,14 @@ export default function Settings() {
       <NotificationSettings
         bbyid={currentBbyId}
       />
+
+      {currentBabyId && selectedBaby && (
+        <SleepEventNotificationSettings
+          key={currentBabyId}
+          babyId={currentBabyId}
+          babyName={selectedBaby.name}
+        />
+      )}
 
       <section className="settings-card">
         <div className="setting-copy">

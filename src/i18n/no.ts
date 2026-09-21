@@ -373,6 +373,11 @@ const no = {
     errorCouldNotRemoveSubscription:
       "Kunne ikke fjerne push-abonnement: {{error}}",
     errorCouldNotSendTestDetailed: "Kunne ikke sende testvarsel: {{error}}",
+    errorCouldNotUpdateDetailed: "Kunne ikke oppdatere varselinnstillinger: {{error}}",
+    sleepEventsTitle: "Søvnvarsler",
+    sleepEventsLoading: "Laster søvnvarsler…",
+    notifyFallsAsleep: "Varsle meg når {{name}} sovner",
+    notifyWakesUp: "Varsle meg når {{name}} våkner",
   },
 
   family: {

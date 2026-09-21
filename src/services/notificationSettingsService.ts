@@ -92,3 +92,70 @@ export async function updateFeedingReminderMinutes(
     );
   }
 }
+
+/*
+ * Sleep start / wake-up push notifications - Sleepy 3.0.
+ *
+ * Unlike the feeding reminder settings above (still keyed by the legacy
+ * bbyid), these are keyed by the signed-in user's UUID plus the baby's UUID
+ * (notification_settings.user_id / .baby_id), so each household member can
+ * independently choose whether they want to be notified for a given baby.
+ */
+export interface SleepEventNotificationSettings {
+  notify_sleep_started: boolean;
+  notify_sleep_ended: boolean;
+}
+
+const DEFAULT_SLEEP_EVENT_SETTINGS: SleepEventNotificationSettings = {
+  notify_sleep_started: false,
+  notify_sleep_ended: false,
+};
+
+export async function getSleepEventNotificationSettings(
+  userId: string,
+  babyId: string,
+): Promise<SleepEventNotificationSettings> {
+  const { data, error } = await supabase
+    .from("notification_settings")
+    .select("notify_sleep_started, notify_sleep_ended")
+    .eq("user_id", userId)
+    .eq("baby_id", babyId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      t("notifications.errorCouldNotLoadDetailed", { error: error.message }),
+    );
+  }
+
+  return data
+    ? {
+        notify_sleep_started: data.notify_sleep_started,
+        notify_sleep_ended: data.notify_sleep_ended,
+      }
+    : DEFAULT_SLEEP_EVENT_SETTINGS;
+}
+
+export async function updateSleepEventNotificationSettings(
+  userId: string,
+  babyId: string,
+  updates: Partial<SleepEventNotificationSettings>,
+): Promise<void> {
+  const { error } = await supabase.from("notification_settings").upsert(
+    {
+      user_id: userId,
+      baby_id: babyId,
+      ...updates,
+      updated_at: new Date().toISOString(),
+    },
+    {
+      onConflict: "user_id,baby_id",
+    },
+  );
+
+  if (error) {
+    throw new Error(
+      t("notifications.errorCouldNotUpdateDetailed", { error: error.message }),
+    );
+  }
+}
