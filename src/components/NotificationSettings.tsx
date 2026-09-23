@@ -7,6 +7,7 @@ import {
 import type { BabyId } from "../stores/appStore";
 
 import {
+  attributePushSubscription,
   disablePushNotifications,
   enablePushNotifications,
   hasPushSubscription,
@@ -101,6 +102,15 @@ export default function NotificationSettings({
         setPushEnabled(
           pushSubscriptionEnabled,
         );
+
+        /*
+         * Repair a device that subscribed before subscriptions carried a
+         * user_id - otherwise it looks enabled here but is skipped by every
+         * server-side delivery path.
+         */
+        if (pushSubscriptionEnabled) {
+          void attributePushSubscription(bbyid);
+        }
 
         setFeedingReminderEnabled(
           settings.feeding_reminder_enabled,

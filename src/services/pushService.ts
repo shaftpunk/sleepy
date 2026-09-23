@@ -223,6 +223,85 @@ export async function hasPushSubscription(): Promise<boolean> {
 }
 
 /**
+ * Make sure this device's existing push subscription is attributed to the
+ * signed-in user.
+ *
+ * Subscriptions registered before per-user attribution existed have
+ * user_id = null, and every server-side delivery path looks devices up by
+ * user_id (feeding reminders and sleep events both do). Such a device shows
+ * as "enabled" in the UI but silently receives nothing. Re-upserting the
+ * row it already has costs one write and repairs it without the user having
+ * to toggle push off and on.
+ *
+ * Best-effort: failures are logged, never surfaced, and never block the
+ * settings screen from loading.
+ */
+export async function attributePushSubscription(
+  bbyid: BabyId,
+): Promise<void> {
+  try {
+    if (!pushSupported() || Notification.permission !== "granted") {
+      return;
+    }
+
+    const registration = await navigator.serviceWorker.ready;
+
+    const subscription =
+      await registration.pushManager.getSubscription();
+
+    if (!subscription) {
+      return;
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return;
+    }
+
+    const subscriptionJson = subscription.toJSON();
+
+    if (
+      !subscriptionJson.endpoint ||
+      !subscriptionJson.keys?.p256dh ||
+      !subscriptionJson.keys?.auth
+    ) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from("push_subscriptions")
+      .upsert(
+        {
+          bbyid,
+          user_id: user.id,
+          endpoint: subscriptionJson.endpoint,
+          p256dh: subscriptionJson.keys.p256dh,
+          auth: subscriptionJson.keys.auth,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "endpoint",
+        },
+      );
+
+    if (error) {
+      console.warn(
+        "Could not attribute this device's push subscription:",
+        error.message,
+      );
+    }
+  } catch (error) {
+    console.warn(
+      "Could not attribute this device's push subscription:",
+      error,
+    );
+  }
+}
+
+/**
  * Ask the Supabase Edge Function to send a test push
  * to subscriptions belonging to the selected baby/profile.
  */
