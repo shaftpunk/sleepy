@@ -142,6 +142,49 @@
   border-radius: 2px;
 }
 
+[data-visual-theme="retro"] .sleep-clock-svg {
+  filter: drop-shadow(6px 6px 0 var(--retro-border-dark));
+}
+
+[data-visual-theme="retro"] .sleep-clock-bezel {
+  fill: var(--retro-border-dark);
+  stroke: var(--retro-border-light);
+  stroke-width: 5;
+}
+
+[data-visual-theme="retro"] .sleep-clock-face {
+  fill: var(--retro-panel);
+  stroke: var(--retro-ink-dim);
+}
+
+[data-visual-theme="retro"] .sleep-clock-segment.sleep {
+  fill: var(--retro-border-light);
+  filter: none;
+}
+
+[data-visual-theme="retro"] .sleep-clock-tick-label,
+[data-visual-theme="retro"] .sleep-clock-center-value {
+  fill: var(--retro-ink);
+  font-family: inherit;
+}
+
+[data-visual-theme="retro"] .sleep-clock-hand.hour {
+  stroke: var(--retro-ink);
+}
+
+[data-visual-theme="retro"] .sleep-clock-hand.minute,
+[data-visual-theme="retro"] .sleep-clock-hand-pin {
+  stroke: var(--retro-border-dark);
+  fill: var(--retro-gold);
+}
+
+[data-visual-theme="retro"] .sleep-clock-totals > div {
+  border: 2px solid var(--retro-border-light);
+  border-radius: 2px;
+  background: var(--retro-panel-raised);
+  box-shadow: 3px 3px 0 var(--retro-border-dark);
+}
+
 /* ---------------------------------------------------------------------- */
 /* Buttons - chunky pixel-bevel look                                      */
 /* ---------------------------------------------------------------------- */

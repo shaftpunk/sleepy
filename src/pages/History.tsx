@@ -10,6 +10,7 @@ import {
 
 import {
   deleteSleep,
+  getAllSleeps,
   getRecentSleeps,
   type SleepRecord,
 } from "../services/sleepService";
@@ -72,6 +73,8 @@ export default function History() {
   } = useAnalyticsData(currentBabyId);
 
   const [now, setNow] = useState(() => Date.now());
+  const [copyingSleep, setCopyingSleep] = useState(false);
+  const [copyMessage, setCopyMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 60000);
@@ -99,6 +102,62 @@ export default function History() {
     }
 
     return typeLabel;
+  }
+
+  async function copyText(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      const copied = document.execCommand("copy");
+      textarea.remove();
+      if (!copied) throw new Error("Clipboard unavailable");
+    }
+  }
+
+  async function handleCopySleepJson() {
+    if (!currentBabyId || !currentBaby) return;
+
+    try {
+      setCopyingSleep(true);
+      setCopyMessage(null);
+      const allSleeps = await getAllSleeps(currentBabyId);
+      const payload = {
+        format: "sleepy-sleep-export",
+        version: 1,
+        exported_at: new Date().toISOString(),
+        baby: {
+          id: currentBaby.id,
+          name: currentBaby.name,
+          birth_date: currentBaby.birth_date,
+        },
+        sessions: allSleeps.map((sleep) => ({
+          id: sleep.id,
+          baby_id: sleep.baby_id,
+          starttime: sleep.starttime,
+          endtime: sleep.endtime,
+          durationminutes: sleep.durationminutes,
+          sleep_type: sleep.sleep_type,
+          rate: sleep.rate,
+          note: sleep.note ?? null,
+          created_at: sleep.created_at ?? null,
+          updated_at: sleep.updated_at ?? null,
+        })),
+      };
+
+      await copyText(JSON.stringify(payload, null, 2));
+      setCopyMessage(t("history.copyJsonSuccess", { count: allSleeps.length }));
+    } catch (error) {
+      console.error("Could not copy sleep history:", error);
+      setCopyMessage(t("history.copyJsonError"));
+    } finally {
+      setCopyingSleep(false);
+    }
   }
 
 
@@ -281,16 +340,33 @@ export default function History() {
               {t("common.sleep")}
             </h2>
 
-            <button
-              className="secondary-button"
-              disabled={!currentBabyId}
-              onClick={() =>
-                setNewSleep(true)
-              }
-            >
-              {t("common.addShort")}
-            </button>
+            <div className="history-heading-actions">
+              <button
+                type="button"
+                className="secondary-button history-copy-button"
+                disabled={!currentBabyId || copyingSleep}
+                onClick={() => void handleCopySleepJson()}
+                title={t("history.copyJsonDescription")}
+              >
+                <span aria-hidden="true">⧉</span>
+                {copyingSleep ? t("history.copyingJson") : t("history.copyJson")}
+              </button>
+
+              <button
+                className="secondary-button"
+                disabled={!currentBabyId}
+                onClick={() =>
+                  setNewSleep(true)
+                }
+              >
+                {t("common.addShort")}
+              </button>
+            </div>
           </div>
+
+          {copyMessage && (
+            <p className="history-copy-message" role="status">{copyMessage}</p>
+          )}
 
 
           <div className="history-list">

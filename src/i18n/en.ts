@@ -132,6 +132,13 @@ const en = {
     sleepClockTitle: "Last 24 hours",
     sleepClockDescription: "Sleep and awake time over the last 24 hours, shown on a clock.",
     sleepClockPercentOfDay: "{{pct}}% of the day",
+    sleepClockSleepTotal: "Sleep",
+    sleepClockAwakeTotal: "Awake / unrecorded",
+    copyJson: "Copy JSON",
+    copyingJson: "Copying…",
+    copyJsonDescription: "Copy the complete sleep history as JSON",
+    copyJsonSuccess: "{{count}} sleep sessions copied as JSON.",
+    copyJsonError: "Could not copy sleep history.",
   },
 
   analysis: {

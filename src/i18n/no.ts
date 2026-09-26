@@ -131,6 +131,13 @@ const no = {
     sleepClockTitle: "Siste døgn",
     sleepClockDescription: "Søvn og våken tid siste 24 timer, vist på en klokke.",
     sleepClockPercentOfDay: "{{pct}}% av døgnet",
+    sleepClockSleepTotal: "Søvn",
+    sleepClockAwakeTotal: "Våken / ikke registrert",
+    copyJson: "Kopier JSON",
+    copyingJson: "Kopierer…",
+    copyJsonDescription: "Kopier hele søvnhistorikken som JSON",
+    copyJsonSuccess: "{{count}} søvnøkter kopiert som JSON.",
+    copyJsonError: "Kunne ikke kopiere søvnhistorikken.",
   },
 
   analysis: {

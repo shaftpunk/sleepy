@@ -488,6 +488,35 @@ export async function getRecentSleeps(
   ) as SleepRecord[];
 }
 
+// Fetches every non-deleted sleep row for a child. Supabase projects often
+// cap one response at 1,000 rows, so exports are paginated rather than
+// silently truncating older history. Active sessions are included.
+export async function getAllSleeps(
+  babyId: string,
+): Promise<SleepRecord[]> {
+  const pageSize = 1000;
+  const sleeps: SleepRecord[] = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("sleep")
+      .select("*")
+      .eq("baby_id", babyId)
+      .is("deleted_at", null)
+      .order("starttime", { ascending: true })
+      .range(from, from + pageSize - 1);
+
+    if (error) throw error;
+
+    const page = (data ?? []) as SleepRecord[];
+    sleeps.push(...page);
+
+    if (page.length < pageSize) break;
+  }
+
+  return sleeps;
+}
+
 export async function getSleepsFromDate(
   babyId: string,
   fromDate: string,

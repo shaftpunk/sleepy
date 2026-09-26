@@ -9,14 +9,16 @@ type Props = {
   now: number;
 };
 
-const SIZE = 220;
+const SIZE = 300;
 const CENTER = SIZE / 2;
-const OUTER_R = 92;
-const INNER_R = 62;
-const TICK_INNER_R = 94;
-const TICK_OUTER_R = 101;
-const TICK_LABEL_R = 114;
-const NOW_MARKER_R = (OUTER_R + INNER_R) / 2;
+const BEZEL_R = 141;
+const FACE_R = 134;
+const OUTER_R = 116;
+const INNER_R = 88;
+const TICK_OUTER_R = 130;
+const MAJOR_TICK_INNER_R = 121;
+const MINOR_TICK_INNER_R = 125;
+const TICK_LABEL_R = 74;
 
 // Angle measured clockwise from the top (00:00 local time), like a real
 // 24-hour clock face.
@@ -59,17 +61,29 @@ function ringSegmentPath(startAngle: number, endAngle: number): string {
   ].join(" ");
 }
 
-const HOUR_TICKS = [0, 6, 12, 18];
+const HOUR_TICKS = Array.from({ length: 24 }, (_, hour) => hour);
+const LABEL_HOURS = new Set([0, 3, 6, 9, 12, 15, 18, 21]);
+
+function handEnd(angleDeg: number, length: number) {
+  return polarToCartesian(angleDeg, length);
+}
 
 export default function SleepClock({ sessions, active, now }: Props) {
   const { t, lang } = useTranslation();
 
   const clock = computeSleepClock(sessions, active, now);
-  const nowMarker = polarToCartesian(clock.nowAngle, NOW_MARKER_R);
+  const localNow = new Date(now);
+  const minuteAngle = (localNow.getMinutes() / 60) * 360;
+  const hourHand = handEnd(clock.nowAngle, 66);
+  const minuteHand = handEnd(minuteAngle, 82);
+  const noRecordedMinutes = Math.max(0, 24 * 60 - clock.totalSleepMinutes);
 
   return (
     <div className="sleep-clock">
       <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="sleep-clock-svg" role="img" aria-label={t("history.sleepClockTitle")}>
+        <circle cx={CENTER} cy={CENTER} r={BEZEL_R} className="sleep-clock-bezel" />
+        <circle cx={CENTER} cy={CENTER} r={FACE_R} className="sleep-clock-face" />
+
         {clock.segments.map((segment, i) => (
           <path
             key={i}
@@ -80,7 +94,11 @@ export default function SleepClock({ sessions, active, now }: Props) {
 
         {HOUR_TICKS.map((hour) => {
           const angle = (hour / 24) * 360;
-          const tickStart = polarToCartesian(angle, TICK_INNER_R);
+          const major = hour % 3 === 0;
+          const tickStart = polarToCartesian(
+            angle,
+            major ? MAJOR_TICK_INNER_R : MINOR_TICK_INNER_R,
+          );
           const tickEnd = polarToCartesian(angle, TICK_OUTER_R);
           const label = polarToCartesian(angle, TICK_LABEL_R);
 
@@ -91,25 +109,52 @@ export default function SleepClock({ sessions, active, now }: Props) {
                 y1={tickStart.y}
                 x2={tickEnd.x}
                 y2={tickEnd.y}
-                className="sleep-clock-tick"
+                className={major ? "sleep-clock-tick major" : "sleep-clock-tick"}
               />
-              <text x={label.x} y={label.y} className="sleep-clock-tick-label">
-                {String(hour).padStart(2, "0")}
-              </text>
+              {LABEL_HOURS.has(hour) && (
+                <text x={label.x} y={label.y} className="sleep-clock-tick-label">
+                  {String(hour).padStart(2, "0")}
+                </text>
+              )}
             </g>
           );
         })}
 
-        <circle cx={nowMarker.x} cy={nowMarker.y} r={5} className="sleep-clock-now-dot" />
+        <line
+          x1={CENTER}
+          y1={CENTER}
+          x2={hourHand.x}
+          y2={hourHand.y}
+          className="sleep-clock-hand hour"
+        />
+        <line
+          x1={CENTER}
+          y1={CENTER}
+          x2={minuteHand.x}
+          y2={minuteHand.y}
+          className="sleep-clock-hand minute"
+        />
+        <circle cx={CENTER} cy={CENTER} r={6} className="sleep-clock-hand-pin" />
 
-        <text x={CENTER} y={CENTER - 6} textAnchor="middle" className="sleep-clock-center-value">
+        <text x={CENTER} y={CENTER + 38} textAnchor="middle" className="sleep-clock-center-value">
           {formatDuration(clock.totalSleepMinutes, lang)}
         </text>
 
-        <text x={CENTER} y={CENTER + 14} textAnchor="middle" className="sleep-clock-center-pct">
+        <text x={CENTER} y={CENTER + 54} textAnchor="middle" className="sleep-clock-center-pct">
           {t("history.sleepClockPercentOfDay", { pct: clock.sleepPct })}
         </text>
       </svg>
+
+      <div className="sleep-clock-totals">
+        <div>
+          <span><i className="sleep-clock-legend-dot sleep" />{t("history.sleepClockSleepTotal")}</span>
+          <strong>{formatDuration(clock.totalSleepMinutes, lang)}</strong>
+        </div>
+        <div>
+          <span><i className="sleep-clock-legend-dot" />{t("history.sleepClockAwakeTotal")}</span>
+          <strong>{formatDuration(noRecordedMinutes, lang)}</strong>
+        </div>
+      </div>
 
       <div className="sleep-clock-legend">
         <span>
@@ -122,10 +167,6 @@ export default function SleepClock({ sessions, active, now }: Props) {
           {t("home.sleepStripNoRecordedSleep")}
         </span>
 
-        <span>
-          <i className="sleep-clock-legend-dot now" />
-          {t("common.now")}
-        </span>
       </div>
     </div>
   );
