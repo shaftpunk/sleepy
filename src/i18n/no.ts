@@ -291,6 +291,10 @@ const no = {
     pageTitle: "Innstillinger",
     pageDescription:
       "Velg baby, administrer familien din, varsler og hvordan Sleepy skal se ut på denne enheten.",
+    tabBaby: "Baby og familie",
+    tabNotifications: "Varsler",
+    tabAppearance: "Utseende",
+    tabAccount: "Konto",
     babyTitle: "Baby",
     babyProfileNote: "Sleepy 3.0 babyprofil",
     dateOfBirth: "Fødselsdato: {{date}}",
@@ -318,6 +322,7 @@ const no = {
     logoutButton: "Logg ut",
     loggingOut: "Logger ut…",
     logoutError: "Kunne ikke logge ut.",
+    accountUnknownUser: "Innlogget bruker",
   },
 
   notifications: {

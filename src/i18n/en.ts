@@ -292,6 +292,10 @@ const en = {
     pageTitle: "Settings",
     pageDescription:
       "Choose your baby, manage your family, notifications and how Sleepy should look on this device.",
+    tabBaby: "Baby & family",
+    tabNotifications: "Notifications",
+    tabAppearance: "Appearance",
+    tabAccount: "Account",
     babyTitle: "Baby",
     babyProfileNote: "Sleepy 3.0 baby profile",
     dateOfBirth: "Date of birth: {{date}}",
@@ -319,6 +323,7 @@ const en = {
     logoutButton: "Log out",
     loggingOut: "Logging out…",
     logoutError: "Could not log out.",
+    accountUnknownUser: "Signed-in user",
   },
 
   notifications: {

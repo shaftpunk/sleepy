@@ -52,6 +52,30 @@
   color: var(--retro-ink);
 }
 
+[data-visual-theme="retro"] .settings-tab-bar {
+  gap: 4px;
+  padding: 5px;
+  border: 3px solid var(--retro-border-light);
+  border-radius: 0;
+  background: var(--retro-panel);
+  box-shadow: var(--retro-shadow);
+}
+
+[data-visual-theme="retro"] .settings-tab {
+  border: 2px solid transparent;
+  border-radius: 0;
+  color: var(--retro-ink-dim);
+  font-family: inherit;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+}
+
+[data-visual-theme="retro"] .settings-tab.active {
+  border-color: var(--retro-gold);
+  background: var(--retro-panel-raised);
+  color: var(--retro-ink);
+}
+
 /* ---------------------------------------------------------------------- */
 /* Typography                                                             */
 /* ---------------------------------------------------------------------- */

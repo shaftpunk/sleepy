@@ -12,7 +12,10 @@ import { updateBabyBirthDate } from "../services/householdService";
 
 export default function Settings() {
   const { t } = useTranslation();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
+  const [activeTab, setActiveTab] = useState<
+    "baby" | "notifications" | "appearance" | "account"
+  >("baby");
 
   // Still read (not shown in the UI anymore, see below) because
   // NotificationSettings/notification_settings and push_subscriptions are
@@ -90,6 +93,13 @@ export default function Settings() {
 
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
+  const accountName =
+    (typeof user?.user_metadata?.full_name === "string" &&
+      user.user_metadata.full_name.trim()) ||
+    (typeof user?.user_metadata?.name === "string" &&
+      user.user_metadata.name.trim()) ||
+    user?.email ||
+    t("settings.accountUnknownUser");
 
   async function handleLogout() {
     setLogoutError(null);
@@ -157,6 +167,34 @@ export default function Settings() {
         </p>
       </header>
 
+      <div
+        className="settings-tab-bar"
+        role="tablist"
+        aria-label={t("settings.pageTitle")}
+      >
+        {(
+          [
+            ["baby", t("settings.tabBaby")],
+            ["notifications", t("settings.tabNotifications")],
+            ["appearance", t("settings.tabAppearance")],
+            ["account", t("settings.tabAccount")],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === key}
+            className={activeTab === key ? "settings-tab active" : "settings-tab"}
+            onClick={() => setActiveTab(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="settings-tab-content" role="tabpanel">
+      {activeTab === "baby" && <>
       <section className="settings-card">
         <div className="setting-copy">
           <p className="setting-title">
@@ -235,7 +273,9 @@ export default function Settings() {
       )}
 
       <FamilySettings />
+      </>}
 
+      {activeTab === "appearance" && <>
       <section className="settings-card appearance-card">
         <div className="appearance-row">
           <div className="setting-copy">
@@ -336,7 +376,9 @@ export default function Settings() {
           </button>
         </div>
       </section>
+      </>}
 
+      {activeTab === "notifications" && <>
       <NotificationSettings
         bbyid={currentBbyId}
       />
@@ -350,7 +392,9 @@ export default function Settings() {
       )}
 
       <SoundMonitoringSettings />
+      </>}
 
+      {activeTab === "account" && <>
       <section className="settings-card">
         <div className="setting-copy">
           <p className="setting-title">
@@ -363,11 +407,21 @@ export default function Settings() {
         </div>
       </section>
 
-      <section className="settings-card">
+      <section className="settings-card account-card">
+        <div className="account-identity" aria-hidden="true">
+          {accountName.slice(0, 1).toLocaleUpperCase()}
+        </div>
+
         <div className="setting-copy">
           <p className="setting-title">
             {t("settings.accountTitle")}
           </p>
+
+          <p className="account-name">{accountName}</p>
+
+          {user?.email && user.email !== accountName && (
+            <p className="muted account-email">{user.email}</p>
+          )}
 
           {logoutError && (
             <p className="settings-error">{logoutError}</p>
@@ -383,6 +437,8 @@ export default function Settings() {
           {loggingOut ? t("settings.loggingOut") : t("settings.logoutButton")}
         </button>
       </section>
+      </>}
+      </div>
     </main>
   );
 }
