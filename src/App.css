@@ -397,6 +397,37 @@
   overflow-wrap: anywhere;
 }
 
+.add-child-card {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.add-child-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.add-child-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.add-child-form .settings-field:first-child,
+.add-child-form .settings-error,
+.add-child-form .primary-button {
+  grid-column: 1 / -1;
+}
+
+.settings-success {
+  margin: 0;
+  color: #83d5a1;
+  font-size: 0.88rem;
+}
+
 .settings-select {
   min-width: 130px;
   padding: 11px 13px;
@@ -497,6 +528,15 @@
 
   .account-card .secondary-button {
     width: 100%;
+  }
+
+  .add-child-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .add-child-form {
+    grid-template-columns: 1fr;
   }
 }
 

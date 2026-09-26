@@ -6,6 +6,7 @@ import NotificationSettings from "../components/NotificationSettings";
 import SleepEventNotificationSettings from "../components/SleepEventNotificationSettings";
 import SoundMonitoringSettings from "../components/SoundMonitoringSettings";
 import FamilySettings from "../components/FamilySettings";
+import AddChildSettings from "../components/AddChildSettings";
 import { useTranslation } from "../i18n";
 import { isValidBirthDateInput } from "../analytics/localDate";
 import { updateBabyBirthDate } from "../services/householdService";
@@ -271,6 +272,8 @@ export default function Settings() {
           </button>
         </section>
       )}
+
+      <AddChildSettings />
 
       <FamilySettings />
       </>}

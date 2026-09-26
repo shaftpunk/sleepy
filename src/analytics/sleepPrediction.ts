@@ -85,11 +85,11 @@ function blend(
 }
 
 function clampToSafeRange(minutes: number, guideline: SleepGuideline | null): number {
-  const min = guideline
+  const min = guideline?.wakeWindowMin != null
     ? guideline.wakeWindowMin * GUIDELINE_CLAMP_MIN_RATIO
     : NO_GUIDELINE_FALLBACK_MIN_MINUTES;
 
-  const max = guideline
+  const max = guideline?.wakeWindowMax != null
     ? guideline.wakeWindowMax * GUIDELINE_CLAMP_MAX_RATIO
     : NO_GUIDELINE_FALLBACK_MAX_MINUTES;
 
@@ -124,7 +124,11 @@ export function computeSleepPrediction(input: {
   const guidelineLookup = getGuidelineForAgeDays(ageDays);
   const guideline = guidelineLookup.status === "found" ? guidelineLookup.guideline : null;
 
-  const ageWakeWindow = guideline ? (guideline.wakeWindowMin + guideline.wakeWindowMax) / 2 : null;
+  const ageWakeWindow =
+    guideline?.wakeWindowMin != null && guideline.wakeWindowMax != null
+      ? (guideline.wakeWindowMin + guideline.wakeWindowMax) / 2
+      : null;
+  const wakeWindowGuideline = ageWakeWindow != null ? guideline : null;
 
   const bucket = timeOfDayBucket(new Date(now).getHours());
   const timeOfDayWindow =
@@ -154,14 +158,14 @@ export function computeSleepPrediction(input: {
   const likelyMinutes = blend(ageWakeWindow, personalWakeWindow, ageWeight, personalWeight);
   if (likelyMinutes == null) return { status: "unavailable" };
 
-  const ageEarliest = guideline
-    ? guideline.wakeWindowMin
+  const ageEarliest = wakeWindowGuideline?.wakeWindowMin != null
+    ? wakeWindowGuideline.wakeWindowMin
     : ageWakeWindow != null
       ? ageWakeWindow * (1 - POINT_ESTIMATE_SPREAD_RATIO)
       : null;
 
-  const ageLatest = guideline
-    ? guideline.wakeWindowMax
+  const ageLatest = wakeWindowGuideline?.wakeWindowMax != null
+    ? wakeWindowGuideline.wakeWindowMax
     : ageWakeWindow != null
       ? ageWakeWindow * (1 + POINT_ESTIMATE_SPREAD_RATIO)
       : null;
@@ -178,13 +182,13 @@ export function computeSleepPrediction(input: {
   const latestMinutes =
     blend(ageLatest, personalLatest, ageWeight, personalWeight) ?? likelyMinutes;
 
-  const clampedLikely = clampToSafeRange(likelyMinutes, guideline);
-  const clampedEarliest = Math.min(clampToSafeRange(earliestMinutes, guideline), clampedLikely);
-  const clampedLatest = Math.max(clampToSafeRange(latestMinutes, guideline), clampedLikely);
+  const clampedLikely = clampToSafeRange(likelyMinutes, wakeWindowGuideline);
+  const clampedEarliest = Math.min(clampToSafeRange(earliestMinutes, wakeWindowGuideline), clampedLikely);
+  const clampedLatest = Math.max(clampToSafeRange(latestMinutes, wakeWindowGuideline), clampedLikely);
 
   const basis: PredictionBasisEntry[] = [];
 
-  if (guideline) basis.push({ id: "age-guideline" });
+  if (ageWakeWindow != null) basis.push({ id: "age-guideline" });
 
   if (timeOfDayWindow != null) {
     basis.push({ id: "time-of-day-pattern" });

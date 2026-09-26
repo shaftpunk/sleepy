@@ -71,12 +71,30 @@ export default function AgeSleepGuideCard({ birthDate, sessions, active, now }: 
     guideline.totalSleepMax
   );
 
-  const napsStatus = compareToRange(rolling.napCount, guideline.napsMin, guideline.napsMax);
+  const napsStatus =
+    guideline.napsMin != null && guideline.napsMax != null
+      ? compareToRange(rolling.napCount, guideline.napsMin, guideline.napsMax)
+      : null;
 
-  const wakeWindowStatus = compareToRange(
-    rolling.medianWakeWindowMinutes,
-    guideline.wakeWindowMin,
-    guideline.wakeWindowMax
+  const wakeWindowStatus =
+    guideline.wakeWindowMin != null && guideline.wakeWindowMax != null
+      ? compareToRange(
+          rolling.medianWakeWindowMinutes,
+          guideline.wakeWindowMin,
+          guideline.wakeWindowMax,
+        )
+      : null;
+
+  const ageRange = t(
+    guideline.ageUnit === "months"
+      ? "analysis.ageGuide.monthRange"
+      : "analysis.ageGuide.yearRange",
+    { min: guideline.minAge, max: guideline.maxAge },
+  );
+  const approximateYears = Math.floor((ageDays ?? 0) / 365.2425);
+  const approximateRemainingMonths = Math.max(
+    0,
+    Math.floor(((ageDays ?? 0) - approximateYears * 365.2425) / 30.44),
   );
 
   return (
@@ -85,20 +103,22 @@ export default function AgeSleepGuideCard({ birthDate, sessions, active, now }: 
         <div>
           <p className="card-label">{t("analysis.ageGuide.title")}</p>
           <h2>
-            {t("analysis.ageGuide.monthRange", {
-              min: guideline.minMonths,
-              max: guideline.maxMonths,
-            })}
+            {ageRange}
           </h2>
         </div>
       </div>
 
       <p className="muted age-guide-current-age">
         {t("analysis.ageGuide.currentAge")}:{" "}
-        {t("analysis.ageGuide.ageInDaysAndMonths", {
-          days: ageDays ?? 0,
-          months: Math.floor((ageDays ?? 0) / 30),
-        })}
+        {(ageDays ?? 0) < 730
+          ? t("analysis.ageGuide.ageInDaysAndMonths", {
+              days: ageDays ?? 0,
+              months: Math.floor((ageDays ?? 0) / 30),
+            })
+          : t("analysis.ageGuide.ageInYearsAndMonths", {
+              years: approximateYears,
+              months: approximateRemainingMonths,
+            })}
       </p>
 
       <div className="age-guide-metric-rows">
@@ -121,13 +141,21 @@ export default function AgeSleepGuideCard({ birthDate, sessions, active, now }: 
         <div className="age-guide-metric-row">
           <div className="age-guide-metric-head">
             <span>{t("analysis.ageGuide.napsLast24h")}</span>
-            <StatusChip status={napsStatus} label={statusLabel[napsStatus]} />
+            {napsStatus ? (
+              <StatusChip status={napsStatus} label={statusLabel[napsStatus]} />
+            ) : (
+              <span className="trend-chip neutral">
+                {t("analysis.ageGuide.noGeneralRange")}
+              </span>
+            )}
           </div>
 
           <div className="age-guide-metric-values">
             <strong>{rolling.napCount}</strong>
             <small>
-              {t("analysis.ageGuide.typicalNaps")}: {guideline.napsMin}–{guideline.napsMax}
+              {t("analysis.ageGuide.typicalNaps")}: {guideline.napsMin != null && guideline.napsMax != null
+                ? `${guideline.napsMin}–${guideline.napsMax}`
+                : t("analysis.ageGuide.noGeneralRange")}
             </small>
           </div>
         </div>
@@ -135,7 +163,13 @@ export default function AgeSleepGuideCard({ birthDate, sessions, active, now }: 
         <div className="age-guide-metric-row">
           <div className="age-guide-metric-head">
             <span>{t("analysis.ageGuide.medianWakeWindowLabel")}</span>
-            <StatusChip status={wakeWindowStatus} label={statusLabel[wakeWindowStatus]} />
+            {wakeWindowStatus ? (
+              <StatusChip status={wakeWindowStatus} label={statusLabel[wakeWindowStatus]} />
+            ) : (
+              <span className="trend-chip neutral">
+                {t("analysis.ageGuide.noGeneralRange")}
+              </span>
+            )}
           </div>
 
           <div className="age-guide-metric-values">
@@ -146,14 +180,20 @@ export default function AgeSleepGuideCard({ birthDate, sessions, active, now }: 
             </strong>
             <small>
               {t("analysis.ageGuide.typicalWakeWindow")}:{" "}
-              {formatDuration(guideline.wakeWindowMin, lang)}–
-              {formatDuration(guideline.wakeWindowMax, lang)}
+              {guideline.wakeWindowMin != null && guideline.wakeWindowMax != null
+                ? `${formatDuration(guideline.wakeWindowMin, lang)}–${formatDuration(
+                    guideline.wakeWindowMax,
+                    lang,
+                  )}`
+                : t("analysis.ageGuide.noGeneralRange")}
             </small>
           </div>
         </div>
       </div>
 
-      <p className="guidance-disclaimer">{t("common.guidanceDisclaimer")}</p>
+      <p className="guidance-disclaimer">
+        {t("common.guidanceDisclaimer")} {t("analysis.ageGuide.sourceNote")}
+      </p>
     </section>
   );
 }

@@ -84,7 +84,9 @@ export default function PersonalSleepProfileCard({ sessions, guideline, now }: P
             </div>
           </div>
 
-          {guideline && profile.medianWakeWindow != null && (
+          {guideline?.wakeWindowMin != null &&
+            guideline.wakeWindowMax != null &&
+            profile.medianWakeWindow != null && (
             <div className="personal-vs-guideline">
               <div>
                 <span>{t("analysis.personalProfile.comparisonAgeLabel")}</span>

@@ -72,6 +72,33 @@ export async function updateBabyBirthDate(
   }
 }
 
+export async function createBabyForHousehold(
+  householdId: string,
+  babyName: string,
+  birthDate: string | null,
+): Promise<Baby> {
+  const { data, error } = await supabase.rpc(
+    "create_baby_for_household",
+    {
+      target_household_id: householdId,
+      baby_name: babyName.trim(),
+      baby_birth_date: birthDate || null,
+    },
+  );
+
+  if (error) {
+    throw new Error(
+      t("family.errorCouldNotCreateBaby", { error: error.message }),
+    );
+  }
+
+  if (!data) {
+    throw new Error(t("family.errorServerNoBaby"));
+  }
+
+  return data as Baby;
+}
+
 export async function createHouseholdWithBaby(
   householdName: string,
   babyName: string,

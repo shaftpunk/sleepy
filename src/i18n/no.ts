@@ -3,6 +3,7 @@
 // noTranslations`, so a missing/extra key there is a compile error.
 const no = {
   sleepStart: {
+    minutesAgo: "{{minutes}} minutter siden",
     question: "Når sovnet babyen?", now: "Nå", preset: "{{minutes}} min",
     custom: "Antall minutter siden", invalid: "Skriv et gyldig helt antall minutter, 0 eller mer.",
     overlap: "Starttidspunktet overlapper forrige søvnøkt. Velg færre minutter eller korriger forrige økt i historikken.",
@@ -232,9 +233,11 @@ const no = {
       title: "Aldersbasert søvnguide",
       ageRangeLabel: "Aldersintervall",
       monthRange: "{{min}}–{{max}} mnd",
+      yearRange: "{{min}}–{{max}} år",
       currentAge: "Nåværende alder",
       ageInDays: "{{days}} dager",
       ageInDaysAndMonths: "{{days}} dager ({{months}} mnd)",
+      ageInYearsAndMonths: "{{years}} år, {{months}} mnd",
       last24hSleep: "Søvn siste 24 timer",
       typicalTotalSleep: "Typisk total søvn",
       napsLast24h: "Lurer siste 24 timer",
@@ -247,9 +250,11 @@ const no = {
       noBirthDateTitle: "Legg til fødselsdato",
       noBirthDateDescription:
         "Legg til fødselsdato under innstillinger for å se aldersbasert søvnveiledning.",
-      tooOldTitle: "Guiden dekker første leveår",
+      noGeneralRange: "Ingen generell veiledning",
+      sourceNote: "Daglig søvnintervall følger AASM/CDC-veiledning.",
+      tooOldTitle: "Guiden dekker barn til og med 10 år",
       tooOldDescription:
-        "Denne guiden dekker kun det første leveåret, og vises ikke lenger for denne alderen.",
+        "Denne guiden har aldersbaserte søvnintervaller til og med 10 år, og vises ikke lenger for denne alderen.",
     },
 
     personalProfile: {
@@ -323,6 +328,17 @@ const no = {
     loggingOut: "Logger ut…",
     logoutError: "Kunne ikke logge ut.",
     accountUnknownUser: "Innlogget bruker",
+    addChildTitle: "Legg til barn",
+    addChildDescription: "Opprett en ny barneprofil i familien.",
+    addChildButton: "Nytt barn",
+    addChildSubmit: "Legg til barn",
+    addingChild: "Legger til…",
+    addChildName: "Barnets navn",
+    addChildNamePlaceholder: "Navn",
+    addChildRequired: "Velg familie og skriv inn barnets navn.",
+    addChildNoFamily: "Du må være medlem av en familie før du kan legge til et barn.",
+    addChildSuccess: "{{name}} er lagt til og valgt.",
+    addChildError: "Kunne ikke legge til barnet.",
   },
 
   notifications: {
@@ -424,6 +440,8 @@ const no = {
     errorCouldNotAcceptInvitation: "Kunne ikke godta invitasjonen: {{error}}",
     errorServerNoHousehold: "Serveren returnerte ikke husholdningen.",
     errorCouldNotUpdateBirthDate: "Kunne ikke oppdatere fødselsdato: {{error}}",
+    errorCouldNotCreateBaby: "Kunne ikke legge til barnet: {{error}}",
+    errorServerNoBaby: "Serveren returnerte ikke barnet som ble opprettet.",
   },
 
   onboarding: {

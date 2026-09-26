@@ -4,6 +4,7 @@ import type { Translations } from "./types";
 // missing or extra key here a compile error.
 const en = {
   sleepStart: {
+    minutesAgo: "{{minutes}} minutes ago",
     question: "When did your baby fall asleep?", now: "Now", preset: "{{minutes}} min",
     custom: "Minutes ago", invalid: "Enter a valid whole number of minutes, 0 or more.",
     overlap: "The start time overlaps the previous sleep session. Choose fewer minutes or correct the previous session in history.",
@@ -233,9 +234,11 @@ const en = {
       title: "Age-based sleep guide",
       ageRangeLabel: "Age interval",
       monthRange: "{{min}}–{{max}} mo",
+      yearRange: "{{min}}–{{max}} years",
       currentAge: "Current age",
       ageInDays: "{{days}} days",
       ageInDaysAndMonths: "{{days}} days ({{months}} mo)",
+      ageInYearsAndMonths: "{{years}} years, {{months}} mo",
       last24hSleep: "Sleep in the last 24 hours",
       typicalTotalSleep: "Typical total sleep",
       napsLast24h: "Naps in the last 24 hours",
@@ -248,9 +251,11 @@ const en = {
       noBirthDateTitle: "Add a birth date",
       noBirthDateDescription:
         "Add a birth date in Settings to see age-based sleep guidance.",
-      tooOldTitle: "The guide covers the first year",
+      noGeneralRange: "No general age range",
+      sourceNote: "Daily sleep ranges follow AASM/CDC guidance.",
+      tooOldTitle: "The guide covers children through age 10",
       tooOldDescription:
-        "This guide only covers the first year of life, and no longer applies at this age.",
+        "This guide contains age-based sleep ranges through age 10 and no longer applies at this age.",
     },
 
     personalProfile: {
@@ -324,6 +329,17 @@ const en = {
     loggingOut: "Logging out…",
     logoutError: "Could not log out.",
     accountUnknownUser: "Signed-in user",
+    addChildTitle: "Add child",
+    addChildDescription: "Create another child profile in the family.",
+    addChildButton: "New child",
+    addChildSubmit: "Add child",
+    addingChild: "Adding…",
+    addChildName: "Child's name",
+    addChildNamePlaceholder: "Name",
+    addChildRequired: "Choose a family and enter the child's name.",
+    addChildNoFamily: "You must belong to a family before adding a child.",
+    addChildSuccess: "{{name}} was added and selected.",
+    addChildError: "Could not add the child.",
   },
 
   notifications: {
@@ -425,6 +441,8 @@ const en = {
     errorCouldNotAcceptInvitation: "Could not accept invitation: {{error}}",
     errorServerNoHousehold: "The server did not return the household.",
     errorCouldNotUpdateBirthDate: "Could not update birth date: {{error}}",
+    errorCouldNotCreateBaby: "Could not add child: {{error}}",
+    errorServerNoBaby: "The server did not return the created child.",
   },
 
   onboarding: {
