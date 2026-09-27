@@ -1345,6 +1345,11 @@
   background: rgba(255, 255, 255, 0.11);
 }
 
+.history-action-button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
 
 .split-summary {
   display: flex;

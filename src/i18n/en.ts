@@ -139,6 +139,9 @@ const en = {
     copyJsonDescription: "Copy the complete sleep history as JSON",
     copyJsonSuccess: "{{count}} sleep sessions copied as JSON.",
     copyJsonError: "Could not copy sleep history.",
+    resumeSleepTitle: "Make last sleep active again",
+    confirmResumeSleep: "Make the last sleep active again? This removes its wake-up time and keeps the original start time.",
+    resumeSleepSuccess: "Last sleep is active again.",
   },
 
   analysis: {
@@ -504,6 +507,8 @@ const en = {
     mustBeLoggedIn: "You must be logged in.",
     endTimeAfterStart: "End time must be after start time.",
     couldNotSaveSleep: "Could not save sleep.",
+    couldNotResumeSleep: "Could not resume sleep.",
+    sleepAlreadyActive: "There is already an active sleep session.",
     noBabySelected: "No baby selected.",
     couldNotSplitSleep: "Could not split sleep session.",
     splitTimeOutsideSession: "Split time must be inside the sleep session.",

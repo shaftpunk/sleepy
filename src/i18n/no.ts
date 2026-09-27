@@ -138,6 +138,9 @@ const no = {
     copyJsonDescription: "Kopier hele søvnhistorikken som JSON",
     copyJsonSuccess: "{{count}} søvnøkter kopiert som JSON.",
     copyJsonError: "Kunne ikke kopiere søvnhistorikken.",
+    resumeSleepTitle: "Gjør siste søvn aktiv igjen",
+    confirmResumeSleep: "Gjøre siste søvn aktiv igjen? Dette fjerner oppvåkningstiden og beholder original starttid.",
+    resumeSleepSuccess: "Siste søvn er aktiv igjen.",
   },
 
   analysis: {
@@ -503,6 +506,8 @@ const no = {
     mustBeLoggedIn: "Du må være logget inn.",
     endTimeAfterStart: "Sluttid må være etter starttid.",
     couldNotSaveSleep: "Kunne ikke lagre søvn.",
+    couldNotResumeSleep: "Kunne ikke gjenoppta søvn.",
+    sleepAlreadyActive: "Det finnes allerede en aktiv søvnøkt.",
     noBabySelected: "Ingen baby valgt.",
     couldNotSplitSleep: "Kunne ikke dele søvnøkten.",
     splitTimeOutsideSession: "Delingstidspunktet må være inni søvnøkten.",

@@ -187,6 +187,54 @@ export async function stopSleep(
   return data as SleepRecord;
 }
 
+export async function resumeSleep(
+  sleep: SleepRecord,
+) {
+  const current =
+    await getActiveSleep(
+      sleep.baby_id,
+    );
+
+  if (current && current.id !== sleep.id) {
+    throw new Error(t("errors.sleepAlreadyActive"));
+  }
+
+  if (!sleep.endtime) {
+    return sleep;
+  }
+
+  const userId =
+    await getCurrentUserId();
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("sleep")
+    .update({
+      endtime: null,
+      durationminutes: null,
+
+      updated_by_user_id:
+        userId,
+
+      updated_at:
+        new Date().toISOString(),
+    })
+    .eq("id", sleep.id)
+    .eq("baby_id", sleep.baby_id)
+    .is("deleted_at", null)
+    .not("endtime", "is", null)
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as SleepRecord;
+}
+
 export async function createManualSleep(
   input: SleepInput,
 ) {

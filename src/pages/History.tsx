@@ -12,6 +12,7 @@ import {
   deleteSleep,
   getAllSleeps,
   getRecentSleeps,
+  resumeSleep,
   type SleepRecord,
 } from "../services/sleepService";
 
@@ -74,7 +75,9 @@ export default function History() {
 
   const [now, setNow] = useState(() => Date.now());
   const [copyingSleep, setCopyingSleep] = useState(false);
+  const [resumingSleepId, setResumingSleepId] = useState<string | null>(null);
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
+  const [resumeMessage, setResumeMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 60000);
@@ -157,6 +160,37 @@ export default function History() {
       setCopyMessage(t("history.copyJsonError"));
     } finally {
       setCopyingSleep(false);
+    }
+  }
+
+  async function handleResumeSleep(sleep: SleepRecord) {
+    if (resumingSleepId) return;
+
+    if (
+      !window.confirm(
+        t("history.confirmResumeSleep")
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setResumingSleepId(sleep.id);
+      setResumeMessage(null);
+
+      await resumeSleep(sleep);
+      await load();
+
+      setResumeMessage(t("history.resumeSleepSuccess"));
+    } catch (error) {
+      console.error("Could not resume sleep:", error);
+      setResumeMessage(
+        error instanceof Error
+          ? error.message
+          : t("errors.couldNotResumeSleep")
+      );
+    } finally {
+      setResumingSleepId(null);
     }
   }
 
@@ -368,11 +402,15 @@ export default function History() {
             <p className="history-copy-message" role="status">{copyMessage}</p>
           )}
 
+          {resumeMessage && (
+            <p className="history-copy-message" role="status">{resumeMessage}</p>
+          )}
+
 
           <div className="history-list">
 
             {sleeps.map(
-              (sleep) => (
+              (sleep, index) => (
 
                 <div
                   className="history-item"
@@ -428,6 +466,23 @@ export default function History() {
 
 
                   <div className="history-actions">
+
+                    {!active && index === 0 && sleep.endtime && (
+                      <button
+                        className="history-action-button"
+                        title={t("history.resumeSleepTitle")}
+                        disabled={resumingSleepId === sleep.id}
+                        onClick={() =>
+                          void handleResumeSleep(
+                            sleep
+                          )
+                        }
+                      >
+                        {resumingSleepId === sleep.id
+                          ? "..."
+                          : "↺"}
+                      </button>
+                    )}
 
                     {sleep.endtime && (
                       <button
