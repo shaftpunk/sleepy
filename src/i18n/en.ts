@@ -324,6 +324,7 @@ const en = {
     visualThemeTitle: "Visual theme",
     visualThemeNote: "Choose how Sleepy looks.",
     visualThemeDefault: "Original Sleepy",
+    visualThemeAlive: "Alive",
     visualThemeRetro: "Retro 1994",
     languageTitle: "Language",
     languageNote: "Choose the language Sleepy is displayed in.",

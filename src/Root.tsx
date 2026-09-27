@@ -6,6 +6,7 @@ import AuthGate from "./components/AuthGate";
 import BabyLoader from "./components/BabyLoader";
 import SplashScreen from "./components/SplashScreen";
 import { useAppStore } from "./stores/appStore";
+import { useLoadAliveStyles } from "./themes/alive/useLoadAliveStyles";
 import { useLoadRetroStyles } from "./themes/retro/useLoadRetroStyles";
 
 // The splash is a brief branding overlay, not a gate on real readiness.
@@ -37,9 +38,10 @@ export default function Root() {
     document.documentElement.dataset.visualTheme = visualTheme;
   }, [visualTheme]);
 
-  // Loaded on demand (see useLoadRetroStyles) so choosing "Original Sleepy"
-  // never downloads a single byte of retro.css.
+  // Optional theme styles and assets are loaded only when selected, keeping
+  // the original theme's initial bundle lean.
   useLoadRetroStyles(visualTheme === "retro");
+  useLoadAliveStyles(visualTheme === "alive");
 
   return (
     <>

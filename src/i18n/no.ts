@@ -323,6 +323,7 @@ const no = {
     visualThemeTitle: "Visuelt tema",
     visualThemeNote: "Velg hvordan Sleepy skal se ut.",
     visualThemeDefault: "Original Sleepy",
+    visualThemeAlive: "Alive",
     visualThemeRetro: "Retro 1994",
     languageTitle: "Språk",
     languageNote: "Velg språket Sleepy skal vises på.",

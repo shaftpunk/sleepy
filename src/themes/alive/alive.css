@@ -1,0 +1,47 @@
+[data-visual-theme="alive"] [data-alive-background="morning"][data-theme="dark"] {
+  background:
+    linear-gradient(rgba(16, 14, 22, 0.72), rgba(16, 14, 22, 0.84)),
+    url("./assets/sleepy-morning-background.webp") center / cover fixed no-repeat;
+}
+
+[data-visual-theme="alive"] [data-alive-background="morning"][data-theme="light"] {
+  background:
+    linear-gradient(rgba(244, 239, 250, 0.7), rgba(238, 231, 246, 0.82)),
+    url("./assets/sleepy-morning-background.webp") center / cover fixed no-repeat;
+}
+
+[data-visual-theme="alive"] [data-alive-background="day"][data-theme="dark"] {
+  background:
+    linear-gradient(rgba(16, 14, 22, 0.74), rgba(16, 14, 22, 0.86)),
+    url("./assets/sleepy-day-background.webp") center / cover fixed no-repeat;
+}
+
+[data-visual-theme="alive"] [data-alive-background="day"][data-theme="light"] {
+  background:
+    linear-gradient(rgba(244, 239, 250, 0.72), rgba(238, 231, 246, 0.84)),
+    url("./assets/sleepy-day-background.webp") center / cover fixed no-repeat;
+}
+
+[data-visual-theme="alive"] [data-alive-background="evening"][data-theme="dark"] {
+  background:
+    linear-gradient(rgba(16, 14, 22, 0.7), rgba(16, 14, 22, 0.84)),
+    url("./assets/sleepy-evening-background.webp") center / cover fixed no-repeat;
+}
+
+[data-visual-theme="alive"] [data-alive-background="evening"][data-theme="light"] {
+  background:
+    linear-gradient(rgba(244, 239, 250, 0.7), rgba(238, 231, 246, 0.82)),
+    url("./assets/sleepy-evening-background.webp") center / cover fixed no-repeat;
+}
+
+[data-visual-theme="alive"] [data-alive-background="night"][data-theme="dark"] {
+  background:
+    linear-gradient(rgba(16, 14, 22, 0.66), rgba(16, 14, 22, 0.8)),
+    url("./assets/sleepy-night-background.webp") center / cover fixed no-repeat;
+}
+
+[data-visual-theme="alive"] [data-alive-background="night"][data-theme="light"] {
+  background:
+    linear-gradient(rgba(244, 239, 250, 0.68), rgba(238, 231, 246, 0.8)),
+    url("./assets/sleepy-night-background.webp") center / cover fixed no-repeat;
+}

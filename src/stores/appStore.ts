@@ -10,7 +10,7 @@ export type ThemeMode = "dark" | "light";
 // exactly two values in spirit: additional skins (e.g. "gameboy", "pastel")
 // can be added later by extending this type and adding another CSS module
 // under src/themes/, without changing how switching/persistence works.
-export type VisualTheme = "default" | "retro";
+export type VisualTheme = "default" | "alive" | "retro";
 
 export interface Baby {
   id: string;
@@ -56,10 +56,10 @@ const savedBabyId =
 const savedLanguage =
   (localStorage.getItem("sleepy_language") as Language) || "no";
 
-// "default" (the existing, unchanged Sleepy look) for a fresh install and
-// for any existing user with no saved preference - retro is strictly opt-in.
+// Alive is the primary Sleepy look for fresh installs and existing users with
+// no saved preference. Explicit Original Sleepy or Retro choices are preserved.
 const savedVisualTheme =
-  (localStorage.getItem("sleepy_visual_theme") as VisualTheme) || "default";
+  (localStorage.getItem("sleepy_visual_theme") as VisualTheme) || "alive";
 
 export const useAppStore = create<AppState>((set) => ({
   // --------------------------------------------------

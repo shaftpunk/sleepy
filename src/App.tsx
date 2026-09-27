@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
   BrowserRouter,
   NavLink,
@@ -22,17 +22,49 @@ const Analysis = lazy(() => import("./pages/Analysis"));
 const Settings = lazy(() => import("./pages/Settings"));
 const About = lazy(() => import("./pages/About"));
 
+type AliveBackground = "morning" | "day" | "evening" | "night";
+
+function getAliveBackground(date = new Date()): AliveBackground {
+  const hour = date.getHours();
+
+  if (hour >= 6 && hour < 8) return "morning";
+  if (hour >= 8 && hour < 16) return "day";
+  if (hour >= 16 && hour < 18) return "evening";
+  return "night";
+}
+
 function App() {
   const { t } = useTranslation();
   const theme = useAppStore((state) => state.theme);
-  const isRetro = useAppStore((state) => state.visualTheme) === "retro";
+  const visualTheme = useAppStore((state) => state.visualTheme);
+  const isRetro = visualTheme === "retro";
+  const [aliveBackground, setAliveBackground] = useState(getAliveBackground);
+
+  useEffect(() => {
+    const updateAliveBackground = () => {
+      setAliveBackground(getAliveBackground());
+    };
+
+    const timer = window.setInterval(updateAliveBackground, 30_000);
+    document.addEventListener("visibilitychange", updateAliveBackground);
+
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", updateAliveBackground);
+    };
+  }, []);
 
   function navIcon(name: "home" | "history" | "analysis" | "settings", glyph: string) {
     return isRetro ? <PixelIcon name={name} /> : glyph;
   }
 
   return (
-    <div data-theme={theme}>
+    <div
+      data-theme={theme}
+      data-alive-background={
+        visualTheme === "alive" ? aliveBackground : undefined
+      }
+    >
       <BrowserRouter>
         <div className="app-shell">
           <Suspense fallback={<div className="empty-card">{t("common.loading")}</div>}>

@@ -330,6 +330,18 @@ export default function Settings() {
             <button
               type="button"
               className={
+                visualTheme === "alive"
+                  ? "side-button active"
+                  : "side-button"
+              }
+              onClick={() => setVisualTheme("alive")}
+            >
+              {t("settings.visualThemeAlive")}
+            </button>
+
+            <button
+              type="button"
+              className={
                 visualTheme === "retro"
                   ? "side-button active"
                   : "side-button"
