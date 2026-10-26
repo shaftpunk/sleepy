@@ -4,6 +4,9 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 
 import Root from "./Root";
+import { registerServiceWorker } from "./serviceWorkerRegistration";
+
+registerServiceWorker();
 
 createRoot(
   document.getElementById("root")!,

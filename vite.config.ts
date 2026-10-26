@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => ({
       filename: "sw.ts",
 
       registerType: "autoUpdate",
+      // The app registers the custom injectManifest worker itself so it can
+      // force update checks with updateViaCache: "none" (see main.tsx).
+      injectRegister: false,
 
       manifest: {
         name: "Sleepy",

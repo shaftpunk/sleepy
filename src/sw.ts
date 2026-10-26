@@ -4,6 +4,15 @@ import { cleanupOutdatedCaches, precacheAndRoute } from "workbox-precaching";
 
 declare let self: ServiceWorkerGlobalScope;
 
+// vite-plugin-pwa's autoUpdate lifecycle options only apply automatically to
+// generated workers. This is an injectManifest worker, so keep the lifecycle
+// explicit: a new deployment must not wait for the old installed PWA to close.
+self.skipWaiting();
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 precacheAndRoute(self.__WB_MANIFEST);
 
 cleanupOutdatedCaches();
