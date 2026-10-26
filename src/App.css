@@ -156,6 +156,22 @@
   padding: 20px;
 }
 
+.family-message-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  padding: 20px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.family-message-card h2 {
+  margin: 0 0 4px;
+  font-size: 1.35rem;
+}
+
 .feed-card h2 {
   margin: 0 0 4px;
   font-size: 1.35rem;
@@ -460,6 +476,7 @@
 }
 
 [data-theme="light"] .feed-card,
+[data-theme="light"] .family-message-card,
 [data-theme="light"] .empty-card,
 [data-theme="light"] .settings-card,
 [data-theme="light"] .today-stats,
@@ -717,6 +734,55 @@
   font-size: 1.5rem;
 }
 
+.family-message-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.family-message-quick-actions .secondary-button {
+  min-height: 52px;
+}
+
+.family-message-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.family-message-form textarea {
+  width: 100%;
+  min-height: 100px;
+  resize: vertical;
+  font: inherit;
+}
+
+.family-message-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: #9f96ad;
+  font-size: 0.85rem;
+}
+
+.family-message-form-footer .primary-button {
+  width: auto;
+  min-width: 130px;
+  padding: 12px 16px;
+}
+
+@media (max-width: 430px) {
+  .family-message-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .family-message-card .secondary-button {
+    width: 100%;
+  }
+}
+
 .feed-type-grid {
   display: grid;
   grid-template-columns:
@@ -882,6 +948,10 @@
 
 [data-theme="light"] .feed-modal {
   background: #f8f4fc;
+}
+
+[data-theme="light"] .family-message-form-footer {
+  color: #776d82;
 }
 
 [data-theme="light"]

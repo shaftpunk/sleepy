@@ -100,6 +100,21 @@ const no = {
     sleepStripSummary: "{{duration}} søvn ({{pct}}%)",
   },
 
+  familyMessage: {
+    eyebrow: "Familie",
+    title: "Send melding",
+    description: "Send en kort melding til familien din.",
+    comeHome: "Kom hjem ❤️",
+    onMyWay: "På vei ❤️",
+    writeMessage: "Skriv melding…",
+    send: "Send melding",
+    sending: "Sender…",
+    sent: "Melding sendt",
+    noRecipients: "Ingen andre tilkoblede enheter kan motta meldinger akkurat nå.",
+    error: "Kunne ikke sende meldingen. Prøv igjen.",
+    close: "Lukk",
+  },
+
   sleep: {
     fellAsleep: "Sovnet",
     wokeUp: "Våknet",

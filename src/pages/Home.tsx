@@ -30,6 +30,7 @@ import {
 } from "../services/feedRealtime";
 
 import FeedModal from "../components/FeedModal";
+import FamilyMessageModal from "../components/FamilyMessageModal";
 import SoundMonitorPanel from "../components/SoundMonitorPanel";
 import FeedHistory from "../components/FeedHistory";
 import SleepStrip from "../components/SleepStrip";
@@ -190,6 +191,8 @@ export default function Home() {
     setFeedModalOpen,
   ] =
     useState(false);
+
+  const [familyMessageOpen, setFamilyMessageOpen] = useState(false);
 
   const [
     timer,
@@ -639,6 +642,23 @@ export default function Home() {
           </button>
         </section>
 
+        <section className="family-message-card">
+          <div>
+            <p className="card-label">{t("familyMessage.eyebrow")}</p>
+            <h2>{t("familyMessage.title")}</h2>
+            <p className="muted">{t("familyMessage.description")}</p>
+          </div>
+
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={!currentBabyId || !currentBaby}
+            onClick={() => setFamilyMessageOpen(true)}
+          >
+            {t("familyMessage.send")}
+          </button>
+        </section>
+
         <section className="recent-section">
           <div className="section-heading">
             <div>
@@ -751,6 +771,14 @@ export default function Home() {
           onSaved={
             loadFeedData
           }
+        />
+      )}
+
+      {familyMessageOpen && currentBabyId && currentBaby && (
+        <FamilyMessageModal
+          babyId={currentBabyId}
+          babyName={currentBaby.name}
+          onClose={() => setFamilyMessageOpen(false)}
         />
       )}
     </>

@@ -29,3 +29,11 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/sleep-notify/deno.json"
 entrypoint = "./functions/sleep-notify/index.ts"
+
+[functions.family-message]
+enabled = true
+# This endpoint is called by signed-in app users. It also verifies the caller
+# in its own code before using the service role for recipient lookup.
+verify_jwt = true
+import_map = "./functions/family-message/deno.json"
+entrypoint = "./functions/family-message/index.ts"

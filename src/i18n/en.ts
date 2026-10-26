@@ -101,6 +101,21 @@ const en = {
     sleepStripSummary: "{{duration}} sleep ({{pct}}%)",
   },
 
+  familyMessage: {
+    eyebrow: "Family",
+    title: "Send message",
+    description: "Send a short message to your family.",
+    comeHome: "Come home ❤️",
+    onMyWay: "On my way ❤️",
+    writeMessage: "Write message…",
+    send: "Send message",
+    sending: "Sending…",
+    sent: "Message sent",
+    noRecipients: "No other connected device can receive messages right now.",
+    error: "Could not send the message. Please try again.",
+    close: "Close",
+  },
+
   sleep: {
     fellAsleep: "Fell asleep",
     wokeUp: "Woke up",
