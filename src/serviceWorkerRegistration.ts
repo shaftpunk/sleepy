@@ -10,36 +10,77 @@ export function registerServiceWorker(): void {
     return;
   }
 
-  // Do not reload a first-time install. Reload only after a newer worker has
-  // replaced an existing controller, so the current document also gets that
-  // worker's matching precached index.html and hashed assets.
-  const hadController = navigator.serviceWorker.controller !== null;
+  const RELOAD_GUARD_KEY = "sleepy-service-worker-reload";
+  const RELOAD_GUARD_MS = 30_000;
+
+  // A controller change alone is not proof of a deployment update. In a
+  // standalone iOS PWA it can also happen while a worker claims a resumed
+  // client. Reload only after this page itself observed updatefound.
+  let observedUpdate = false;
   let reloadingForUpdate = false;
 
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (!hadController || reloadingForUpdate) {
+    if (!observedUpdate || reloadingForUpdate || recentlyReloaded()) {
       return;
     }
 
     reloadingForUpdate = true;
+    sessionStorage.setItem(RELOAD_GUARD_KEY, String(Date.now()));
     window.location.reload();
   });
 
   let registration: ServiceWorkerRegistration | undefined;
+  let updateCheck: Promise<void> | undefined;
+  let listeningForUpdates = false;
 
-  async function checkForUpdate() {
+  function recentlyReloaded(): boolean {
     try {
-      registration ??= await navigator.serviceWorker.register("/sw.js", {
-        scope: "/",
-        // Do not let an HTTP cache delay delivery of a deployment's new
-        // worker script or its Workbox imports.
-        updateViaCache: "none",
-      });
+      const previousReload = Number(
+        sessionStorage.getItem(RELOAD_GUARD_KEY),
+      );
 
-      await registration.update();
-    } catch (error) {
-      console.error("Could not register the service worker:", error);
+      return Number.isFinite(previousReload) &&
+        Date.now() - previousReload < RELOAD_GUARD_MS;
+    } catch {
+      // Storage can be unavailable in private browsing. The updatefound
+      // guard above still prevents unrelated controller changes from reloads.
+      return false;
     }
+  }
+
+  function watchForUpdates(nextRegistration: ServiceWorkerRegistration) {
+    if (listeningForUpdates) return;
+
+    listeningForUpdates = true;
+    nextRegistration.addEventListener("updatefound", () => {
+      // Ignore first installation; it is not an update and must never force
+      // a reload before the application has rendered.
+      observedUpdate = navigator.serviceWorker.controller !== null;
+    });
+  }
+
+  function checkForUpdate(): Promise<void> {
+    if (updateCheck) return updateCheck;
+
+    updateCheck = (async () => {
+      try {
+        registration ??= await navigator.serviceWorker.register("/sw.js", {
+          scope: "/",
+          // Do not let an HTTP cache delay delivery of a deployment's new
+          // worker script or its Workbox imports.
+          updateViaCache: "none",
+        });
+
+        watchForUpdates(registration);
+        await registration.update();
+      } catch (error) {
+        console.error("Could not register the service worker:", error);
+      } finally {
+        updateCheck = undefined;
+      }
+    })();
+
+    return updateCheck;
   }
 
   window.addEventListener("load", () => {

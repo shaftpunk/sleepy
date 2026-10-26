@@ -6,8 +6,6 @@ import "./index.css";
 import Root from "./Root";
 import { registerServiceWorker } from "./serviceWorkerRegistration";
 
-registerServiceWorker();
-
 createRoot(
   document.getElementById("root")!,
 ).render(
@@ -15,3 +13,5 @@ createRoot(
     <Root />
   </StrictMode>,
 );
+
+registerServiceWorker();
