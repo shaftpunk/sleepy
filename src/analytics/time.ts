@@ -56,7 +56,15 @@ export function splitMinutesByLocalDay(startMs: number, endMs: number): DayMinut
   let cursor = startMs;
 
   while (cursor < endMs) {
-    const nextMidnight = startOfLocalDay(cursor) + 24 * 60 * 60 * 1000;
+    // A local day is not always 24 hours: it is 23 hours when daylight
+    // saving time starts and 25 hours when it ends. Adding 24 hours to the
+    // current day's midnight can therefore land *on* cursor during the last
+    // hour of a fall-back day, leaving chunkEnd unchanged forever. Advance
+    // the calendar date instead so this is the next local midnight.
+    const nextMidnightDate = new Date(cursor);
+    nextMidnightDate.setHours(0, 0, 0, 0);
+    nextMidnightDate.setDate(nextMidnightDate.getDate() + 1);
+    const nextMidnight = nextMidnightDate.getTime();
     const chunkEnd = Math.min(nextMidnight, endMs);
 
     fragments.push({
