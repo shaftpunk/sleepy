@@ -77,7 +77,12 @@ function browser(getMedia, contextState = 'running') {
     document: { hidden: false, addEventListener(n, f) { listeners.set(n, f); }, removeEventListener(n) { listeners.delete(n); } },
     setInterval(fn) { interval = fn; return 1; }, clearInterval() { interval = null; },
   };
-  const { SoundMonitor } = load('src/services/soundMonitorService.ts', globals, { '../sound/detector': detector });
+  const { SoundMonitor } = load('src/services/soundMonitorService.ts', globals, {
+    '../sound/detector': detector,
+    '@capacitor/core': { Capacitor: { isNativePlatform: () => false, getPlatform: () => 'web' } },
+    '../auth/sessionLifecycle': { sessionGeneration: () => 0, isSessionGenerationCurrent: () => true,
+      registerBeforeSignOut: () => () => {} },
+  });
   const states = []; const monitor = new SoundMonitor('medium', () => {}, state => states.push(state));
   return { monitor, states, globals, counts: () => ({ stops, closes, disconnects, interval, listeners: listeners.size }) };
 }
