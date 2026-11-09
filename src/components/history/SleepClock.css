@@ -1,0 +1,95 @@
+.sleep-clock--summary {
+  --clock-text: #f5efff;
+  --clock-muted: #bcb0ce;
+  --clock-border: rgba(207, 191, 241, .18);
+  width: 100%;
+  min-width: 0;
+  gap: 14px;
+}
+[data-theme="light"] .sleep-clock--summary {
+  --clock-text: #2c2238;
+  --clock-muted: #695b7a;
+  --clock-border: rgba(73, 48, 104, .22);
+}
+.sleep-clock--summary .sleep-clock-svg {
+  display: block;
+  width: 100%;
+  max-width: 340px;
+  overflow: hidden;
+  filter: none;
+}
+.sleep-clock--summary .sleep-clock-bezel { stroke-width: 1; stroke: var(--clock-border); }
+.sleep-clock--summary .sleep-clock-face { stroke: none; }
+.sleep-clock--summary .sleep-clock-tick { stroke: var(--clock-muted); stroke-width: 1; opacity: .5; }
+.sleep-clock--summary .sleep-clock-tick-label { fill: var(--clock-muted); font-size: 15px; font-weight: 500; }
+.sleep-clock--summary .sleep-clock-segment.sleep { fill: #8f74df; filter: none; }
+.sleep-clock--summary .sleep-clock-center-value { fill: var(--clock-text); font-size: 28px; font-weight: 750; letter-spacing: -.8px; }
+.sleep-clock--summary .sleep-clock-center-pct { fill: var(--clock-muted); font-size: 14px; }
+.sleep-clock--summary .sleep-clock-active-label { fill: var(--clock-text); font-size: 13px; font-weight: 600; }
+.sleep-clock-session {
+  fill: transparent;
+  stroke: rgba(188, 160, 255, .5);
+  stroke-width: 1;
+  cursor: pointer;
+  pointer-events: all;
+  outline: none;
+}
+.sleep-clock-session.is-active {
+  fill: #b299ed;
+  stroke: var(--clock-text);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+  filter: drop-shadow(0 0 3px rgba(178, 153, 237, .35));
+}
+.sleep-clock-session.is-selected,
+.sleep-clock-session:focus-visible { stroke: var(--clock-text); stroke-width: 3; stroke-dasharray: none; }
+.sleep-clock-remainder {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px 12px;
+  width: 100%;
+  padding: 12px 0;
+  border-block: 1px solid var(--clock-border);
+  color: var(--clock-muted);
+  font-size: .85rem;
+}
+.sleep-clock-remainder strong { color: var(--clock-text); white-space: nowrap; }
+.sleep-clock-picker { display: grid; gap: 7px; width: 100%; min-width: 0; color: var(--clock-muted); font-size: .85rem; }
+.sleep-clock-picker select {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  border: 1px solid var(--clock-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(143, 116, 223, .08);
+  color: var(--clock-text);
+  font: inherit;
+  font-size: 16px;
+  text-overflow: ellipsis;
+  color-scheme: dark;
+}
+.sleep-clock-picker option { color: #f5efff; background: #231b32; }
+[data-theme="light"] .sleep-clock-picker select { color-scheme: light; }
+[data-theme="light"] .sleep-clock-picker option { color: #2c2238; background: #faf7ff; }
+.sleep-clock-picker select:focus-visible { outline: 2px solid #bca0ff; outline-offset: 3px; }
+.sleep-clock-detail {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 5px;
+  width: 100%;
+  min-height: 100px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(143, 116, 223, .08);
+  color: var(--clock-text);
+  font-size: .9rem;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.sleep-clock-detail strong { font-size: 1.25rem; }
+.sleep-clock-detail p { margin: 0; color: var(--clock-muted); line-height: 1.5; }
+.sleep-clock-detail-date { color: var(--clock-muted); font-size: .8rem; }

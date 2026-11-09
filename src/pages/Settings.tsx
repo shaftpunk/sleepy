@@ -10,6 +10,7 @@ import AddChildSettings from "../components/AddChildSettings";
 import { useTranslation } from "../i18n";
 import { isValidBirthDateInput } from "../analytics/localDate";
 import { updateBabyBirthDate } from "../services/householdService";
+import "./Settings.css";
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -157,7 +158,7 @@ export default function Settings() {
   }
 
   return (
-    <main className="settings-page">
+    <main className="settings-page" lang={language === "no" ? "nb" : "en"}>
       <header className="page-header">
         <p className="eyebrow">{t("common.appName")}</p>
 
@@ -210,6 +211,7 @@ export default function Settings() {
         {babies.length > 0 ? (
           <select
             className="settings-select"
+            aria-label={t("settings.babyTitle")}
             value={currentBabyId ?? ""}
             onChange={(event) =>
               setCurrentBabyId(
@@ -234,16 +236,20 @@ export default function Settings() {
       </section>
 
       {currentBabyId && (
-        <section className="settings-card">
+        <section className="settings-card settings-card--stack">
           <div className="setting-copy">
             <p className="setting-title">
               {t("settings.birthDateLabel")}
             </p>
 
+          </div>
+
+          <div className="settings-control-row">
             <label className="birth-date-field">
               <input
                 type="date"
                 className="settings-select"
+                aria-label={t("settings.birthDateLabel")}
                 value={birthDateInput}
                 max={new Date().toISOString().slice(0, 10)}
                 onChange={(event) => {
@@ -254,15 +260,6 @@ export default function Settings() {
               />
             </label>
 
-            {birthDateError && (
-              <p className="settings-error">{birthDateError}</p>
-            )}
-
-            {birthDateMessage && (
-              <p className="muted">{birthDateMessage}</p>
-            )}
-          </div>
-
           <button
             className="secondary-button"
             disabled={savingBirthDate}
@@ -270,6 +267,14 @@ export default function Settings() {
           >
             {savingBirthDate ? t("common.saving") : t("settings.birthDateSave")}
           </button>
+          </div>
+
+          {birthDateError && (
+            <p className="settings-error" role="alert">{birthDateError}</p>
+          )}
+          {birthDateMessage && (
+            <p className="muted" role="status">{birthDateMessage}</p>
+          )}
         </section>
       )}
 

@@ -216,7 +216,7 @@ export default function FamilySettings() {
 
   if (loading) {
     return (
-      <section className="settings-section">
+      <section className="settings-section family-settings">
         <h2>
           {t("family.heading")}
         </h2>
@@ -230,7 +230,7 @@ export default function FamilySettings() {
 
 
   return (
-    <section className="settings-section">
+    <section className="settings-section family-settings">
 
       <div className="section-heading">
         <div>
@@ -349,18 +349,13 @@ export default function FamilySettings() {
 
 
       {inviteToken && (
-        <div className="settings-card">
+        <div className="settings-card invitation-result">
 
           <strong>
             {t("family.invitationCode")}
           </strong>
 
-          <p
-            style={{
-              wordBreak:
-                "break-all",
-            }}
-          >
+          <p className="invitation-code">
             {inviteToken}
           </p>
 

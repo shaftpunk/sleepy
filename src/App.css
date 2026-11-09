@@ -21,7 +21,10 @@
   max-width: 520px;
   min-height: 100vh;
   margin: 0 auto;
-  padding: 28px 20px 110px;
+  padding: calc(24px + env(safe-area-inset-top, 0px))
+    max(20px, env(safe-area-inset-right, 0px))
+    calc(110px + env(safe-area-inset-bottom, 0px))
+    max(20px, env(safe-area-inset-left, 0px));
 }
 
 .bottom-nav {
@@ -33,7 +36,10 @@
   max-width: 520px;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  padding: 12px 10px 20px;
+  padding: 12px max(10px, env(safe-area-inset-right, 0px))
+    calc(12px + env(safe-area-inset-bottom, 0px))
+    max(10px, env(safe-area-inset-left, 0px));
+  z-index: 20;
   background: rgba(18, 15, 26, 0.92);
   backdrop-filter: blur(18px);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
