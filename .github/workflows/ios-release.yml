@@ -104,6 +104,20 @@ jobs:
       - name: Resolve Swift package dependencies
         run: xcodebuild -resolvePackageDependencies -project ios/App/App.xcodeproj -scheme App
 
+      - name: Set release build number
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$GITHUB_RUN_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "GITHUB_RUN_NUMBER must be numeric" >&2
+            exit 1
+          fi
+
+          printf 'Marketing version: 1.0\n'
+          printf 'Build number: %s\n' "$GITHUB_RUN_NUMBER"
+          printf 'SLEEPY_BUILD_NUMBER=%s\n' "$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+
       - name: Archive signed iOS application
         shell: bash
         run: |
@@ -122,11 +136,20 @@ jobs:
             SLEEPY_DEVELOPMENT_TEAM="$SLEEPY_TEAM_ID" \
             SLEEPY_CODE_SIGN_IDENTITY="$SLEEPY_SIGNING_IDENTITY" \
             SLEEPY_PROVISIONING_PROFILE_SPECIFIER="$SLEEPY_PROFILE_NAME" \
+            CURRENT_PROJECT_VERSION="$SLEEPY_BUILD_NUMBER" \
             OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH" \
             CODE_SIGNING_ALLOWED=YES \
             CODE_SIGNING_REQUIRED=YES
 
           test -d "$ARCHIVE_PATH"
+          readonly ARCHIVE_APP_PATH="$ARCHIVE_PATH/Products/Applications/App.app"
+          readonly ARCHIVE_INFO_PLIST="$ARCHIVE_APP_PATH/Info.plist"
+          test -d "$ARCHIVE_APP_PATH"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$ARCHIVE_INFO_PLIST")" = "no.strandeconsulting.sleepy"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$ARCHIVE_INFO_PLIST")" = "1.0"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$ARCHIVE_INFO_PLIST")" = "$SLEEPY_BUILD_NUMBER"
+          printf 'Archive version: 1.0\n'
+          printf 'Archive build number: %s\n' "$SLEEPY_BUILD_NUMBER"
 
       - name: Create App Store export options
         shell: bash
@@ -191,12 +214,16 @@ jobs:
           readonly APP_PATH="$IPA_ROOT/Payload/App.app"
           test -d "$APP_PATH"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist")" = "$BUNDLE_ID"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_PATH/Info.plist")" = "1.0"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP_PATH/Info.plist")" = "$SLEEPY_BUILD_NUMBER"
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
 
           SIGNING_SUMMARY="$(codesign -dvvv "$APP_PATH" 2>&1 \
             | grep -E 'Identifier=|TeamIdentifier=|Authority=Apple Distribution' || true)"
           test -n "$SIGNING_SUMMARY"
           printf '%s\n' "$SIGNING_SUMMARY"
+          printf 'IPA version: 1.0\n'
+          printf 'IPA build number: %s\n' "$SLEEPY_BUILD_NUMBER"
           printf 'Verified signed IPA: %s\n' "$(basename "$IPA_PATH")"
 
       - name: Upload signed IPA artifact
@@ -206,6 +233,34 @@ jobs:
           path: ${{ runner.temp }}/SleepyExport/*.ipa
           if-no-files-found: error
           retention-days: 14
+
+      - name: Upload IPA to App Store Connect
+        shell: bash
+        env:
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+
+          readonly IPA_PATH="$(find "$RUNNER_TEMP/SleepyExport" -maxdepth 1 -type f -name '*.ipa' -print -quit)"
+          readonly PRIVATE_KEY_DIRECTORY="$HOME/.appstoreconnect/private_keys"
+          readonly PRIVATE_KEY_PATH="$PRIVATE_KEY_DIRECTORY/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8"
+
+          test -n "$IPA_PATH"
+          test -f "$IPA_PATH"
+          mkdir -p "$PRIVATE_KEY_DIRECTORY"
+          umask 077
+          printf '%s' "$APP_STORE_CONNECT_PRIVATE_KEY" > "$PRIVATE_KEY_PATH"
+          test -s "$PRIVATE_KEY_PATH"
+          chmod 600 "$PRIVATE_KEY_PATH"
+          printf 'SLEEPY_ASC_PRIVATE_KEY_PATH=%s\n' "$PRIVATE_KEY_PATH" >> "$GITHUB_ENV"
+
+          xcrun altool --upload-app \
+            --file "$IPA_PATH" \
+            --type ios \
+            --apiKey "$APP_STORE_CONNECT_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
 
       - name: Clean up signing materials
         if: always()
@@ -222,3 +277,6 @@ jobs:
           rm -f "$RUNNER_TEMP/SleepyAppStore.mobileprovision"
           rm -f "$RUNNER_TEMP/SleepyAppStore.plist"
           rm -f "$RUNNER_TEMP/ExportOptions.plist"
+          if [ -n "${SLEEPY_ASC_PRIVATE_KEY_PATH:-}" ]; then
+            rm -f "$SLEEPY_ASC_PRIVATE_KEY_PATH"
+          fi
