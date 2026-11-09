@@ -28,7 +28,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate Vite environment
+        shell: bash
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          for name in VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY VITE_VAPID_PUBLIC_KEY; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Missing required Vite environment variable: $name" >&2
+              exit 1
+            fi
+          done
+          echo "Required Vite environment variables are configured."
+
       - name: Prepare native iOS project
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
         run: node scripts/ios-prepare.mjs
 
       - name: Import signing certificate and provisioning profile
