@@ -297,6 +297,8 @@ export default function History() {
 
   useEffect(() => {
     if (!currentBabyId) {
+      // Reset history when the selected baby is cleared.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSleeps([]);
       setFeeds([]);
       return;

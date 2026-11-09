@@ -126,9 +126,11 @@ console.log(
                 id: subscription.id,
                 success: true,
               };
-            } catch (error: any) {
+            } catch (error: unknown) {
               const statusCode =
-                error?.statusCode;
+                error && typeof error === "object" && "statusCode" in error
+                  ? (error as { statusCode?: number }).statusCode
+                  : undefined;
 
               if (
                 statusCode === 404 ||

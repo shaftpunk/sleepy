@@ -1,0 +1,74 @@
+name: iOS build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ios:
+    name: Build iOS Simulator app
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare native iOS project
+        run: node scripts/ios-prepare.mjs
+
+      - name: Verify iOS bundle identifier
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+
+          const expected = "no.strandeconsulting.sleepy";
+          const rootConfig = JSON.parse(readFileSync("capacitor.config.json", "utf8"));
+          const nativeConfig = JSON.parse(readFileSync("ios/App/App/capacitor.config.json", "utf8"));
+
+          for (const [name, config] of [["root", rootConfig], ["native", nativeConfig]]) {
+            if (config.appId !== expected) {
+              throw new Error(`${name} appId is ${config.appId}, expected ${expected}`);
+            }
+            if (config.appName !== "Sleepy") {
+              throw new Error(`${name} appName is ${config.appName}, expected Sleepy`);
+            }
+            if (config.webDir !== "dist-ios") {
+              throw new Error(`${name} webDir is ${config.webDir}, expected dist-ios`);
+            }
+          }
+          NODE
+
+          test "$(grep -c 'PRODUCT_BUNDLE_IDENTIFIER = no.strandeconsulting.sleepy;' ios/App/App.xcodeproj/project.pbxproj)" -eq 2
+
+      - name: Resolve Swift package dependencies
+        run: xcodebuild -resolvePackageDependencies -project ios/App/App.xcodeproj -scheme App
+
+      - name: Build iOS Simulator application
+        run: >-
+          xcodebuild
+          -project ios/App/App.xcodeproj
+          -scheme App
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath "$RUNNER_TEMP/SleepyDerivedData"
+          CODE_SIGN_IDENTITY=""
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_REQUIRED=NO
+          build

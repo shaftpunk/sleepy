@@ -291,7 +291,12 @@ export default {
 
             sentForSetting++;
             notificationsSent++;
-          } catch (error: any) {
+          } catch (error: unknown) {
+            const statusCode =
+              error && typeof error === "object" && "statusCode" in error
+                ? (error as { statusCode?: number }).statusCode
+                : undefined;
+
             console.error(
               "Push failed:",
               {
@@ -304,8 +309,7 @@ export default {
                 babyId:
                   setting.baby_id,
 
-                statusCode:
-                  error?.statusCode,
+                statusCode,
 
                 error,
               },
@@ -315,8 +319,8 @@ export default {
              * Remove expired subscriptions.
              */
             if (
-              error?.statusCode === 404 ||
-              error?.statusCode === 410
+              statusCode === 404 ||
+              statusCode === 410
             ) {
               const {
                 error:

@@ -73,6 +73,8 @@ export default function AuthGate({
   useEffect(() => {
     if (!session) return;
 
+    // Account loading is initiated by the effect and updates local state asynchronously.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void checkAccount();
   }, [session, checkAccount]);
 
