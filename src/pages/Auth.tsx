@@ -6,6 +6,7 @@ import {
 
 import { supabase } from "../lib/supabase";
 import { useTranslation } from "../i18n";
+import { appleSignInSupported, signInWithApple } from "../services/appleAuthService";
 
 type AuthMode =
   | "login"
@@ -16,6 +17,7 @@ type AuthMode =
 
 export default function Auth() {
   const { t } = useTranslation();
+  const nativeApple = appleSignInSupported();
 
   const [mode, setMode] =
     useState<AuthMode>("login");
@@ -205,6 +207,19 @@ export default function Auth() {
   }
 
 
+  async function handleAppleSignIn() {
+    setLoading(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    try {
+      await signInWithApple();
+    } catch {
+      setErrorMessage(t("auth.appleSignInError"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function changeMode(
     nextMode: AuthMode,
   ) {
@@ -229,7 +244,7 @@ export default function Auth() {
       return t("auth.chooseNewPasswordHeading");
     }
 
-    return t("auth.welcomeBack");
+    return t(nativeApple ? "auth.welcomeToSleepy" : "auth.welcomeBack");
   }
 
 
@@ -272,7 +287,20 @@ export default function Auth() {
         </div>
 
 
-        {(
+        {nativeApple && mode === "login" && (
+          <>
+            <button type="button" className="apple-sign-in" disabled={loading}
+              onClick={() => void handleAppleSignIn()}>
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path d="M17.05 12.54c.03 3.16 2.77 4.21 2.8 4.22-.02.08-.44 1.5-1.45 2.97-.87 1.27-1.78 2.53-3.2 2.56-1.4.03-1.85-.83-3.45-.83-1.59 0-2.09.8-3.41.86-1.37.05-2.41-1.37-3.29-2.63-1.78-2.58-3.14-7.3-1.31-10.49.91-1.58 2.54-2.58 4.31-2.6 1.35-.03 2.62.91 3.45.91.82 0 2.37-1.13 3.99-.96.68.03 2.58.27 3.8 2.05-.1.06-2.27 1.32-2.24 3.94zM14.43 4.82c.73-.88 1.22-2.1 1.09-3.32-1.05.04-2.32.7-3.07 1.58-.67.78-1.26 2.02-1.1 3.21 1.17.09 2.36-.6 3.08-1.47z" />
+              </svg>
+              {t("auth.continueWithApple")}
+            </button>
+            <p className="auth-divider">{t("auth.or")}</p>
+          </>
+        )}
+
+        {(!nativeApple || mode !== "login") && (
           mode === "login" ||
           mode === "register"
         ) && (
@@ -448,7 +476,7 @@ export default function Auth() {
           )}
 
 
-          {mode === "login" && (
+          {mode === "login" && !nativeApple && (
             <button
               type="button"
               className="auth-link-button"
@@ -490,6 +518,19 @@ export default function Auth() {
                     ? t("auth.sendResetLink")
                     : t("auth.updatePassword")}
           </button>
+
+          {nativeApple && mode === "login" && (
+            <>
+              <button type="button" className="auth-link-button" disabled={loading}
+                onClick={() => changeMode("register")}>
+                {t("auth.newAccountLink")}
+              </button>
+              <button type="button" className="auth-link-button" disabled={loading}
+                onClick={() => changeMode("forgot")}>
+                {t("auth.forgotPasswordLink")}
+              </button>
+            </>
+          )}
 
 
           {mode === "forgot" && (

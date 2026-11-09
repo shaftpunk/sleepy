@@ -483,6 +483,11 @@ const no = {
   },
 
   auth: {
+    welcomeToSleepy: "Velkommen til Sleepy",
+    continueWithApple: "Fortsett med Apple",
+    or: "eller",
+    newAccountLink: "Ny hos Sleepy? Opprett konto",
+    appleSignInError: "Kunne ikke fullføre Apple-pålogging. Prøv igjen.",
     welcomeBack: "Velkommen tilbake",
     createAccountHeading: "Opprett kontoen din",
     resetPasswordHeading: "Tilbakestill passordet ditt",

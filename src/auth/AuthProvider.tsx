@@ -12,6 +12,8 @@ import type {
 } from "@supabase/supabase-js";
 
 import { supabase } from "../lib/supabase";
+import { useAppStore } from "../stores/appStore";
+import { invalidateSessionWork, prepareSignOut } from "./sessionLifecycle";
 
 interface AuthContextValue {
   session: Session | null;
@@ -63,6 +65,10 @@ export function AuthProvider({
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       (_event, nextSession) => {
+        if (!nextSession) {
+          invalidateSessionWork();
+          useAppStore.getState().clearAccountState();
+        }
         setSession(nextSession);
         setLoading(false);
       },
@@ -75,12 +81,14 @@ export function AuthProvider({
   }, []);
 
   async function signOut() {
+    await prepareSignOut();
     const { error } =
       await supabase.auth.signOut();
 
     if (error) {
       throw new Error(error.message);
     }
+    useAppStore.getState().clearAccountState();
   }
 
   return (

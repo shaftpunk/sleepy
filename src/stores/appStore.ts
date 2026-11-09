@@ -31,6 +31,7 @@ type AppState = {
   currentBabyId: string | null;
 
   setBabies: (babies: Baby[]) => void;
+  clearAccountState: () => void;
   setCurrentBabyId: (babyId: string) => void;
 
   // i18n
@@ -97,6 +98,11 @@ export const useAppStore = create<AppState>((set) => ({
   // --------------------------------------------------
 
   babies: [],
+
+  clearAccountState: () => {
+    localStorage.removeItem("sleepy_current_baby_id");
+    set({ babies: [], currentBabyId: null, currentBbyId: "Hamar" });
+  },
 
   currentBabyId: savedBabyId,
 

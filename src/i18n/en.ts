@@ -484,6 +484,11 @@ const en = {
   },
 
   auth: {
+    welcomeToSleepy: "Welcome to Sleepy",
+    continueWithApple: "Continue with Apple",
+    or: "or",
+    newAccountLink: "New to Sleepy? Create account",
+    appleSignInError: "Could not complete Apple sign-in. Please try again.",
     welcomeBack: "Welcome back",
     createAccountHeading: "Create your account",
     resetPasswordHeading: "Reset your password",

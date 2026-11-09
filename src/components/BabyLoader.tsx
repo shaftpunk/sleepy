@@ -23,10 +23,13 @@ export default function BabyLoader({
     );
 
   useEffect(() => {
+    let cancelled = false;
     async function loadBabies() {
       try {
         const babies =
           await getMyBabies();
+
+        if (cancelled) return;
 
         setBabies(babies);
 
@@ -50,6 +53,7 @@ export default function BabyLoader({
     }
 
     void loadBabies();
+    return () => { cancelled = true; };
   }, [
     currentBabyId,
     setBabies,
