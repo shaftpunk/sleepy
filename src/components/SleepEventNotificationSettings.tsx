@@ -98,7 +98,7 @@ export default function SleepEventNotificationSettings({
   }
 
   return (
-    <section className="settings-card">
+    <section className="settings-card settings-card--stack">
       <div className="setting-copy">
         <p className="setting-title">{t("notifications.sleepEventsTitle")}</p>
       </div>
@@ -113,6 +113,7 @@ export default function SleepEventNotificationSettings({
             <label className="notification-toggle">
               <input
                 type="checkbox"
+                aria-label={t("notifications.notifyFallsAsleep", { name: babyName })}
                 checked={settings.notify_sleep_started}
                 onChange={(event) =>
                   void handleChange("notify_sleep_started", event.target.checked)
@@ -129,6 +130,7 @@ export default function SleepEventNotificationSettings({
             <label className="notification-toggle">
               <input
                 type="checkbox"
+                aria-label={t("notifications.notifyWakesUp", { name: babyName })}
                 checked={settings.notify_sleep_ended}
                 onChange={(event) =>
                   void handleChange("notify_sleep_ended", event.target.checked)

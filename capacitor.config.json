@@ -2,6 +2,11 @@
   "appId": "no.strandeconsulting.sleepy",
   "appName": "Sleepy",
   "webDir": "dist-ios",
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["banner", "list", "sound"]
+    }
+  },
   "ios": {
     "contentInset": "automatic",
     "backgroundColor": "#17131f"

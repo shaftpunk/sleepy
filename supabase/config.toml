@@ -10,6 +10,11 @@ entrypoint = "./functions/send-push/index.ts"
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/send-push/*.html" ]
 
+[functions.send-native-push]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/send-native-push/index.ts"
+
 [functions.check-feeding-reminders]
 enabled = true
 verify_jwt = false

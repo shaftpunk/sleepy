@@ -1,4 +1,5 @@
 import webpush from "npm:web-push@3.6.7";
+import { sendNativeNotifications } from "../_shared/nativePush.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
 export default {
@@ -217,18 +218,6 @@ export default {
           continue;
         }
 
-        if (
-          !subscriptions ||
-          subscriptions.length === 0
-        ) {
-          console.log(
-            "No push subscriptions found for user:",
-            setting.user_id,
-          );
-
-          continue;
-        }
-
         const hours = Math.floor(
           elapsedMinutes / 60,
         );
@@ -269,7 +258,7 @@ export default {
 
         for (
           const subscription of
-          subscriptions
+          subscriptions ?? []
         ) {
           try {
             await webpush.sendNotification(
@@ -352,6 +341,11 @@ export default {
          * Only mark the feeding as notified
          * if at least one push was successfully sent.
          */
+        const native = await sendNativeNotifications(supabase, [setting.user_id], {
+          title: "Feeding reminder", body: `It has been ${elapsedText} since the last feeding.`, url: "/",
+        });
+        sentForSetting += native.sent;
+        notificationsSent += native.sent;
         if (sentForSetting > 0) {
           const {
             error: updateError,

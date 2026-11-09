@@ -3,6 +3,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useRef,
   type ReactNode,
 } from "react";
 
@@ -14,6 +15,7 @@ import type {
 import { supabase } from "../lib/supabase";
 import { useAppStore } from "../stores/appStore";
 import { invalidateSessionWork, prepareSignOut } from "./sessionLifecycle";
+import { setNativePushUser } from "../services/nativePushService";
 
 interface AuthContextValue {
   session: Session | null;
@@ -36,6 +38,7 @@ export function AuthProvider({
 
   const [loading, setLoading] =
     useState(true);
+  const accountUser = useRef<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -54,6 +57,7 @@ export function AuthProvider({
       }
 
       if (active) {
+        accountUser.current = data.session?.user.id ?? null;
         setSession(data.session ?? null);
         setLoading(false);
       }
@@ -65,10 +69,12 @@ export function AuthProvider({
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       (_event, nextSession) => {
-        if (!nextSession) {
+        const nextUser = nextSession?.user.id ?? null;
+        if (!nextSession || accountUser.current !== nextUser) {
           invalidateSessionWork();
           useAppStore.getState().clearAccountState();
         }
+        accountUser.current = nextUser;
         setSession(nextSession);
         setLoading(false);
       },
@@ -90,6 +96,20 @@ export function AuthProvider({
     }
     useAppStore.getState().clearAccountState();
   }
+
+  useEffect(() => {
+    // Keep Supabase network work outside onAuthStateChange's synchronous callback.
+    void setNativePushUser(session?.user.id ?? null).catch(() => {
+      // The notification service exposes a safe registration-failed state in Settings.
+    });
+    const onResume = () => {
+      if (document.visibilityState === "visible") {
+        void setNativePushUser(session?.user.id ?? null, true).catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", onResume);
+    return () => document.removeEventListener("visibilitychange", onResume);
+  }, [session?.user.id]);
 
   return (
     <AuthContext.Provider

@@ -1,6 +1,7 @@
 import { supabase } from "../lib/supabase";
 import { useAppStore, type BabyId } from "../stores/appStore";
 import { translate, type TranslationKey } from "../i18n";
+import { isNativeIOS, enableNativePush, disableNativePush, nativePushState } from "./nativePushService";
 
 function t(key: TranslationKey, params?: Record<string, string | number>): string {
   return translate(useAppStore.getState().language, key, params);
@@ -34,6 +35,7 @@ function urlBase64ToArrayBuffer(base64String: string): ArrayBuffer {
  * Check whether the current browser/device supports Web Push.
  */
 export function pushSupported(): boolean {
+  if (isNativeIOS()) return true;
   return (
     "serviceWorker" in navigator &&
     "PushManager" in window &&
@@ -57,7 +59,8 @@ export function getNotificationPermission(): NotificationPermission {
  */
 export async function enablePushNotifications(
   bbyid: BabyId,
-): Promise<PushSubscription> {
+): Promise<PushSubscription | void> {
+  if (isNativeIOS()) return enableNativePush();
   if (!pushSupported()) {
     throw new Error(
       t("notifications.errorPushNotSupported"),
@@ -166,6 +169,7 @@ export async function enablePushNotifications(
  * then unsubscribes the browser.
  */
 export async function disablePushNotifications(): Promise<void> {
+  if (isNativeIOS()) return disableNativePush();
   if (!pushSupported()) {
     return;
   }
@@ -206,6 +210,7 @@ export async function disablePushNotifications(): Promise<void> {
  * push subscription.
  */
 export async function hasPushSubscription(): Promise<boolean> {
+  if (isNativeIOS()) return nativePushState() === "enabled";
   if (!pushSupported()) {
     return false;
   }
@@ -239,6 +244,7 @@ export async function hasPushSubscription(): Promise<boolean> {
 export async function attributePushSubscription(
   bbyid: BabyId,
 ): Promise<void> {
+  if (isNativeIOS()) return;
   try {
     if (!pushSupported() || Notification.permission !== "granted") {
       return;
@@ -308,6 +314,11 @@ export async function attributePushSubscription(
 export async function sendTestNotification(
   bbyid: BabyId,
 ): Promise<void> {
+  if (isNativeIOS()) {
+    const { data, error } = await supabase.functions.invoke("send-native-push", { body: {} });
+    if (error || !data?.sent) throw new Error("Could not send the native test notification. Check APNs server configuration.");
+    return;
+  }
   const { data, error } = await supabase.functions.invoke(
     "send-push",
     {

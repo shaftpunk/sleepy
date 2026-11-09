@@ -2,6 +2,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import type { BabyId } from "../stores/appStore";
@@ -21,6 +22,7 @@ import {
 } from "../services/notificationSettingsService";
 
 import { useTranslation } from "../i18n";
+import { isNativeIOS, nativePushState, subscribeNativePush } from "../services/nativePushService";
 
 interface NotificationSettingsProps {
   bbyid: BabyId;
@@ -30,6 +32,7 @@ export default function NotificationSettings({
   bbyid,
 }: NotificationSettingsProps) {
   const { t } = useTranslation();
+  const nativeState = useSyncExternalStore(subscribeNativePush, nativePushState);
 
   function formatMinutes(totalMinutes: number): string {
     const hours = Math.floor(totalMinutes / 60);
@@ -54,8 +57,9 @@ export default function NotificationSettings({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [pushEnabled, setPushEnabled] =
+  const [webPushEnabled, setPushEnabled] =
     useState(false);
+  const pushEnabled = isNativeIOS() ? nativeState === "enabled" : webPushEnabled;
 
   const [
     feedingReminderEnabled,
@@ -308,6 +312,7 @@ export default function NotificationSettings({
 
   return (
     <section className="notification-settings">
+      {isNativeIOS() && <p role="status">{t(`notifications.native_${nativeState}`)}</p>}
       <div className="notification-settings__header">
         <div>
           <h2>{t("notifications.heading")}</h2>
@@ -380,6 +385,7 @@ export default function NotificationSettings({
           <label className="notification-toggle">
             <input
               type="checkbox"
+              aria-label={t("notifications.feedingReminderTitle")}
               checked={
                 feedingReminderEnabled
               }

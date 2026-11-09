@@ -1,4 +1,5 @@
 import webpush from "npm:web-push@3.6.7";
+import { sendNativeNotifications } from "../_shared/nativePush.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
 /*
@@ -292,6 +293,11 @@ export default {
           }
         }
       }
+
+      const native = await sendNativeNotifications(supabase, recipientIds, {
+        title: text.title, body: text.body, url: "/",
+      });
+      sent += native.sent;
 
       console.log("sleep-notify complete:", {
         sleepId,
