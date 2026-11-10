@@ -57,6 +57,21 @@ test('native start is explicit; raw detector threshold is unchanged and listener
   assert.equal(f.state().threshold, .06); assert.equal(f.events.size, 4);
   await f.service.reconcileNativeSound('A', 'baby', true); assert.equal(f.calls.starts, 1); assert.equal(f.events.size, 4);
 });
+test('display subscribers receive changing native levels every 60ms without scroll; cleanup and Stop fence updates', async () => {
+  const f = fixture(); await start(f);
+  const samples = [];
+  const unsubscribe = f.service.subscribeNativeSound(() => samples.push(f.service.nativeSoundSnapshot().level));
+  for (const rms of [.001, .01, .1, .7, .01]) { f.advance(60); f.level(rms); }
+  assert.equal(samples.length, 5);
+  assert.ok(samples[0] < samples[1] && samples[1] < samples[2] && samples[2] < samples[3]);
+  assert.ok(samples[4] < samples[3]);
+  unsubscribe(); f.advance(60); f.level(.8); assert.equal(samples.length, 5);
+  await f.service.stopNativeSound();
+  const stopped = f.service.nativeSoundSnapshot().level;
+  f.advance(60); f.level(1); assert.equal(f.service.nativeSoundSnapshot().level, stopped);
+  assert.equal(stopped, 0);
+});
+
 test('missing validity endpoint/network prevents capture with a session-specific error', async () => {
   const f = fixture({ leaseFail: true }); await f.service.reconcileNativeSound('A', 'baby', true);
   await assert.rejects(f.service.startNativeSound(f.options));

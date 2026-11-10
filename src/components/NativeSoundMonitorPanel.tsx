@@ -6,6 +6,7 @@ import { useTranslation } from "../i18n";
 import { nativeSoundSnapshot, subscribeNativeSound, startNativeSound, stopNativeSound, synchronizeNativeSoundEvents, validateNativeSoundSleep } from "../services/nativeSoundMonitoring";
 import type { SleepRecord } from "../services/sleepService";
 import "./SoundMonitoring.css";
+import NativeSoundLevelMeter from "./NativeSoundLevelMeter";
 
 export default function NativeSoundMonitorPanel({ sleep }: { sleep: SleepRecord | null }) {
   const { t } = useTranslation(); const { user } = useAuth();
@@ -22,7 +23,7 @@ export default function NativeSoundMonitorPanel({ sleep }: { sleep: SleepRecord 
   const status = Object.hasOwn(keys, state.status) ? state.status as keyof typeof keys : "error";
   return <aside className="sound-panel" aria-label={t("sound.title")}>
     <div className="sound-line"><strong>{t("sound.title")}</strong><span role="status">{t(keys[status])}</span></div>
-    {state.running && <meter min={0} max={1} value={state.level} aria-label={t("sound.level")} />}
+    {state.running && <NativeSoundLevelMeter level={state.level} label={t("sound.level")} />}
     {state.active ? <button className="secondary-button" onClick={() => void stopNativeSound("manual-stop").then(synchronizeNativeSoundEvents).catch(() => {})}>{t("sound.stop")}</button>
       : eligible && user && babyId && sleep && <button className="secondary-button" onClick={() => void startNativeSound({ userId: user.id, babyId, sleepId: sleep.id, sensitivity }).catch(() => {})}>{t("sound.restart")}</button>}
     {state.active && <small>{t("sound.backgroundActive")}</small>}

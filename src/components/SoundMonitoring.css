@@ -5,4 +5,24 @@
 .sound-panel { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid currentColor; border-radius: 14px; font-size: .85rem; }
 .sound-panel small { line-height: 1.5; }
 .sound-panel meter { width: 100%; height: 12px; }
+.native-sound-meter {
+  width: 100%;
+  height: 12px;
+  flex: none;
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgba(143, 116, 223, .18);
+  box-shadow: inset 0 0 0 1px rgba(143, 116, 223, .3);
+}
+.native-sound-meter-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #8f74df;
+  transform-origin: left center;
+  /* A dedicated composited fill avoids WKWebView's native meter paint path.
+     Existing sample-driven envelope supplies smoothing; no CSS animation,
+     transition, timers or independent rendering loop are needed. */
+  will-change: transform;
+}
 [data-visual-theme="retro"] .sound-panel { border-radius: 0; border-width: 2px; }
