@@ -2,6 +2,7 @@ import { supabase } from "../lib/supabase";
 import { useAppStore } from "../stores/appStore";
 import { translate, type TranslationKey } from "../i18n";
 import { notifySleepPresentationChanged } from "./sleepPresentationEvents";
+import { endSleep } from "./endSleepCommand";
 
 function t(key: TranslationKey): string {
   return translate(useAppStore.getState().language, key);
@@ -151,43 +152,7 @@ export async function stopSleep(
     throw new Error(t("errors.endTimeAfterStart"));
   }
 
-  const userId =
-    await getCurrentUserId();
-
-  const endtime =
-    ended.toISOString();
-
-  const {
-    data,
-    error,
-  } = await supabase
-    .from("sleep")
-    .update({
-      endtime,
-
-      durationminutes:
-        calculateMinutes(
-          starttime,
-          endtime,
-        ),
-
-      updated_by_user_id:
-        userId,
-
-      updated_at:
-        new Date().toISOString(),
-    })
-    .eq("id", sleepId)
-    .is("deleted_at", null)
-    .select()
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  notifySleepPresentationChanged();
-  return data as SleepRecord;
+  return endSleep(sleepId, ended.toISOString());
 }
 
 export async function resumeSleep(

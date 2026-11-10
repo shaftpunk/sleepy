@@ -16,6 +16,7 @@ import { supabase } from "../lib/supabase";
 import { useAppStore } from "../stores/appStore";
 import { invalidateSessionWork, prepareSignOut } from "./sessionLifecycle";
 import { setNativePushUser } from "../services/nativePushService";
+import { synchronizeNativeSleepSession } from "../services/nativeSleepSession";
 
 interface AuthContextValue {
   session: Session | null;
@@ -39,9 +40,16 @@ export function AuthProvider({
   const [loading, setLoading] =
     useState(true);
   const accountUser = useRef<string | null>(null);
+  const signingOut = useRef(false);
 
   useEffect(() => {
     let active = true;
+    let authEventSeen = false;
+    let latestSession: Session | null = null;
+    function mirror(next: Session | null) {
+      latestSession = next;
+      if (!signingOut.current || !next) void synchronizeNativeSleepSession(next).catch(() => {});
+    }
 
     async function loadSession() {
       const {
@@ -56,10 +64,11 @@ export function AuthProvider({
         );
       }
 
-      if (active) {
+      if (active && !authEventSeen) {
         accountUser.current = data.session?.user.id ?? null;
         setSession(data.session ?? null);
         setLoading(false);
+        mirror(data.session);
       }
     }
 
@@ -69,6 +78,7 @@ export function AuthProvider({
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       (_event, nextSession) => {
+        authEventSeen = true;
         const nextUser = nextSession?.user.id ?? null;
         if (!nextSession || accountUser.current !== nextUser) {
           invalidateSessionWork();
@@ -77,24 +87,32 @@ export function AuthProvider({
         accountUser.current = nextUser;
         setSession(nextSession);
         setLoading(false);
+        // Only calls the Capacitor bridge; no Supabase work inside this callback.
+        mirror(nextSession);
       },
     );
 
+    const resume = () => { if (!document.hidden && authEventSeen) mirror(latestSession); };
+    document.addEventListener("visibilitychange", resume);
+    document.addEventListener("resume", resume);
     return () => {
       active = false;
       subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", resume);
+      document.removeEventListener("resume", resume);
     };
   }, []);
 
   async function signOut() {
-    await prepareSignOut();
-    const { error } =
-      await supabase.auth.signOut();
-
-    if (error) {
-      throw new Error(error.message);
+    signingOut.current = true;
+    try {
+      await prepareSignOut();
+      const { error } = await supabase.auth.signOut();
+      if (error) throw new Error(error.message);
+      useAppStore.getState().clearAccountState();
+    } finally {
+      signingOut.current = false;
     }
-    useAppStore.getState().clearAccountState();
   }
 
   useEffect(() => {

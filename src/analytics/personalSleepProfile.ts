@@ -5,6 +5,7 @@ import { computeWindowAverage } from "./overview";
 import type { SleepSession } from "./types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+export const PERSONAL_SLEEP_LOOKBACK_DAYS = 14;
 
 // A single session longer than this is treated as clearly broken data (e.g.
 // a forgotten "stop sleep") rather than a real, if unusual, long sleep.
@@ -67,7 +68,7 @@ function emptyProfile(historyDays: number, completedSessionCount: number): Perso
 // deliberately simple duplicate/overlap guard rather than a general interval
 // merge, since real duplicate registrations are the main case this protects
 // against.
-function cleanSessions(sessions: SleepSession[]): SleepSession[] {
+export function cleanPersonalSleepSessions(sessions: SleepSession[]): SleepSession[] {
   const valid = sessions.filter(
     (s) => s.durationMin > 0 && s.durationMin <= MAX_PLAUSIBLE_SESSION_MINUTES
   );
@@ -114,11 +115,11 @@ export function confidenceForHistoryDays(historyDays: number): ProfileConfidence
 export function computePersonalSleepProfile(
   sessions: SleepSession[],
   now: number,
-  lookbackDays = 14
+  lookbackDays = PERSONAL_SLEEP_LOOKBACK_DAYS
 ): PersonalSleepProfile {
   const windowStart = now - lookbackDays * DAY_MS;
   const inWindow = sessions.filter((s) => s.startMs >= windowStart && s.startMs <= now);
-  const cleaned = cleanSessions(inWindow);
+  const cleaned = cleanPersonalSleepSessions(inWindow);
 
   const historyDays = new Set(cleaned.map((s) => dayKeyOf(s.startMs))).size;
 

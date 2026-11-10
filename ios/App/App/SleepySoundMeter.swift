@@ -6,6 +6,9 @@ import os
 // Audio stays inside the tap. Only scalar metering and finalized metadata leave it.
 @objc(SleepySoundMeterPlugin)
 public class SleepySoundMeterPlugin: CAPPlugin, CAPBridgedPlugin {
+    // The registered bridge owns capture; the intent may only stop that
+    // instance's exact confirmed sleep. Cold intent launches have no capture.
+    private static weak var captureOwner: SleepySoundMeterPlugin?
     public let identifier = "SleepySoundMeterPlugin"
     public let jsName = "SleepySoundMeter"
     public let pluginMethods: [CAPPluginMethod] = ["start", "stop", "getState", "getEvents", "acknowledge"].map {
@@ -51,6 +54,7 @@ public class SleepySoundMeterPlugin: CAPPlugin, CAPBridgedPlugin {
     private func now() -> Double { floor(Date().timeIntervalSince1970 * 1000) }
 
     public override func load() {
+        Self.captureOwner = self
         // A newly created native input plugin owns no running capture. Do not
         // retain an old bridge instance's last-reported microphone flag.
         if #available(iOS 16.2, *) {
@@ -101,6 +105,12 @@ public class SleepySoundMeterPlugin: CAPPlugin, CAPBridgedPlugin {
             }
         })
         observers.append(center.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: nil, queue: .main) { [weak self] _ in self?.recoverInput(reason: "audio-reset") })
+    }
+    @MainActor
+    static func stopConfirmedSleep(sleepId: UUID, ownerId: UUID) {
+        guard let plugin = captureOwner, let context = plugin.session,
+              UUID(uuidString: context.sleepId) == sleepId, UUID(uuidString: context.userId) == ownerId else { return }
+        plugin.finish(reason: "sleep-ended-or-unavailable")
     }
     @objc public func start(_ call: CAPPluginCall) {
         DispatchQueue.main.async { [weak self] in

@@ -5,6 +5,8 @@ import ActivityKit
 struct SleepActivityAttributes: ActivityAttributes {
     struct ContentState: Codable, Hashable {
         var soundMonitoringActive: Bool
+        var estimatedWakeTime: Date? = nil
+        var wakeFailure: SleepWakeFailure? = nil
     }
     let sleepId: String
     let babyId: String

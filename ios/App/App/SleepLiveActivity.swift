@@ -11,6 +11,9 @@ final class SleepLiveActivityCoordinator {
     private let defaults = UserDefaults.standard
     private var sound: [String: Bool] = [:]
     private var queued: Task<Void, Never>?
+    var ownerID: UUID? {
+        defaults.string(forKey: "SleepyLiveActivity.owner.v1").flatMap(UUID.init(uuidString:))
+    }
     // Serialize bridge reconciliation and native sound transitions across await
     // points, so an older update cannot overtake Stop/account cleanup.
     func enqueue(_ operation: @escaping @MainActor () async -> Void) async {
@@ -23,20 +26,28 @@ final class SleepLiveActivityCoordinator {
         get { defaults.dictionary(forKey: "SleepyLiveActivity.attempted.v1") as? [String: Double] ?? [:] }
         set { defaults.set(newValue, forKey: "SleepyLiveActivity.attempted.v1") }
     }
+    nonisolated static func parseDate(_ value: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: value) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: value)
+    }
     struct Sleep {
         let sleepId: String, babyId: String, babyName: String
         let startedAt: Date
+        let estimatedWakeTime: Date?
         init?(_ value: [String: Any]) {
             guard let id = value["sleepId"] as? String, UUID(uuidString: id) != nil,
                   let baby = value["babyId"] as? String, UUID(uuidString: baby) != nil,
                   let name = value["babyName"] as? String, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, name.count <= 200,
                   let date = value["startedAt"] as? String else { return nil }
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            var parsed = formatter.date(from: date)
-            if parsed == nil { formatter.formatOptions = [.withInternetDateTime]; parsed = formatter.date(from: date) }
-            guard let start = parsed, start <= Date() else { return nil }
+            guard let start = SleepLiveActivityCoordinator.parseDate(date), start <= Date() else { return nil }
             sleepId = id; babyId = baby; babyName = name; startedAt = start
+            let estimate = (value["estimatedWakeTime"] as? String).flatMap(SleepLiveActivityCoordinator.parseDate)
+            if let estimate, (60...43200).contains(estimate.timeIntervalSince(start)) {
+                estimatedWakeTime = estimate
+            } else { estimatedWakeTime = nil }
         }
     }
     func reconcile(ownerId: String, sleeps: [Sleep]) async {
@@ -60,7 +71,7 @@ final class SleepLiveActivityCoordinator {
                 // Immutable corrected timestamps must not leave a misleading timer.
                 if abs(existing.attributes.startedAt.timeIntervalSince(sleep.startedAt)) > 1 || existing.attributes.babyId != sleep.babyId {
                     await finish(existing) // Retain ledger: no silent renewal/replacement.
-                } else { await update(sleepId: sleep.sleepId, active: sound[sleep.sleepId] ?? false) }
+                } else { await update(sleepId: sleep.sleepId, active: sound[sleep.sleepId] ?? false, sleep: sleep) }
             } else if plan.request.contains(sleep.sleepId) { request(sleep) }
         }
     }
@@ -68,7 +79,7 @@ final class SleepLiveActivityCoordinator {
         if let oldOwner = defaults.string(forKey: "SleepyLiveActivity.owner.v1"), oldOwner != ownerId { await endAll() }
         defaults.set(ownerId, forKey: "SleepyLiveActivity.owner.v1")
         if Activity<SleepActivityAttributes>.activities.contains(where: { $0.attributes.sleepId == sleep.sleepId }) {
-            await update(sleepId: sleep.sleepId, active: sound[sleep.sleepId] ?? false); return
+            await update(sleepId: sleep.sleepId, active: sound[sleep.sleepId] ?? false, sleep: sleep); return
         }
         guard attempted[sleep.sleepId] == nil else { return }
         request(sleep)
@@ -83,7 +94,8 @@ final class SleepLiveActivityCoordinator {
                                                 startedAt: sleep.startedAt, presentationEndsAt: expires)
         do {
             _ = try Activity.request(attributes: attributes,
-                content: ActivityContent(state: SleepActivityAttributes.ContentState(soundMonitoringActive: sound[sleep.sleepId] ?? false), staleDate: expires), pushType: nil)
+                content: ActivityContent(state: SleepActivityAttributes.ContentState(soundMonitoringActive: sound[sleep.sleepId] ?? false,
+                    estimatedWakeTime: sleep.estimatedWakeTime), staleDate: expires), pushType: nil)
             var ledger = attempted; ledger[sleep.sleepId] = Date().timeIntervalSince1970; attempted = ledger
             log.info("Live Activity started")
         } catch { log.info("Live Activity request unavailable; sleep data unchanged") }
@@ -99,12 +111,32 @@ final class SleepLiveActivityCoordinator {
         if running { sound[sleepId] = true } else { sound.removeValue(forKey: sleepId) }
         await update(sleepId: sleepId, active: running)
     }
-    func update(sleepId: String, active: Bool) async {
+    func update(sleepId: String, active: Bool, sleep: Sleep? = nil) async {
         for activity in Activity<SleepActivityAttributes>.activities where activity.attributes.sleepId == sleepId {
             guard activity.activityState == .active || activity.activityState == .stale else { continue }
             guard activity.attributes.presentationEndsAt > Date() else { await finish(activity); continue }
-            let state = SleepActivityAttributes.ContentState(soundMonitoringActive: active)
+            var state = activity.content.state
+            state.soundMonitoringActive = active
+            if let sleep { state.estimatedWakeTime = sleep.estimatedWakeTime }
             if activity.content.state != state { await activity.update(ActivityContent(state: state, staleDate: activity.attributes.presentationEndsAt)) }
+        }
+    }
+    func showWakeFailure(activityID: String, failure: SleepWakeFailure) async {
+        guard let activity = Activity<SleepActivityAttributes>.activities.first(where: { $0.id == activityID }),
+              activity.activityState == .active else { return }
+        var state = activity.content.state
+        guard state.wakeFailure != failure else { return }
+        state.wakeFailure = failure
+        await activity.update(ActivityContent(state: state, staleDate: activity.attributes.presentationEndsAt))
+    }
+    func finishConfirmedWake(sleepId: String) async {
+        // Keep suppression until the next authoritative snapshot. An older
+        // in-flight read must not recreate the just-ended Live Activity.
+        var ledger = attempted
+        ledger[sleepId] = Date().timeIntervalSince1970
+        attempted = ledger
+        for activity in Activity<SleepActivityAttributes>.activities where activity.attributes.sleepId == sleepId {
+            await finish(activity)
         }
     }
     func end(sleepId: String) async {
@@ -130,7 +162,9 @@ public class SleepyLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "updateSleep", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endSleep", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "reconcile", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "endAll", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "endAll", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setAuthSession", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "clearAuthSession", returnType: CAPPluginReturnPromise)
     ]
     private var pending: Task<Void, Never>?
     private func perform(_ call: CAPPluginCall, operation: @escaping @MainActor () async -> Void) {
@@ -174,5 +208,28 @@ public class SleepyLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
     }
     @objc public func endAll(_ call: CAPPluginCall) {
         perform(call) { if #available(iOS 16.2, *) { await SleepLiveActivityCoordinator.shared.endAll() } }
+    }
+    @objc public func setAuthSession(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            guard #available(iOS 17.0, *) else { call.resolve(); return }
+            do {
+                guard let id = call.getString("userId"), let user = UUID(uuidString: id),
+                      let token = call.getString("accessToken"), let expiry = call.getDouble("expiresAt"),
+                      let value = call.getString("url"), let url = URL(string: value),
+                      let key = call.getString("anonKey") else {
+                    try SleepWakeCredentials.clear()
+                    throw SleepWakeFailure.authentication
+                }
+                try SleepWakeCredentials.replace(.init(userId: user, accessToken: token, expiresAt: expiry, url: url, anonKey: key))
+                call.resolve()
+            } catch { call.reject("Wake up authentication unavailable") }
+        }
+    }
+    @objc public func clearAuthSession(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            guard #available(iOS 17.0, *) else { call.resolve(); return }
+            do { try SleepWakeCredentials.clear(); call.resolve() }
+            catch { call.reject("Could not clear Wake up authentication") }
+        }
     }
 }

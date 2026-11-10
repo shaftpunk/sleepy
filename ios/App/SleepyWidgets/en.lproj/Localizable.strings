@@ -5,3 +5,9 @@
 "sleep_check_app" = "Open Sleepy to check sleep status";
 "sound_active" = "Sound monitoring active";
 "sound_off" = "Sound monitoring off";
+"wake_sleep" = "Wake up";
+"estimated_progress" = "Estimated nap progress";
+"estimated_wake" = "Estimated wake-up:";
+"estimated_time_left" = "Est. time remaining:";
+"wake_auth" = "Couldn’t end sleep. Open Sleepy to check access.";
+"wake_unconfirmed" = "Sleep end not confirmed. Try again.";

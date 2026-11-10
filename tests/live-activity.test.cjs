@@ -12,13 +12,14 @@ function load(file, imports, globals = {}) {
   new vm.Script(output).runInNewContext({ exports, require: name => imports[name], console: { info() {} }, ...globals });
   return exports;
 }
-function fixture({ native = true, failRead = false, failBridge = false, gate } = {}) {
+function fixture({ native = true, failRead = false, failBridge = false, gate, estimate, estimateGate } = {}) {
   const calls = [], records = new Map(), document = { hidden: false }; let generation = 0, logout;
   const bridge = { reconcile: async data => { if (failBridge) throw Error('optional failure'); calls.push(['reconcile', data]); },
     endAll: async () => { calls.push(['clear']); if (failBridge) throw Error('optional failure'); } };
   const service = load('src/services/liveActivityService.ts', {
     '@capacitor/core': { Capacitor: { isNativePlatform: () => native, getPlatform: () => 'ios', isPluginAvailable: () => true }, registerPlugin: () => bridge },
     './sleepService': { getActiveSleep: async id => { if (gate) await gate; if (failRead) throw Error('offline'); return records.get(id) ?? null; } },
+    './sleepEstimateService': { getActiveSleepEstimate: async () => { if (estimateGate) await estimateGate; return estimate ?? null; } },
     '../auth/sessionLifecycle': { registerBeforeSignOut: fn => { logout = fn; }, sessionGeneration: () => generation, isSessionGenerationCurrent: value => value === generation },
   }, { document });
   return { service, calls, records, document, invalidate: () => generation++, logout: async () => { generation++; await logout(); },
@@ -65,6 +66,25 @@ test('normal stop is reflected on the next refresh without inventing elapsed sta
   f.records.set('baby', { ...f.sleep, endtime: '2026-11-10T21:00:00Z' }); await f.service.refreshSleepLiveActivities();
   assert.equal(f.calls[1][1].sleeps.length, 0);
 });
+test('one absolute estimate and a long name reach the native snapshot without timer fields', async () => {
+  const estimate = '2026-11-10T21:28:00Z';
+  const f = fixture({ estimate }); f.records.set('baby', f.sleep);
+  const name = 'Amalie '.repeat(27).trim();
+  await f.service.configureSleepLiveActivities('owner', [{ ...f.baby, name }]);
+  const sleep = f.calls[0][1].sleeps[0];
+  assert.equal(sleep.babyName, name);
+  assert.equal(sleep.estimatedWakeTime, estimate);
+  assert.ok(!('progressPercent' in sleep) && !('remainingMinutes' in sleep));
+});
+test('logout fences an in-flight estimate read before bridge reconciliation', async () => {
+  let release; const f = fixture({ estimateGate: new Promise(resolve => { release = resolve; }) });
+  f.records.set('baby', f.sleep);
+  const configuring = f.service.configureSleepLiveActivities('owner', [f.baby]);
+  await new Promise(resolve => setImmediate(resolve));
+  const clearing = f.logout(); release();
+  await Promise.all([configuring, clearing]);
+  assert.deepEqual(f.calls, [['clear']]);
+});
 function sleepWriter({ databaseError = false, presentationError = false } = {}) {
   let notifications = 0;
   const record = { id: 'sleep', baby_id: 'baby' };
@@ -75,10 +95,14 @@ function sleepWriter({ databaseError = false, presentationError = false } = {}) 
     return q;
   };
   const notifier = load('src/services/sleepPresentationEvents.ts', {}, { Event: class {}, window: { dispatchEvent() { notifications++; if (presentationError) throw Error('UI failed'); } } });
+  const supabase = { from: query, auth: { getUser: async () => ({ data: { user: { id: 'user' } }, error: null }) },
+    rpc: (_name, args) => ({ single: async () => ({ data: { ...record, endtime: args.p_ended_at }, error: databaseError ? Error('DB failed') : null }) }) };
+  const command = load('src/services/endSleepCommand.ts', { '../lib/supabase': { supabase }, './sleepPresentationEvents': notifier });
   const service = load('src/services/sleepService.ts', {
-    '../lib/supabase': { supabase: { from: query, auth: { getUser: async () => ({ data: { user: { id: 'user' } }, error: null }) } } },
+    '../lib/supabase': { supabase },
     '../stores/appStore': { useAppStore: { getState: () => ({ language: 'en' }) } }, '../i18n': { translate: (_, key) => key },
     './sleepPresentationEvents': notifier,
+    './endSleepCommand': command,
   });
   return { service, notifications: () => notifications, record };
 }

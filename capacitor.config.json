@@ -9,6 +9,7 @@
   },
   "ios": {
     "contentInset": "automatic",
+    "loggingBehavior": "none",
     "backgroundColor": "#17131f"
   }
 }

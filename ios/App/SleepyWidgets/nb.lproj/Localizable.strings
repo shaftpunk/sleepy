@@ -5,3 +5,9 @@
 "sleep_check_app" = "Åpne Sleepy for å sjekke søvnstatus";
 "sound_active" = "Lydmåling aktiv";
 "sound_off" = "Lydmåling av";
+"wake_sleep" = "Våkn opp";
+"estimated_progress" = "Estimert fremdrift for luren";
+"estimated_wake" = "Estimert oppvåkning:";
+"estimated_time_left" = "Ca. tid igjen:";
+"wake_auth" = "Kunne ikke avslutte søvnen. Åpne Sleepy for å sjekke tilgang.";
+"wake_unconfirmed" = "Søvnslutt ikke bekreftet. Prøv igjen.";

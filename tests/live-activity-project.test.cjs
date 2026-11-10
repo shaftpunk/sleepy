@@ -19,6 +19,12 @@ test('App builds/embeds a real extension target, with shared model and native br
   const sources = target => objects.PBXSourcesBuildPhase[target.buildPhases.map(ref).find(id => objects.PBXSourcesBuildPhase[id])].files.map(ref).map(id => objects.PBXBuildFile[id].fileRef);
   assert.ok(sources(app).includes('A74000000000000000000002')); assert.ok(sources(widget).includes('A74000000000000000000002'));
   assert.ok(sources(app).includes('A74000000000000000000004'));
+  for (const shared of ['A75000000000000000000002', 'A75000000000000000000007']) {
+    assert.ok(sources(app).includes(shared)); assert.ok(sources(widget).includes(shared));
+  }
+  assert.ok(sources(app).includes('A75000000000000000000005'));
+  assert.ok(!sources(widget).includes('A75000000000000000000005'), 'credentials and RPC code are app-only');
+  for (const config of configurations(widget)) assert.match(clean(config.buildSettings.SWIFT_ACTIVE_COMPILATION_CONDITIONS), /SLEEPY_WIDGET_EXTENSION/);
 });
 test('both bundle IDs/version settings and Release profiles are target scoped', () => {
   for (const id of ['504EC3031FED79650016851F', 'A74000000000000000000013']) {
@@ -34,7 +40,7 @@ test('both bundle IDs/version settings and Release profiles are target scoped', 
 });
 test('new source/resource references resolve and every build phase reference exists', () => {
   for (const [id, file] of Object.entries(objects.PBXFileReference)) {
-    if (!id.startsWith('A740') || typeof file !== 'object' || clean(file.sourceTree) === 'BUILT_PRODUCTS_DIR') continue;
+    if (!/^A7[45]0/.test(id) || typeof file !== 'object' || clean(file.sourceTree) === 'BUILT_PRODUCTS_DIR') continue;
     const base = clean(file.sourceTree) === 'SOURCE_ROOT' ? 'ios/App' : ['SleepLiveActivity.swift','PrivacyInfo.xcprivacy','../../LiveActivityCore/Sources/LiveActivityCore/SleepActivityPolicy.swift'].includes(file.path) ? 'ios/App/App' : 'ios/App/SleepyWidgets';
     assert.ok(fs.existsSync(path.join(root, base, clean(file.path))), file.path);
   }
@@ -53,7 +59,11 @@ test('App capabilities remain present; extension only declares WidgetKit and nat
   const privacy=read('ios/App/App/PrivacyInfo.xcprivacy');
   assert.deepEqual(privacy.NSPrivacyAccessedAPITypes,[{NSPrivacyAccessedAPIType:'NSPrivacyAccessedAPICategoryUserDefaults',NSPrivacyAccessedAPITypeReasons:['CA92.1']}]);
   const keys = lang => [...fs.readFileSync(path.join(root,`ios/App/SleepyWidgets/${lang}.lproj/Localizable.strings`),'utf8').matchAll(/^"([^"]+)"\s*=/gm)].map(match=>match[1]).sort();
-  assert.deepEqual(keys('en'),keys('nb')); assert.equal(keys('en').length,7);
+  assert.deepEqual(keys('en'),keys('nb'));
+  for (const key of ['wake_sleep','estimated_progress','estimated_wake','estimated_time_left','wake_auth','wake_unconfirmed']) assert.ok(keys('en').includes(key));
+  assert.match(fs.readFileSync(path.join(root,'ios/App/SleepyWidgets/en.lproj/Localizable.strings'),'utf8'), /"wake_sleep" = "Wake up";/);
+  assert.match(fs.readFileSync(path.join(root,'ios/App/SleepyWidgets/nb.lproj/Localizable.strings'),'utf8'), /"wake_sleep" = "Våkn opp";/);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'capacitor.config.json'),'utf8')).ios.loggingBehavior,'none');
 });
 test('Capacitor deployment scanning still sees the App minimum before the extension minimum', () => {
   const file=fs.readFileSync(path.join(root,'ios/App/App.xcodeproj/project.pbxproj'),'utf8');

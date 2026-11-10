@@ -18,11 +18,19 @@ struct SleepLiveActivityWidget: Widget {
                         .font(.title3.weight(.semibold)).foregroundStyle(SleepyActivityColors.darkText)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        SleepIdentity(context: context)
-                            .font(.headline).foregroundStyle(SleepyActivityColors.darkText)
-                        SleepSoundStatus(active: context.state.soundMonitoringActive, stale: context.isStale)
-                            .font(.caption).foregroundStyle(SleepyActivityColors.darkMuted)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 8) {
+                            SleepIdentity(context: context)
+                                .font(.headline).foregroundStyle(SleepyActivityColors.darkText)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            SleepWakeButton(context: context, accent: SleepyActivityColors.lavender)
+                        }
+                        if let failure = context.state.wakeFailure, !context.isStale {
+                            SleepWakeFeedback(failure: failure).foregroundStyle(SleepyActivityColors.darkMuted)
+                        } else {
+                            SleepSoundStatus(active: context.state.soundMonitoringActive, stale: context.isStale)
+                                .font(.caption).foregroundStyle(SleepyActivityColors.darkMuted)
+                        }
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }
             } compactLeading: {
@@ -61,24 +69,33 @@ private struct SleepLockScreen: View {
     private var muted: Color { isDark ? SleepyActivityColors.darkMuted : SleepyActivityColors.lightMuted }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Label("Sleepy", systemImage: "moon.zzz.fill")
-                .font(.caption.weight(.semibold)).foregroundStyle(accent)
-            SleepIdentity(context: context).font(.headline)
-            SleepElapsed(attributes: context.attributes)
-                .font(.system(.title, design: .rounded).weight(.semibold))
-                .frame(maxWidth: .infinity, alignment: .leading)
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    started
-                    Spacer(minLength: 0)
-                    sound
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .center, spacing: 8) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Label("Sleepy", systemImage: "moon.zzz.fill")
+                        .font(.caption.weight(.semibold)).foregroundStyle(accent)
+                    SleepIdentity(context: context).font(.subheadline.weight(.semibold))
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                SleepElapsed(attributes: context.attributes)
+                    .font(.system(.title, design: .rounded).weight(.semibold))
+                    .frame(maxWidth: 132, alignment: .trailing)
+            }
+            if let failure = context.state.wakeFailure, !context.isStale {
+                SleepWakeFeedback(failure: failure).foregroundStyle(muted)
+            } else if let wake = context.state.estimatedWakeTime, !context.isStale, wake > context.attributes.startedAt {
+                SleepNapProgress(start: context.attributes.startedAt, wake: wake, accent: accent)
+                    .foregroundStyle(muted)
+            }
+            HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 3) {
                     started
                     sound
                 }
-            }.font(.caption).foregroundStyle(muted)
+                .font(.caption).foregroundStyle(muted)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                SleepWakeButton(context: context, accent: accent)
+            }
         }
         .foregroundStyle(isDark ? SleepyActivityColors.darkText : SleepyActivityColors.lightText)
         .padding(14)
@@ -95,6 +112,67 @@ private struct SleepLockScreen: View {
 
     private var sound: some View {
         SleepSoundStatus(active: context.state.soundMonitoringActive, stale: context.isStale)
+    }
+}
+
+private struct SleepNapProgress: View {
+    let start: Date
+    let wake: Date
+    let accent: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ProgressView(timerInterval: start...wake, countsDown: false)
+                .tint(accent)
+                .accessibilityLabel(Text("estimated_progress"))
+            HStack(spacing: 4) {
+                if #available(iOS 18.0, *) {
+                    Text("estimated_wake")
+                    Text(.currentDate, format: SystemFormatStyle.DateReference(to: wake))
+                } else {
+                    Text("estimated_time_left")
+                    Text(timerInterval: start...wake, pauseTime: wake, countsDown: true, showsHours: true)
+                }
+            }
+            .font(.caption)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .accessibilityElement(children: .combine)
+        }
+    }
+}
+
+private struct SleepWakeButton: View {
+    let context: ActivityViewContext<SleepActivityAttributes>
+    let accent: Color
+
+    var body: some View {
+        if #available(iOS 17.0, *), !context.isStale {
+            Button(intent: WakeSleepIntent(sleepId: context.attributes.sleepId, activityID: context.activityID)) {
+                Text("wake_sleep")
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(minHeight: 32)
+                    .padding(.horizontal, 8)
+            }
+            .buttonStyle(.bordered)
+            .tint(accent)
+            .accessibilityLabel(Text("wake_sleep"))
+        }
+    }
+}
+
+private struct SleepWakeFeedback: View {
+    let failure: SleepWakeFailure
+    var body: some View {
+        Label {
+            Text(LocalizedStringKey(failure == .authentication ? "wake_auth" : "wake_unconfirmed"))
+        } icon: {
+            Image(systemName: "exclamationmark.circle")
+        }
+        .font(.caption)
+        .lineLimit(2)
     }
 }
 
