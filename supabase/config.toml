@@ -42,3 +42,9 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/family-message/deno.json"
 entrypoint = "./functions/family-message/index.ts"
+
+[functions.sound-monitor-status]
+enabled = true
+# Issue: Supabase Auth + caller RLS. Validate: scoped HMAC capability, not Auth JWT.
+verify_jwt = false
+entrypoint = "./functions/sound-monitor-status/index.ts"

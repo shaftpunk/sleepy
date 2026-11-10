@@ -7,10 +7,15 @@ import { isNativeSoundIOS, SoundMonitor, type MonitorState } from "../services/s
 import { enqueueSoundEvent, retrySoundEvents, useSoundQueue } from "../services/soundEventQueue";
 import type { SleepRecord } from "../services/sleepService";
 import "./SoundMonitoring.css";
+import NativeSoundMonitorPanel from "./NativeSoundMonitorPanel";
 
-// Home owns the active sleep and receives existing realtime updates. Unmount
-// deliberately releases the microphone; navigation never stops sleep tracking.
+// Native capture has app-level lifetime; the existing Web/PWA panel below keeps
+// its foreground/route-scoped microphone lifetime.
 export default function SoundMonitorPanel({ sleep }: { sleep: SleepRecord | null }) {
+  return isNativeSoundIOS() ? <NativeSoundMonitorPanel sleep={sleep} /> : <WebSoundMonitorPanel sleep={sleep} />;
+}
+
+function WebSoundMonitorPanel({ sleep }: { sleep: SleepRecord | null }) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const babyId = useAppStore((state) => state.currentBabyId);

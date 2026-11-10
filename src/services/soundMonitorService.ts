@@ -1,7 +1,6 @@
 import { SoundDetector, THRESHOLDS, type Sensitivity, type SoundObservation } from "../sound/detector";
 import { Capacitor } from "@capacitor/core";
 import { isSessionGenerationCurrent, registerBeforeSignOut, sessionGeneration } from "../auth/sessionLifecycle";
-import { NativeSoundInput } from "./nativeSoundInput";
 
 export const isNativeSoundIOS = () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
 
@@ -14,7 +13,6 @@ export class SoundMonitor {
   private nativeIOS = false;
   private generation = 0;
   private unregisterSignOut: (() => void) | null = null;
-  private nativeInput: NativeSoundInput | null = null;
   private lastDiagnostic = 0;
   private uiPeak = 0;
   private stream: MediaStream | null = null;
@@ -37,8 +35,7 @@ export class SoundMonitor {
     if (this.stopped || this.started) return;
     this.started = true;
     this.nativeIOS = isNativeSoundIOS();
-    if (this.nativeIOS ? !Capacitor.isPluginAvailable("SleepySoundMeter")
-      : !window.isSecureContext || !navigator.mediaDevices?.getUserMedia || !window.AudioContext) {
+    if (this.nativeIOS || !window.isSecureContext || !navigator.mediaDevices?.getUserMedia || !window.AudioContext) {
       this.update({ status: this.nativeIOS ? "unavailable" : "unsupported", level: 0 }); return;
     }
     // WKWebView visibility is not authoritative native background state.
@@ -53,23 +50,6 @@ export class SoundMonitor {
     window.addEventListener("pagehide", this.pageHidden);
     this.update({ status: "starting", level: 0 });
     try {
-      if (this.nativeIOS) {
-        this.nativeInput = new NativeSoundInput();
-        await this.nativeInput.start(rms => this.sample(rms), this.interrupted);
-        if (this.stopped) return;
-        const startedAt = Date.now();
-        // Engine start/permission alone never means a live microphone signal.
-        // Quiet zero-valued buffers are valid; missing events are not.
-        this.timer = setInterval(() => {
-          if (this.stopped) return;
-          if (!isSessionGenerationCurrent(this.generation)) { this.interrupted("session-changed"); return; }
-          if (this.lastSample === null && Date.now() - startedAt > 3000) {
-            console.warn("[Sleepy sound] startup timeout", { elapsedMs: Date.now() - startedAt, nativeStartResolved: true, firstLevelReceived: false });
-            this.stop("startup-timeout"); this.update({ status: "error", level: 0 });
-          } else if (this.lastSample !== null && Date.now() - this.lastSample > 1000) this.interrupted("level-events-stalled");
-        }, 250);
-        return;
-      }
       // Create/resume synchronously when invoked by the retry button on iOS.
       this.context = new AudioContext();
       void this.context.resume().catch(() => { /* State below offers a user-gesture retry. */ });
@@ -164,10 +144,6 @@ export class SoundMonitor {
     if (this.nativeIOS) document.removeEventListener("pause", this.nativePaused);
     window.removeEventListener("pagehide", this.pageHidden);
     this.unregisterSignOut?.(); this.unregisterSignOut = null;
-    if (this.nativeInput) {
-      void this.nativeInput.stop(reason).catch(() => { console.warn("[Sleepy sound] Native input cleanup failed"); });
-      this.nativeInput = null;
-    }
     this.context?.removeEventListener("statechange", this.stateChanged);
     this.stream?.getTracks().forEach((track) => {
       track.removeEventListener("ended", this.mediaInterrupted); track.stop();

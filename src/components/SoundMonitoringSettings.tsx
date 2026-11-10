@@ -2,6 +2,7 @@ import { useSoundStore } from "../stores/soundStore";
 import { useTranslation } from "../i18n";
 import { retrySoundEvents, useSoundQueue } from "../services/soundEventQueue";
 import "./SoundMonitoring.css";
+import { nativeSoundSupported } from "../services/nativeSoundMonitoring";
 
 export default function SoundMonitoringSettings() {
   const { t } = useTranslation();
@@ -24,7 +25,7 @@ export default function SoundMonitoringSettings() {
         <option value="high">{t("sound.high")}</option>
       </select>
     </label>
-    <p className="muted">{t("sound.limitation")}</p>
+    <p className="muted">{t(nativeSoundSupported() ? "sound.nativeLimitation" : "sound.limitation")}</p>
     <p className="muted">{t("sound.notAlarm")}</p>
     {failed && <div role="status"><p>{t("sound.saveError")}</p>
       <button type="button" className="secondary-button" onClick={() => void retrySoundEvents()}>{t("sound.retrySave")}</button>

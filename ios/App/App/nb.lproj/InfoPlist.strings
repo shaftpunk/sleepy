@@ -1,1 +1,1 @@
-"NSMicrophoneUsageDescription" = "Sleepy bruker mikrofonen til å oppdage lydnivå mens barnet sover. Lyd analyseres på enheten og tas ikke opp.";
+"NSMicrophoneUsageDescription" = "Sleepy bruker mikrofonen til lydovervåking du starter, også med låst skjerm eller i andre apper. Lyd analyseres på enheten og tas ikke opp.";

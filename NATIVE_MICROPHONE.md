@@ -1,182 +1,206 @@
-# Native iOS sound monitoring
+# Sleepy native sound monitoring
 
-## Capture and privacy
+## Capture, detection and lifetime
 
-The Web/PWA `getUserMedia({ audio: true })` / Web Audio pipeline is unchanged.
-Native iOS now selects a small app-local `SleepySoundMeter` Capacitor input
-adapter: AVAudioSession (.record/.default), AVAudioEngine input tap, float32
-noninterleaved samples, and on-device linear RMS/peak/dBFS calculation. Only
-derived scalar metadata crosses the bridge at approximately 10 Hz. There is no
-audio recorder, file output or audio-data bridge. No npm dependency was added.
-The existing SoundMonitor, thresholds, detector and Supabase event queue remain.
+Start on Home during an active sleep is the only way to start native capture.
+The saved preference, navigation, app startup, unlock and foregrounding never
+start a new microphone session. An already-running native session is adopted
+when React returns; leaving Home does not stop it.
 
-The old native path still used Web Audio, reported listening immediately after
-setup, and displayed linear RMS directly on a 0–1 meter. Permission/engine state
-did not establish that actual samples reached the analyser. The device's exact
-WebKit failure cannot be proven statically. The new native input removes that
-boundary and identifies each signal stage independently; a new device run must
-verify it. Native now reports listening only after a valid level event. No
-events within 3 seconds after engine startup is an error, not quiet listening.
-Valid zero-valued buffers are still accepted as quiet input.
+The App target declares `UIBackgroundModes = audio`. The real microphone input,
+not playback/silent audio or WebView keepalive, is its background audio activity.
+`AVAudioSession` remains `.record` / `.default` / no options. `AVAudioEngine` reads
+input via a float32 input tap. Only numerical energy/peak values reach native
+main-queue processing. The native detector continues while locked/backgrounded.
+Web/PWA retains its existing getUserMedia/Web Audio path and foreground policy.
 
-The app already includes NSMicrophoneUsageDescription and English/Norwegian
-InfoPlist.strings. iOS chooses the permission prompt language; Sleepy's language
-controls in-app messages. Web retains its HTTPS gate and automatic start.
+`ios/NativeSoundCore` contains the platform-independent detector, bounded queue,
+monitoring-intent and remote-deadline code. App compiles those same sources;
+Swift Package tests do not use a second copy of the algorithm.
 
-Native monitoring starts only after tapping Start on Home during active sleep.
-The persisted Settings opt-in alone never requests microphone access on iOS.
-The native audio session requests system authorization; Sleepy does not automatically
-retry denied requests. Denial directs the user to iPhone Settings. Unavailable
-or restricted capture and runtime acquisition errors have separate messages.
+### Exact detector semantics
 
-The native tap reads transient time-domain samples and calculates RMS locally;
-web retains its existing analyser. The thresholds and detector are unchanged. No recorder,
-audio file, speech recognition, speaker connection, stream transmission or raw
-audio persistence is introduced. Only the existing timestamps and average/peak
-relative levels enter the existing sound-event queue and Supabase service.
+`src/sound/detector.ts` remains unchanged. Swift implements the same rules:
 
-## Foreground lifetime
+- Linear RMS, clamped to 0–1; low/medium/high thresholds **0.12/0.06/0.025**.
+- At least **2000ms** above threshold confirms an event. Short noises reset.
+- Quiet during a confirmed event is bridged until **2500ms**; the event then
+  ends at the beginning of quiet, not at the end of the quiet timeout.
+- Sum/count average and maximum aggregation, including the same quiet samples
+  as TypeScript; no new sensitivity, cooldown or speech/cry classification.
+- A sampling gap over **1000ms** or backwards clock flushes through the last
+  sample. Explicit stop/interruption flushes only observed time, not suspension.
 
-Stop releases the native input tap/engine/audio session (or web tracks, audio
-nodes and AudioContext), watchdog/timer, listeners and authenticated logout hook.
-Pending permission cannot revive a stopped monitor. Run IDs prevent an old
-capture's events or cleanup from affecting another capture. Duplicate
-start calls on one instance are ignored. Account/session generation checks
-reject stale acquisition and stop a running sampling loop after a session change.
+Native detection consumes aggregated RMS at about 100ms cadence. Foreground
+visual cadence is separate. Parity fixtures are produced from the real TS
+detector by `scripts/sound-parity-vectors.cjs`. Node verifies the fixture remains
+current; XCTest executes the Swift detector against the same timestamps/levels
+and expected event boundaries/averages/peaks. `ios-prepare.mjs` now runs
+`swift test --package-path ios/NativeSoundCore` on macOS before the native build.
+The Swift tests cannot execute on the current Windows environment.
 
-Capture ends on manual Stop, disabling the preference, sensitivity change,
-navigation/unmount, baby/sleep/user change, sleep ending, logout, hidden web document,
-page hide, track ending/muting, or AudioContext interruption. Native iOS also
-listens to Capacitor's built-in document `pause` event, dispatched for the scene
-entering the background. Thus switching apps or locking the phone stops capture;
-returning leaves it stopped and requires another Start tap. A stalled sampling
-loop is also stopped rather than fabricating observations across suspension.
-There is no background audio mode, silent-audio workaround or automatic resume.
+## Metadata queue and synchronization
 
-On native iOS, WKWebView `visibilitychange` is diagnostic only: an inactive
-transition during permission/session setup is not authoritative backgrounding.
-Actual native scene/app background notifications and Capacitor `pause` still stop
-capture. Benign category-change notifications from our own `.record/.default`
-setup are ignored only while the valid configured input is starting or running; other
-route changes, lost engine configuration and real audio interruptions still stop.
+Completed events have a native UUID, owner/baby/sleep UUIDs, timestamps, average
+and maximum RMS. They are atomically saved under Application Support/SleepySound,
+excluded from backups, protected until first device unlock. That protection
+allows metadata writes while subsequently locked during user-started capture.
 
-## Physical iPhone verification
+The queue holds at most **256 finalized events**. Capture stops before exhausting
+capacity, reserving a slot for its final flush; old unacknowledged events are
+never evicted. Storage failure also stops capture. No unbounded per-sample queue
+or audio file is created. In-progress events live as detector aggregates; a
+process kill can lose that unfinished event. Finalized queued events survive.
+Force-quit/OS termination ends capture and never auto-restarts it on launch.
 
-1. Build a new IPA through the existing release workflow. The microphone usage
-   input adapter requires a new native build; a web-only update cannot add it.
-   No microphone provisioning entitlement/profile change is
-   needed. Preserve the existing Apple/push profile requirements independently.
-2. Enable sound monitoring in Settings, start a sleep, and open Home. Confirm no
-   microphone prompt appears until Start is tapped.
-3. Tap Start, allow access, and confirm the native active state and a meter that
-   responds to quiet/noise. Sustained sound should produce the same derived
-   events as web. The native meter displays sqrt(RMS) for visibility of ordinary
-   low amplitudes, holding the highest RMS between UI updates to show brief
-   claps. Native emission aggregates energy from every intervening tap buffer
-   rather than dropping them. Detector input and stored levels remain linear RMS.
-   Compare quiet, speech and a nearby clap. Local mocks do not prove physical capture.
-4. Stop/restart repeatedly. Confirm iOS's microphone indicator disappears after
-   Stop and that only one monitoring loop is active.
-5. Deny access on a fresh permission state. Confirm useful iPhone Settings
-   guidance, no automatic retry, and recovery after enabling access in Settings.
-6. Navigate away, end sleep, disable monitoring, switch baby, log out and log in
-   as another user. Capture must end; native monitoring must not auto-start.
-7. Switch apps, lock/unlock, and test an audio interruption (e.g. a call).
-   Returning must not claim to be listening until explicitly restarted.
-8. Verify English/Norwegian messages and permission localization, browser/PWA
-   monitoring, Apple login, and native push. Confirm persisted sound events
-   contain only the established metadata fields.
+On foreground/startup or event availability, the signed-in user drains batches
+of 20 metadata events through existing `createSoundEvent`, including its RLS
+sleep validation/clipping and idempotent UUID upsert. Native acknowledgement
+occurs **after** successful persistence. A crash between write and ack can retry
+the same UUID without duplicating the row. Offline writes leave native metadata
+unacknowledged; another account cannot drain/upload the previous owner's events.
+Queued metadata remains for that owner until successful retry or app removal.
+No new database migration or sound-event schema is required.
 
-Local mocks cover permission outcomes, RMS/event output, duplicate starts,
-pending acquisition, interruption and session cleanup. Windows cannot validate
-Xcode compilation or the real iOS microphone/permission stack.
+## Remote sleep end: under-60-second stop policy
 
-## Temporary signal diagnostics
+The selected policy is native remote validity checking, including while locked.
+One new Edge Function, `sound-monitor-status`, is required. It has two actions:
 
-Native unified logs use subsystem `no.strandeconsulting.sleepy`, category
-`SoundMeter`: session activation/input availability, sample rate/channel format,
-engine running state, then buffer count/frame count/RMS/peak/dBFS about once per
-second. JS console entries prefixed `[Sleepy sound]` identify listeners ready,
-bridge reception, detector/state input and React's raw/displayed meter values.
-Only whitelisted derived numbers are logged. No raw samples, buffers, account
-identifiers, session credentials or recordings are logged. Remove these numeric
-diagnostics after device verification; sound-level history is still sensitive.
+1. `issue`: requires the normal Supabase user JWT and an RLS-visible active sleep.
+   The server creates a **24-hour**, domain-separated HMAC capability restricted
+   to boolean validity checks for that user/baby/sleep. It is not an Auth JWT.
+2. `validate`: verifies the signed capability, expiry and matching context, then
+   checks that the auth user, active sleep and current household access remain.
+   It returns only `active`. No sound observations are sent on this path.
 
-Interpretation: engine started but no buffer logs means native input/tap failure;
-changing native numbers without bridge reception means bridge/listener failure;
-bridge numbers without detector logs means session/lifecycle filtering; detector
-numbers without React updates means component eligibility/rendering. All stages
-changing but a static meter means a UI/display problem. No buffer is emitted
-before native format validation; JS validates metadata and run identity too.
+Gateway JWT verification is disabled **only for this new function**, because the
+native validation capability is not a Supabase JWT. Both actions authenticate
+inside the handler. HMAC key material is domain-separated from the existing
+server-only SUPABASE_SERVICE_ROLE_KEY. It never leaves Supabase. No new secret,
+service-role client credential or native Auth/refresh-token implementation is
+needed. Rotating the server role key invalidates outstanding leases safely.
 
-## Background/lock investigation — not implemented
+Native uses an ephemeral, non-caching URLSession. The capability exists only in
+memory and is cleared on Stop. It is not encoded in session/event queue files.
+Polls run every **20 seconds**, with a **10-second network timeout** and native
+**12-second watchdog** (checked every 2 seconds). Negative, expired, malformed,
+unauthorized or failed responses stop capture; inability to check is NOT treated
+as permission to continue. Expected stop latency is about 20–36 seconds, below
+the requested 60-second budget while iOS schedules the running capture process.
+If iOS terminates the process, the microphone stops as well. This is not a safety
+or real-time guarantee. **Network loss deliberately stops monitoring.**
 
-- Inactive: no unconditional stop solely on becoming inactive; permission sheets
-  must be allowed to complete. Audio interruptions can still stop capture.
-- Background/lock: the previous explicit JS pause/hidden handlers intentionally
-  stopped monitoring, as required by the original foreground-only scope. Native
-  now relies on actual background/pause, not WebView visibility alone. Scene-background notification also releases input if JS is
-  suspended. iOS/WebKit suspension is an additional limitation, not the only cause.
-- Foreground: the saved enable preference is retained, but capture requires Start;
-  monitoring is not automatically resumed or claimed to be active.
+A long permission sheet/interruption requires fresh native validity before
+microphone startup/resume. Foreground realtime/validation can stop sooner.
+Ending a sleep on another family device also causes the existing metadata writer
+to trim/discard out-of-sleep observations when queued events are later uploaded.
+After 24 hours the lease expires and capture stops; a fresh user Start obtains
+a new one. No credential or automatic restart survives process termination.
 
-A separately approved background implementation would require all of:
+Before the next TestFlight build, manually deploy only the new function from root:
 
-1. Add `audio` to App target Info.plist UIBackgroundModes / Background Modes.
-   This task does not add it. No silent audio or process-keepalive workaround.
-2. Keep a deliberately user-started, active AVAudioSession capture category
-   (.record; .playAndRecord only if actual playback is also needed), input tap
-   and engine alive. Handle calls, route changes, media resets and explicit Stop.
-3. Change the intentional pause/hidden policy for that explicit background mode.
-   Do not depend on WKWebView timers/React/Capacitor JS running while locked.
-4. Run equivalent threshold/event detection natively or design a bounded derived
-   event queue with identical timing semantics. Reconcile metadata on foreground;
-   do not buffer raw audio or assume Supabase JS requests execute while suspended.
-5. Provide explicit background opt-in, persistent understandable status/Stop UX,
-   accurate privacy copy and iOS microphone indication. Measure battery/thermal
-   use during realistic overnight tests and rate-limit metering/diagnostics.
-6. Explain the actual user-started baby sound monitoring to App Review, demonstrate
-   it on-device and describe no recording/storage/transmission of audio. Apple
-   permits background audio capture technically, but approval is not guaranteed.
+```powershell
+supabase functions deploy sound-monitor-status --project-ref zebrmlignzctngbxijql
+```
 
-Sources: [Apple audio capture category/background behavior](https://developer.apple.com/documentation/avfaudio/avaudiosession/category-swift.struct/record),
-[App Review Guidelines: background services, power and microphone consent](https://developer.apple.com/app-store/review/guidelines/).
+Do not redeploy push functions or run database migrations for this work. This
+implementation has not deployed any function or changed production configuration.
+Verify the deployed endpoint against real Sleepy RLS/membership data before release.
 
-## Immediate-start-stop diagnostic build
+## Interruptions and user control
 
-The previous route observer unconditionally stopped any installed engine on
-every audio route notification. `setCategory(.record)` may post categoryChange
-on a secondary thread; delivery on the main queue can occur after startup. That
-was a self-stop bug, not proof that `engine.start()` failed. Its event path was
-native `finish` -> `stopped` -> JS `onStopped` -> SoundMonitor paused. The exact
-notification on the reported device still requires the following logs.
+Stop, disabling monitoring, changing baby/sensitivity, local/remote sleep end,
+logout/account change, revoked permission, queue exhaustion or unrecoverable
+audio/validity failure release the input tap, engine, session and native timers.
 
-Native logs (subsystem `no.strandeconsulting.sleepy`, category `SoundMeter`) now
-use `[SoundMeter]` and identify: start request, permission status/result, category
-configuration, session activation, input format, tap installation, preparation,
-engine start, first buffer and first level. Swift throwing setup failures include
-`START FAILED stage=<stage> error=<fixed code> osCode=<number>`; no localized
-error/userInfo/device names are printed. Assertions/process crashes in AVFoundation
-are not Swift errors; retain the last stage log and the iOS crash report if one occurs.
+Backgrounding/lock only cancels the 60ms visual timer. Native capture/detection
+continue; no meter events are bridged to suspended JS. Interruptions flush the
+current detector event and pause capture while retaining explicit user intent.
+On interruption end, resume is permitted only with Apple's `shouldResume`, a
+still-requested session, valid permission and fresh remote validity. Stop clears
+that intent and prevents delayed callbacks from restarting input. A route/media
+reset gets one controlled recovery attempt; failure stops rather than looping.
+Benign category changes caused by our own capture setup are ignored.
 
-All native `finish` calls include stop reason, startup stage, app state and engine
-running state. Category-change notifications log their reason (3 = categoryChange)
-and whether the healthy configured category notification was ignored. Inactive/
-active lifecycle observations are logged without stopping. JS logs listener
-installation, native start request/resolution/rejection, first level, ignored
-stale events, removal and the exact stop reason. Neither run UUIDs nor audio data
-are logged. Console errors are not copied wholesale across the bridge.
+## Foreground display calibration
 
-The existing first-level timeout is still 3 seconds **after native start resolves**,
-not while permission is pending. It logs `startup timeout` and produces **error**,
-not paused. A native engine-start error also produces error; paused means a native
-stop/cancellation, actual background event, invalid level metadata, session change,
-or the existing >1-second gap after levels have already begun. None of these
-timeouts was increased to conceal a native failure.
+- Old native bridge cadence: about **100ms**; React about **250ms** (~4Hz).
+- Old display: `sqrt(RMS)` with peak hold.
+- New native visual timer: **60ms** (~16.7Hz); JS coalesces bursts below 50ms.
+- Target: `clamp((20*log10(RMS) + 70) / 60, 0, 1)^1.4`.
+- Fast attack: **25ms** time constant; decay: **180ms**, elapsed-time adjusted.
+- Quiet/zero inputs are valid; zero/invalid display inputs map safely to zero.
+- Highest RMS between visual ticks holds brief claps. Native detection and
+  persisted RMS are NEVER fed the display transformation.
 
-For the next device run, capture one complete Start attempt from both native
-`[SoundMeter]` and JS `[Sleepy sound]` logs. Include the first stop/rejection and
-all preceding stage lines. If no stop occurs, confirm first-buffer/first-level
-and moving numeric levels. `.record` / `.default` / empty options remain valid
-microphone-input configuration; no playback, disk recording or background mode
-was added. Windows verification cannot establish the actual device event order.
+Steady visual targets: -70dBFS=0, -60=0.08, -45=0.29, -30=0.57, -20=0.77,
+-10=1, 0=1. These are visual calibration defaults, not detector thresholds or
+calibrated SPL/dB readings. Physical microphone gain differs across devices.
+Foreground diagnostics log only RMS/dBFS/mapped display level about once/second.
+There is no animation timer or continuous meter bridge traffic in background.
+
+## Privacy and App Review
+
+No AVAudioRecorder/MediaRecorder, audio files, speech recognition, sample storage,
+audio buffers over Capacitor, audio upload or hidden microphone start is added.
+Transient tap buffers are reduced to scalar energy/peak values immediately.
+Only completed event metadata is persisted; the status endpoint sees only its
+scoped capability/session identifiers, never microphone samples or events.
+The iOS microphone indicator remains visible. Home shows active/paused state and
+Stop; native Settings explains background operation and fail-closed networking.
+English/Norwegian copy is retained. Review must use real hardware and the existing
+review account; credentials should be supplied separately in App Store Connect.
+
+Suggested App Review Notes:
+
+> Sleepy includes optional, explicitly user-started sound-level logging during a
+> baby's sleep session. Start a sleep, enable Sound Monitoring in Settings, then
+> tap Start on Home and grant microphone permission. Continuous microphone input
+> is analyzed locally with AVAudioEngine while the user switches apps or locks
+> the screen. This is the purpose of the audio background mode; no silent playback
+> or WebView keepalive is used. No audio recordings/files are created, and no raw
+> audio is stored or transmitted. Only derived event timestamps and relative
+> average/maximum sound levels are synchronized to the signed-in family's data.
+> The user can Stop on Home or disable monitoring in Settings. Ending the sleep,
+> logout, permission loss or inability to verify session validity stops capture.
+> The iOS microphone indicator remains active during capture. This is a sound log,
+> not a baby alarm, cry-recognition system, medical device or safety guarantee.
+
+Apple supports background capture technically, but review approval is not
+guaranteed. Measure battery/thermal use during overnight tests; network polling
+and continuous microphone capture consume power. Sources:
+[Apple record/background behavior](https://developer.apple.com/documentation/avfaudio/avaudiosession/category-swift.struct/record),
+[interruptions](https://developer.apple.com/documentation/avfaudio/handling-audio-interruptions),
+[Review Guidelines](https://developer.apple.com/app-store/review/guidelines/).
+
+## Physical-iPhone TestFlight plan
+
+1. Run the macOS native preparation (including Swift tests), archive/sign with the
+   existing workflow, and install a fresh TestFlight build. No provisioning change
+   is needed for the audio Info.plist background declaration.
+2. Deploy/verify the new function first. A missing/unavailable validity service
+   intentionally prevents starting. Confirm no token values appear in logs.
+3. Start an active sleep and tap Start. Confirm native permission, responsive
+   quiet/speech/nearby-speech/clap movement, and unchanged sustained detection.
+4. Navigate across Sleepy pages; return Home and confirm the same capture continues.
+5. Switch apps for several minutes and lock for 10+ minutes. Produce separated
+   sustained sounds. Confirm the system microphone indicator remains active.
+6. Return; verify running/detected status, automatic metadata drain, correct event
+   times/durations, and no duplicates after repeated foreground/background cycles.
+7. While locked, end the sleep from a second family device. Time microphone release;
+   it must stop within 60 seconds. Repeat after revoking household access.
+8. Disable network while locked: verify fail-closed microphone release within the
+   same budget and that finalized queued events upload on return/reconnection.
+9. Test Stop, ending sleep locally, disabling preference, switching baby and logout.
+   The microphone indicator must disappear. Another account must not inherit capture
+   or receive prior-owner events. Retry queued metadata after the original user logs in.
+10. Interrupt with a call/Siri; verify safe resume only if permitted/valid. Press Stop
+    during interruption and verify it never resumes afterward. Test route changes.
+11. Force-quit after finalized events have queued; reopen. Verify capture stays off,
+    metadata survives, and retries do not duplicate server events. An unfinished event
+    may be lost on process kill; capture cannot continue after force-quit.
+12. Exercise queue capacity/storage-failure tests and confirm bounded behavior without
+    evicting unacknowledged events. Measure foreground UI rate and overnight battery/heat.
+13. Re-test Web/PWA microphone behavior and both languages. No push/auth changes are
+    part of this work. Do not use this feature as a medical/safety monitor.
