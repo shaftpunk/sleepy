@@ -125,9 +125,13 @@ final class SleepLiveActivityCoordinator {
 public class SleepyLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "SleepyLiveActivityPlugin"
     public let jsName = "SleepyLiveActivity"
-    public let pluginMethods = ["startSleep", "updateSleep", "endSleep", "reconcile", "endAll"].map {
-        CAPPluginMethod(name: $0, returnType: CAPPluginReturnPromise)
-    }
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "startSleep", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "updateSleep", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "endSleep", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "reconcile", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "endAll", returnType: CAPPluginReturnPromise)
+    ]
     private var pending: Task<Void, Never>?
     private func perform(_ call: CAPPluginCall, operation: @escaping @MainActor () async -> Void) {
         DispatchQueue.main.async { [weak self] in
