@@ -19,6 +19,7 @@ function fixture({ native = true, platform = 'ios', secure = true, available = t
   const lifecycle = load('src/auth/sessionLifecycle.ts');
   const listeners = new Map(), documentListeners = new Map();
   const calls = { start: 0, stop: 0, removed: 0, webCapture: 0, contexts: 0, registeredName: '' };
+  const logs = [];
   let now = Date.parse('2026-11-10T10:00:00Z'), timer, runId, resolve;
   class Clock extends Date { static now() { return now; } }
   const level = (rms = .2, changes = {}) => listeners.get('level')?.({ runId, rms, peak: Math.max(.3, rms), dbFS: -14,
@@ -36,10 +37,11 @@ function fixture({ native = true, platform = 'ios', secure = true, available = t
       if (failure) throw { code: failure, message: 'Private hardware details' };
       if (!noLevels) level();
     },
-    async stop(options) { if (options.runId === runId) calls.stop++; },
+    async stop(options) { if (options.runId === runId) { calls.stop++; calls.stopReason = options.reason; } },
   };
   const document = { hidden, addEventListener: (name, cb) => documentListeners.set(name, cb), removeEventListener: name => documentListeners.delete(name) };
-  const globals = { Date: Clock, document, window: { isSecureContext: secure, addEventListener() {}, removeEventListener() {} },
+  const globals = { Date: Clock, document, console: { info: (...args) => logs.push(args), warn: (...args) => logs.push(args) },
+    window: { isSecureContext: secure, addEventListener() {}, removeEventListener() {} },
     navigator: { mediaDevices: { async getUserMedia() { calls.webCapture++; throw new Error('Must not capture on native'); } } },
     setInterval: callback => { timer = callback; return 1; }, clearInterval: () => { timer = null; } };
   const nativeModule = load('src/services/nativeSoundInput.ts', { '@capacitor/core': { registerPlugin: name => { calls.registeredName = name; return plugin; } } }, globals);
@@ -50,9 +52,9 @@ function fixture({ native = true, platform = 'ios', secure = true, available = t
   }, globals);
   const states = [], events = [];
   const monitor = new service.SoundMonitor('medium', event => events.push(event), state => states.push(state));
-  return { monitor, states, events, lifecycle, document, documentListeners, listeners, calls, service, level,
+  return { monitor, states, events, lifecycle, document, documentListeners, listeners, calls, service, level, logs,
     resolve: () => resolve(), advance: (ms = 100) => { now += ms; timer?.(); }, hasTimer: () => Boolean(timer),
-    stoppedEvent: () => listeners.get('stopped')?.({ runId, reason: 'interrupted' }),
+    stoppedEvent: (reason = 'interrupted') => listeners.get('stopped')?.({ runId, reason }),
     input: new nativeModule.NativeSoundInput() };
 }
 
@@ -144,20 +146,45 @@ test('logout stops input before signOut; account switching invalidates pending/r
   const other = fixture(); await other.monitor.start(); other.lifecycle.invalidateSessionWork(); other.advance();
   assert.equal(other.states.at(-1).status, 'paused');
 });
-for (const event of ['pause', 'visibilitychange', 'native-interruption', 'missing-events']) {
+for (const event of ['pause', 'native-interruption', 'missing-events']) {
   test(`${event} stops foreground-only monitoring with no automatic resume`, async () => {
     const f = fixture(); await f.monitor.start();
     if (event === 'pause') f.documentListeners.get('pause')();
-    if (event === 'visibilitychange') { f.document.hidden = true; f.documentListeners.get('visibilitychange')(); }
     if (event === 'native-interruption') f.stoppedEvent();
     if (event === 'missing-events') f.advance(1100);
     assert.equal(f.states.at(-1).status, 'paused'); await tick();
     assert.equal(f.listeners.size, 0); assert.equal(f.hasTimer(), false); assert.equal(f.documentListeners.has('resume'), false);
   });
 }
-test('already backgrounded start does not acquire microphone', async () => {
-  const f = fixture({ hidden: true }); await f.monitor.start(); assert.equal(f.calls.start, 0);
-  assert.equal(f.states.at(-1).status, 'paused');
+test('native WebView hidden/inactive indication alone does not cancel healthy capture or permission startup', async () => {
+  const f = fixture({ hidden: true }); await f.monitor.start();
+  assert.equal(f.calls.start, 1); assert.equal(f.states.at(-1).status, 'listening');
+  f.documentListeners.get('visibilitychange')(); f.advance(300); f.level(.025);
+  assert.equal(f.states.at(-1).status, 'listening'); assert.equal(f.states.at(-1).level, .025);
+  f.documentListeners.get('pause')(); // Actual background still stops.
+  assert.equal(f.states.at(-1).status, 'paused'); assert.equal(f.calls.stopReason, 'capacitor-pause-background');
+});
+test('native stop reason survives the bridge into service diagnostics and cleanup', async () => {
+  const f = fixture(); await f.monitor.start(); f.stoppedEvent('input-route-changed');
+  assert.equal(f.states.at(-1).status, 'paused'); assert.equal(f.calls.stopReason, 'native:input-route-changed');
+  assert.ok(f.logs.some(([message]) => message === '[Sleepy sound] stop requested reason=native:input-route-changed'));
+});
+test('unknown native stop reason is not logged verbatim', async () => {
+  const f = fixture(); await f.monitor.start(); f.stoppedEvent('private unexpected data');
+  assert.equal(f.calls.stopReason, 'native:unknown-native-stop');
+  assert.ok(!JSON.stringify(f.logs).includes('private unexpected data'));
+});
+test('delayed first level before the existing timeout becomes active; permission wait is outside timeout', async () => {
+  const f = fixture({ pending: true, noLevels: true }); const request = f.monitor.start(); await tick();
+  f.advance(15000); assert.equal(f.hasTimer(), false); // No capture timeout during permission dialog.
+  f.resolve(); await request; f.advance(2900); assert.equal(f.states.at(-1).status, 'starting');
+  f.level(.025); f.advance(300); assert.equal(f.states.at(-1).status, 'listening');
+  assert.ok(!f.logs.some(([message]) => message === '[Sleepy sound] startup timeout')); f.monitor.stop();
+});
+test('missing first level reports startup timeout/error, not paused or an engine-start failure', async () => {
+  const f = fixture({ noLevels: true }); await f.monitor.start(); f.advance(3100);
+  assert.equal(f.states.at(-1).status, 'error'); assert.equal(f.calls.stopReason, 'startup-timeout');
+  assert.ok(f.logs.some(([message]) => message === '[Sleepy sound] startup timeout'));
 });
 test('browser keeps its secure-context gate and never enters the native bridge', async () => {
   const f = fixture({ native: false, secure: false }); await f.monitor.start();

@@ -45,13 +45,20 @@ start calls on one instance are ignored. Account/session generation checks
 reject stale acquisition and stop a running sampling loop after a session change.
 
 Capture ends on manual Stop, disabling the preference, sensitivity change,
-navigation/unmount, baby/sleep/user change, sleep ending, logout, hidden document,
+navigation/unmount, baby/sleep/user change, sleep ending, logout, hidden web document,
 page hide, track ending/muting, or AudioContext interruption. Native iOS also
 listens to Capacitor's built-in document `pause` event, dispatched for the scene
 entering the background. Thus switching apps or locking the phone stops capture;
 returning leaves it stopped and requires another Start tap. A stalled sampling
 loop is also stopped rather than fabricating observations across suspension.
 There is no background audio mode, silent-audio workaround or automatic resume.
+
+On native iOS, WKWebView `visibilitychange` is diagnostic only: an inactive
+transition during permission/session setup is not authoritative backgrounding.
+Actual native scene/app background notifications and Capacitor `pause` still stop
+capture. Benign category-change notifications from our own `.record/.default`
+setup are ignored only while the valid configured input is starting or running; other
+route changes, lost engine configuration and real audio interruptions still stop.
 
 ## Physical iPhone verification
 
@@ -107,8 +114,8 @@ before native format validation; JS validates metadata and run identity too.
 - Inactive: no unconditional stop solely on becoming inactive; permission sheets
   must be allowed to complete. Audio interruptions can still stop capture.
 - Background/lock: the previous explicit JS pause/hidden handlers intentionally
-  stopped monitoring, as required by the original foreground-only scope. They
-  remain. Native scene-background notification also releases input if JS is
+  stopped monitoring, as required by the original foreground-only scope. Native
+  now relies on actual background/pause, not WebView visibility alone. Scene-background notification also releases input if JS is
   suspended. iOS/WebKit suspension is an additional limitation, not the only cause.
 - Foreground: the saved enable preference is retained, but capture requires Start;
   monitoring is not automatically resumed or claimed to be active.
@@ -134,3 +141,42 @@ A separately approved background implementation would require all of:
 
 Sources: [Apple audio capture category/background behavior](https://developer.apple.com/documentation/avfaudio/avaudiosession/category-swift.struct/record),
 [App Review Guidelines: background services, power and microphone consent](https://developer.apple.com/app-store/review/guidelines/).
+
+## Immediate-start-stop diagnostic build
+
+The previous route observer unconditionally stopped any installed engine on
+every audio route notification. `setCategory(.record)` may post categoryChange
+on a secondary thread; delivery on the main queue can occur after startup. That
+was a self-stop bug, not proof that `engine.start()` failed. Its event path was
+native `finish` -> `stopped` -> JS `onStopped` -> SoundMonitor paused. The exact
+notification on the reported device still requires the following logs.
+
+Native logs (subsystem `no.strandeconsulting.sleepy`, category `SoundMeter`) now
+use `[SoundMeter]` and identify: start request, permission status/result, category
+configuration, session activation, input format, tap installation, preparation,
+engine start, first buffer and first level. Swift throwing setup failures include
+`START FAILED stage=<stage> error=<fixed code> osCode=<number>`; no localized
+error/userInfo/device names are printed. Assertions/process crashes in AVFoundation
+are not Swift errors; retain the last stage log and the iOS crash report if one occurs.
+
+All native `finish` calls include stop reason, startup stage, app state and engine
+running state. Category-change notifications log their reason (3 = categoryChange)
+and whether the healthy configured category notification was ignored. Inactive/
+active lifecycle observations are logged without stopping. JS logs listener
+installation, native start request/resolution/rejection, first level, ignored
+stale events, removal and the exact stop reason. Neither run UUIDs nor audio data
+are logged. Console errors are not copied wholesale across the bridge.
+
+The existing first-level timeout is still 3 seconds **after native start resolves**,
+not while permission is pending. It logs `startup timeout` and produces **error**,
+not paused. A native engine-start error also produces error; paused means a native
+stop/cancellation, actual background event, invalid level metadata, session change,
+or the existing >1-second gap after levels have already begun. None of these
+timeouts was increased to conceal a native failure.
+
+For the next device run, capture one complete Start attempt from both native
+`[SoundMeter]` and JS `[Sleepy sound]` logs. Include the first stop/rejection and
+all preceding stage lines. If no stop occurs, confirm first-buffer/first-level
+and moving numeric levels. `.record` / `.default` / empty options remain valid
+microphone-input configuration; no playback, disk recording or background mode
+was added. Windows verification cannot establish the actual device event order.

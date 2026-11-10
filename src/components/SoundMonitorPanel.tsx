@@ -45,7 +45,7 @@ export default function SoundMonitorPanel({ sleep }: { sleep: SleepRecord | null
     const start = () => {
       if (disposed || starting) return;
       starting = true;
-      monitor?.stop();
+      monitor?.stop("restart");
       monitor = new SoundMonitor(sensitivity, (event) => {
         enqueueSoundEvent({ ...event, id: crypto.randomUUID(), sleep_id: sleepId,
           baby_id: babyId, created_by_user_id: userId, event_type: "sound" });
@@ -53,12 +53,12 @@ export default function SoundMonitorPanel({ sleep }: { sleep: SleepRecord | null
       void monitor.start().finally(() => { starting = false; });
     };
     startRef.current = start;
-    stopRef.current = () => { monitor?.stop(); setState({ status: "off", level: 0, owner }); };
+    stopRef.current = () => { monitor?.stop("manual-stop"); setState({ status: "off", level: 0, owner }); };
     // Web keeps its existing auto-start. Native capture is an explicit user
     // action, including after returning to Home or changing accounts/sessions.
     if (!nativeIOS) start();
     return () => {
-      disposed = true; startRef.current = null; stopRef.current = null; monitor?.stop();
+      disposed = true; startRef.current = null; stopRef.current = null; monitor?.stop("component-or-session-cleanup");
       // A persisted opt-in can be toggled off/on without unmounting Home.
       // Do not reuse the previous capture's "listening" UI after cleanup.
       setState({ status: "off", level: 0, owner });
