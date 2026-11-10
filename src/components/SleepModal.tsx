@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import {
   createManualSleep,
@@ -9,6 +9,7 @@ import {
 import { useAppStore } from "../stores/appStore";
 import { useTranslation } from "../i18n";
 import SleepSoundActivity from "./SleepSoundActivity";
+import { useModalAccessibility } from "../hooks/useModalAccessibility";
 
 type Props = {
   sleep?: SleepRecord | null;
@@ -31,6 +32,8 @@ export default function SleepModal({
   onSaved,
 }: Props) {
   const { t } = useTranslation();
+  const titleId = useId();
+  const dialogRef = useModalAccessibility(onClose);
 
   const currentBabyId = useAppStore(
     (state) => state.currentBabyId,
@@ -144,6 +147,8 @@ export default function SleepModal({
     >
       <div
         className="feed-modal sleep-detail-modal"
+        ref={dialogRef}
+        role="dialog" aria-modal="true" aria-labelledby={titleId}
         onClick={(event) =>
           event.stopPropagation()
         }
@@ -155,7 +160,7 @@ export default function SleepModal({
                 t("common.appName")}
             </p>
 
-            <h2>
+            <h2 id={titleId}>
               {sleep
                 ? t("sleep.editTitle")
                 : t("sleep.addTitle")}
@@ -164,6 +169,7 @@ export default function SleepModal({
 
           <button
             className="modal-close"
+            type="button" aria-label={t("common.close")}
             onClick={onClose}
           >
             ×
@@ -223,6 +229,7 @@ export default function SleepModal({
                     )
                   }
                   aria-label={t("sleep.rateAria", { value })}
+                  aria-pressed={rate === value}
                 >
                   ★
                 </button>

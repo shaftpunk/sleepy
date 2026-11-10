@@ -87,6 +87,8 @@ const en = {
     confirmDeleteSleep: "Delete this sleep?",
     confirmDeleteFeed: "Delete this feeding?",
     deleteFeedingAria: "Delete feeding",
+    deleteSleepAria: "Delete sleep",
+    close: "Close",
     feedTypeBottle: "Bottle",
     feedTypeBreast: "Breast",
     feedTypeFood: "Food",

@@ -25,6 +25,8 @@ const SPLASH_DURATION_MS = 700;
 export default function Root() {
   const [showSplash, setShowSplash] = useState(true);
   const visualTheme = useAppStore((state) => state.visualTheme);
+  const theme = useAppStore((state) => state.theme);
+  const language = useAppStore((state) => state.language);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setShowSplash(false), SPLASH_DURATION_MS);
@@ -44,7 +46,7 @@ export default function Root() {
   useLoadAliveStyles(visualTheme === "alive");
 
   return (
-    <>
+    <div data-theme={theme} lang={language === "no" ? "nb" : "en"}>
       <AuthProvider>
         <AuthGate>
           <BabyLoader>
@@ -54,6 +56,6 @@ export default function Root() {
       </AuthProvider>
 
       {showSplash && <SplashScreen />}
-    </>
+    </div>
   );
 }

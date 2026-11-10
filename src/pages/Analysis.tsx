@@ -94,6 +94,7 @@ export default function Analysis() {
         {tabs.map((tabItem) => (
           <button
             key={tabItem.key}
+            aria-pressed={tab === tabItem.key}
             className={
               tab === tabItem.key
                 ? "analysis-tab active"

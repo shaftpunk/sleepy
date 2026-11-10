@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 
 import "./App.css";
+import "./mobile.css";
 
 import { useAppStore } from "./stores/appStore";
 import { useTranslation } from "./i18n";

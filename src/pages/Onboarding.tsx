@@ -129,18 +129,11 @@ export default function Onboarding({
         </div>
 
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "1fr 1fr",
-            gap: "8px",
-            marginBottom: "24px",
-          }}
-        >
+        <div className="onboarding-tabs">
 
           <button
             type="button"
+            aria-pressed={mode === "create"}
             className={
               mode === "create"
                 ? "primary-button"
@@ -157,6 +150,7 @@ export default function Onboarding({
 
           <button
             type="button"
+            aria-pressed={mode === "join"}
             className={
               mode === "join"
                 ? "primary-button"

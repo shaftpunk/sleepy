@@ -313,6 +313,7 @@ export default function Auth() {
                   ? "auth-tab auth-tab--active"
                   : "auth-tab"
               }
+              aria-pressed={mode === "login"}
               onClick={() =>
                 changeMode("login")
               }
@@ -328,6 +329,7 @@ export default function Auth() {
                   ? "auth-tab auth-tab--active"
                   : "auth-tab"
               }
+              aria-pressed={mode === "register"}
               onClick={() =>
                 changeMode("register")
               }

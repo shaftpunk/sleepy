@@ -424,7 +424,7 @@ export default function History() {
                   </div>
 
 
-                  <div
+                  <button type="button"
                     className="history-content clickable"
                     onClick={() =>
                       setEditingSleep(
@@ -459,12 +459,12 @@ export default function History() {
 
 
                     {sleep.note && (
-                      <p>
+                      <span className="history-note">
                         {sleep.note}
-                      </p>
+                      </span>
                     )}
 
-                  </div>
+                  </button>
 
 
                   <div className="history-actions">
@@ -473,6 +473,7 @@ export default function History() {
                       <button
                         className="history-action-button"
                         title={t("history.resumeSleepTitle")}
+                        aria-label={t("history.resumeSleepTitle")}
                         disabled={resumingSleepId === sleep.id}
                         onClick={() =>
                           void handleResumeSleep(
@@ -490,6 +491,7 @@ export default function History() {
                       <button
                         className="history-action-button"
                         title={t("sleep.splitButton")}
+                        aria-label={t("sleep.splitButton")}
                         onClick={() =>
                           setSplittingSleep(
                             sleep
@@ -503,6 +505,7 @@ export default function History() {
 
                     <button
                       className="history-delete"
+                      aria-label={t("common.deleteSleepAria")}
                       onClick={async () => {
 
                         if (
@@ -574,7 +577,7 @@ export default function History() {
                   </div>
 
 
-                  <div
+                  <button type="button"
                     className="history-content clickable"
                     onClick={() =>
                       setEditingFeed(
@@ -598,16 +601,17 @@ export default function History() {
                     </span>
 
                     {feed.note && (
-                      <p>
+                      <span className="history-note">
                         {feed.note}
-                      </p>
+                      </span>
                     )}
 
-                  </div>
+                  </button>
 
 
                   <button
                     className="history-delete"
+                    aria-label={t("common.deleteFeedingAria")}
                     onClick={async () => {
 
                       if (

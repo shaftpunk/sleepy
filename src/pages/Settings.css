@@ -1,10 +1,10 @@
 /* Shared Settings layout; behavior and theme artwork remain in their owners. */
 .settings-page {
-  --settings-gap: 16px;
-  --settings-padding: 18px;
-  --settings-radius: 20px;
-  --settings-control-radius: 12px;
-  --settings-control-height: 46px;
+  --settings-gap: var(--ui-gap, 16px);
+  --settings-padding: var(--ui-card-padding, 18px);
+  --settings-radius: var(--ui-card-radius, 20px);
+  --settings-control-radius: var(--ui-control-radius, 12px);
+  --settings-control-height: var(--ui-control-height, 48px);
   --settings-surface: rgba(24, 19, 38, .72);
   --settings-border: rgba(207, 191, 241, .14);
   --settings-control: rgba(255, 255, 255, .065);

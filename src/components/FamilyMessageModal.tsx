@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 
 import { useTranslation } from "../i18n";
 import { sendFamilyMessage } from "../services/familyMessageService";
+import { useModalAccessibility } from "../hooks/useModalAccessibility";
 
 const MAX_MESSAGE_LENGTH = 200;
 
@@ -19,6 +20,7 @@ export default function FamilyMessageModal({
   const { t } = useTranslation();
   const [customMessage, setCustomMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const dialogRef = useModalAccessibility<HTMLElement>(onClose, !sending);
   const sendingRef = useRef(false);
   const [result, setResult] = useState<
     "sent" | "noRecipients" | "error" | null
@@ -49,6 +51,7 @@ export default function FamilyMessageModal({
     <div className="modal-backdrop" onClick={sending ? undefined : onClose}>
       <section
         className="feed-modal family-message-modal"
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="family-message-title"

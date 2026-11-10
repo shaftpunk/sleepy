@@ -1,4 +1,5 @@
 import {
+  useId,
   useState,
 } from "react";
 
@@ -8,6 +9,7 @@ import {
 } from "../services/sleepService";
 
 import { LOCALES, useTranslation } from "../i18n";
+import { useModalAccessibility } from "../hooks/useModalAccessibility";
 
 
 type Props = {
@@ -44,6 +46,8 @@ export default function SleepSplitModal({
   onSaved,
 }: Props) {
   const { t, lang } = useTranslation();
+  const titleId = useId();
+  const dialogRef = useModalAccessibility(onClose);
 
   const startMs =
     sleep.endtime
@@ -145,6 +149,8 @@ export default function SleepSplitModal({
     >
       <div
         className="feed-modal"
+        ref={dialogRef}
+        role="dialog" aria-modal="true" aria-labelledby={titleId}
         onClick={(event) =>
           event.stopPropagation()
         }
@@ -155,13 +161,14 @@ export default function SleepSplitModal({
               {t("sleep.eyebrow")}
             </p>
 
-            <h2>
+            <h2 id={titleId}>
               {t("sleep.splitSessionTitle")}
             </h2>
           </div>
 
           <button
             className="modal-close"
+            type="button" aria-label={t("common.close")}
             onClick={onClose}
           >
             ×

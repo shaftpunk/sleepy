@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import {
   createFeed,
@@ -10,6 +10,7 @@ import {
 
 import { useAppStore } from "../stores/appStore";
 import { feedTypeLabel, sideLabel } from "../lib/format";
+import { useModalAccessibility } from "../hooks/useModalAccessibility";
 import { useTranslation } from "../i18n";
 
 type Props = {
@@ -33,6 +34,8 @@ export default function FeedModal({
   onSaved,
 }: Props) {
   const { t, lang } = useTranslation();
+  const titleId = useId();
+  const dialogRef = useModalAccessibility(onClose);
 
   const currentBabyId = useAppStore(
     (state) => state.currentBabyId,
@@ -142,6 +145,8 @@ export default function FeedModal({
     >
       <div
         className="feed-modal"
+        ref={dialogRef}
+        role="dialog" aria-modal="true" aria-labelledby={titleId}
         onClick={(event) =>
           event.stopPropagation()
         }
@@ -153,7 +158,7 @@ export default function FeedModal({
                 t("common.appName")}
             </p>
 
-            <h2>
+            <h2 id={titleId}>
               {feed
                 ? t("feeding.editTitle")
                 : t("feeding.registerTitle")}
@@ -162,6 +167,7 @@ export default function FeedModal({
 
           <button
             className="modal-close"
+            type="button" aria-label={t("common.close")}
             onClick={onClose}
           >
             ×
@@ -173,6 +179,7 @@ export default function FeedModal({
             ({ value, icon }) => (
               <button
                 key={value}
+                aria-pressed={feedType === value}
                 className={
                   feedType === value
                     ? "feed-type-button active"
@@ -236,6 +243,7 @@ export default function FeedModal({
                 (value) => (
                   <button
                     key={value}
+                    aria-pressed={side === value}
                     className={
                       side === value
                         ? "side-button active"

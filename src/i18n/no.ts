@@ -86,6 +86,8 @@ const no = {
     confirmDeleteSleep: "Slette denne søvnen?",
     confirmDeleteFeed: "Slette denne matingen?",
     deleteFeedingAria: "Slett mating",
+    deleteSleepAria: "Slett søvn",
+    close: "Lukk",
     feedTypeBottle: "Flaske",
     feedTypeBreast: "Bryst",
     feedTypeFood: "Mat",
