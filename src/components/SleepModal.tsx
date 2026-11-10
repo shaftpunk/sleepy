@@ -8,6 +8,7 @@ import {
 
 import { useAppStore } from "../stores/appStore";
 import { useTranslation } from "../i18n";
+import SleepSoundActivity from "./SleepSoundActivity";
 
 type Props = {
   sleep?: SleepRecord | null;
@@ -138,11 +139,11 @@ export default function SleepModal({
 
   return (
     <div
-      className="modal-backdrop"
+      className="modal-backdrop sleep-detail-backdrop"
       onClick={onClose}
     >
       <div
-        className="feed-modal"
+        className="feed-modal sleep-detail-modal"
         onClick={(event) =>
           event.stopPropagation()
         }
@@ -229,6 +230,8 @@ export default function SleepModal({
             )}
           </div>
         </div>
+
+        {sleep?.endtime && !sleep.deleted_at && <SleepSoundActivity key={sleep.id} sleep={sleep} />}
 
         {error && (
           <p className="form-error">

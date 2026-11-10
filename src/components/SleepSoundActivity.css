@@ -1,0 +1,55 @@
+.sleep-detail-backdrop {
+  padding: max(18px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(18px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+}
+.sleep-detail-modal { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+.sleep-sound-activity {
+  --sound-ink: #f3edff;
+  --sound-muted: #c1b5d2;
+  --sound-border: rgba(188, 162, 231, .25);
+  --sound-surface: rgba(127, 93, 178, .09);
+  color: var(--sound-ink); background: var(--sound-surface);
+  border: 1px solid var(--sound-border); border-radius: 18px; padding: 16px; margin: 20px 0;
+  min-width: 0; font-size: .875rem; line-height: 1.5;
+}
+.sleep-sound-activity h3 { margin: 0 0 6px; font-size: 1rem; }
+.sound-activity-summary { margin: 0 0 16px; color: var(--sound-muted); font-variant-numeric: tabular-nums; }
+.sound-activity-plot { min-width: 0; }
+.sound-activity-scroll { max-height: 176px; overflow-y: auto; overflow-x: hidden; border-radius: 8px; background: var(--sound-surface); scrollbar-width: thin; }
+.sound-activity-lanes { position: relative; min-width: 0; }
+.sound-activity-guide { position: absolute; top: 0; bottom: 0; border-left: 1px dashed var(--sound-border); pointer-events: none; }
+.sound-activity-event { position: absolute; height: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 5px; background: transparent; color: inherit; cursor: pointer; }
+.sound-activity-event > span { position: absolute; bottom: 6px; border-radius: 3px; background: #ad89eb; box-sizing: border-box; pointer-events: none; }
+.sound-activity-event.low > span { height: 10px; background: #9276b9; border: 1px dashed #d2b4ff; }
+.sound-activity-event.medium > span { height: 20px; }
+.sound-activity-event.high > span { height: 30px; background: #c6a0ff; border-top: 3px solid #f1e7ff; }
+.sound-activity-event[aria-pressed="true"] { background: var(--sound-border); box-shadow: inset 0 0 0 1px var(--sound-muted); }
+.sleep-sound-activity button:focus-visible, .sleep-sound-activity summary:focus-visible, .sound-activity-scroll:focus-visible { outline: 2px solid var(--sound-ink); outline-offset: -2px; }
+.sound-activity-scale { position: relative; height: 24px; font-size: .75rem; color: var(--sound-muted); font-variant-numeric: tabular-nums; }
+.sound-activity-scale > span { position: absolute; transform: translateX(-50%); top: 4px; white-space: nowrap; }
+.sound-activity-scale > span:first-child { transform: none; }
+.sound-activity-scale > span:last-child { transform: translateX(-100%); }
+.sound-activity-boundaries { display: flex; justify-content: space-between; gap: 12px; font-size: .75rem; color: var(--sound-muted); }
+.sound-activity-boundaries > span { display: flex; flex-direction: column; }
+.sound-activity-boundaries > span:last-child { text-align: right; }
+.sound-activity-boundaries strong { font-size: .9rem; color: var(--sound-ink); }
+.sound-activity-boundaries small { font-size: inherit; }
+.sound-activity-detail:empty { display: none; }
+.sound-activity-detail { display: flex; flex-direction: column; gap: 2px; margin-top: 14px; padding: 10px; border-radius: 10px; background: var(--sound-surface); overflow-wrap: anywhere; }
+.sound-activity-detail span, .sound-activity-detail small { color: var(--sound-muted); }
+.sound-activity-note { color: var(--sound-muted); font-size: .75rem; margin: 12px 0 0; }
+.sound-activity-list { margin-top: 14px; border-top: 1px solid var(--sound-border); }
+.sound-activity-list summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
+.sound-activity-list ol { list-style: none; margin: 0; padding: 0; max-height: 250px; overflow-y: auto; }
+.sound-activity-list li + li { border-top: 1px solid var(--sound-border); }
+.sound-activity-list li button { width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; text-align: left; }
+.sound-activity-list li button[aria-pressed="true"] { background: var(--sound-border); }
+.sound-activity-list small { display: block; color: var(--sound-muted); }
+[data-theme="light"] .sleep-sound-activity { --sound-ink: #30223f; --sound-muted: #665773; --sound-border: rgba(93, 57, 131, .23); --sound-surface: rgba(116, 77, 151, .06); }
+[data-theme="light"] .sound-activity-event.low > span { background: #a58bbf; border-color: #624783; }
+[data-theme="light"] .sound-activity-event.medium > span { background: #8b60bc; }
+[data-theme="light"] .sound-activity-event.high > span { background: #704299; border-top-color: #3a2059; }
+[data-visual-theme="retro"] .sleep-sound-activity, [data-visual-theme="retro"] .sound-activity-detail { border-radius: 0; }
+@media (max-width: 380px) {
+  .sleep-detail-modal { padding: 16px; }
+  .sleep-sound-activity { padding: 12px; }
+}
