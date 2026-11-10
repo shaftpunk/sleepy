@@ -18,6 +18,38 @@ const observers = new Set<() => void>();
 const STORAGE_KEY = "sleepy-native-push-installation";
 type Installation = { id: string; key: string; revision: number; owner: string | null };
 
+// TEMPORARY TestFlight diagnostics. Remove after the persistence failure is
+// identified. Never pass raw plugin errors, sessions, RPC args or storage here.
+function diagnostic(stage: string, facts: Record<string, string | number | boolean | null> = {}) {
+  console.info(`[Sleepy native push] ${stage}`, facts);
+}
+function safeErrorFields(error: unknown, secrets: (string | null)[] = []) {
+  const fields = error && typeof error === "object" ? error as Record<string, unknown> : {};
+  const sanitize = (value: unknown) => {
+    if (typeof value !== "string") return null;
+    let text = value;
+    for (const secret of secrets) {
+      if (secret) text = text.split(secret).join("[redacted]").split(secret.toUpperCase()).join("[redacted]");
+    }
+    return text.replace(/\bBearer\s+\S+/gi, "Bearer [redacted]")
+      .replace(/\beyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, "[redacted JWT]")
+      .replace(/\b[a-fA-F0-9]{32,}\b/g, "[redacted hex]");
+  };
+  return { code: sanitize(fields.code), message: sanitize(fields.message), details: sanitize(fields.details), hint: sanitize(fields.hint) };
+}
+class NativePushPersistenceError extends Error {}
+function persistenceError(stage: string, error?: unknown, secrets: (string | null)[] = []): Error {
+  const fields = safeErrorFields(error, secrets);
+  console.error(`[Sleepy native push] ${stage}`, fields);
+  const code = fields.code && /^[A-Z0-9_-]{1,32}$/i.test(fields.code) ? `:${fields.code}` : "";
+  const action = stage.startsWith("detach:") ? "removed" : "saved";
+  return new NativePushPersistenceError(`Native notification registration could not be ${action}. Please retry. [${stage}${code}]`);
+}
+function tokenFacts(token: string | null) {
+  return { tokenLength: token?.length ?? 0, tokenHexOnly: token !== null && /^[a-fA-F0-9]+$/.test(token),
+    tokenLengthValid: token !== null && token.length >= 32 && token.length <= 512 };
+}
+
 export const isNativeIOS = () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
 export const nativePushState = () => state;
 export function subscribeNativePush(listener: () => void): () => void {
@@ -40,39 +72,85 @@ function installation(create = true): Installation | null {
 function current(value: NonNullable<typeof context>) {
   return userId === value.userId && epoch === value.epoch && isSessionGenerationCurrent(value.generation);
 }
-function persist(token: string | null, owner: string | null): Promise<void> {
+async function persist(token: string | null, owner: string | null): Promise<void> {
   const captured = owner ? { userId: owner, epoch, generation: sessionGeneration() } : undefined;
-  const value = installation()!;
+  const authenticatedUserId = userId;
+  const action = owner ? "attach" : "detach";
+  let value: Installation;
+  try {
+    const saved = installation();
+    if (!saved || typeof saved !== "object") throw new Error("Invalid installation storage");
+    value = saved;
+  }
+  catch { throw persistenceError(`${action}:installation-storage`); }
+  const installationIdValid = typeof value.id === "string" && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value.id);
+  const installationKeyValid = typeof value.key === "string" && /^[a-f0-9]{64}$/.test(value.key);
+  const revisionValid = Number.isSafeInteger(value.revision) && value.revision >= 0 && value.revision < Number.MAX_SAFE_INTEGER;
+  const facts = tokenFacts(token);
+  diagnostic(`${action}: validate`, { installationId: installationIdValid ? value.id : "invalid", installationIdValid,
+    installationKeyValid, revisionValid, ...facts });
+  if (!installationIdValid || !installationKeyValid || !revisionValid || (owner && (!facts.tokenHexOnly || !facts.tokenLengthValid))) {
+    return Promise.reject(persistenceError(`${action}:validation`));
+  }
   value.revision++;
   value.owner = owner;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(value)); }
+  catch { throw persistenceError(`${action}:installation-storage`); }
   const operation = writes.catch(() => {}).then(async () => {
     if (captured && !current(captured)) throw new Error("Notification session changed.");
-    const { data, error } = await supabase.rpc("set_native_push_registration", {
-      p_installation_id: value.id, p_installation_key: value.key, p_revision: value.revision,
-      p_device_token: token, p_enabled: owner !== null,
+    // getSession waits for Supabase's persisted-session initialization. Never
+    // infer authentication solely from the service's cached userId.
+    const { data: auth, error: authError } = await supabase.auth.getSession().catch(error => {
+      throw persistenceError(`${action}:session`, error, [value.key, token]);
     });
-    if (error || data !== true) throw new Error("Native notification registration could not be saved. Please retry.");
+    const sessionUser = auth.session?.user.id;
+    const sessionMatches = Boolean(sessionUser && sessionUser === authenticatedUserId && userId === authenticatedUserId);
+    diagnostic(`${action}: session`, { authenticatedUserExists: Boolean(sessionUser), sessionMatches,
+      installationId: value.id, revision: value.revision });
+    if (authError || !sessionMatches) throw persistenceError(`${action}:session`, authError, [value.key, token]);
+    if (captured && !current(captured)) throw new Error("Notification session changed.");
+    diagnostic(`${action}: RPC start`, { installationId: value.id, revision: value.revision, enabled: owner !== null, ...facts });
+    let result;
+    try {
+      result = await supabase.rpc("set_native_push_registration", {
+        p_installation_id: value.id, p_installation_key: value.key, p_revision: value.revision,
+        p_device_token: token, p_enabled: owner !== null,
+      });
+    } catch (error) { throw persistenceError(`${action}:rpc`, error, [value.key, token]); }
+    const { data, error } = result;
+    if (error) throw persistenceError(`${action}:rpc`, error, [value.key, token]);
+    if (data !== true) {
+      diagnostic(`${action}: RPC rejected revision`, { installationId: value.id, revision: value.revision, returnedFalse: data === false });
+      throw persistenceError(`${action}:rpc-result`, { code: data === false ? "STALE_REVISION" : "UNEXPECTED_RESULT" });
+    }
+    diagnostic(`${action}: RPC saved`, { installationId: value.id, revision: value.revision });
+  }).catch(error => {
+    if (error instanceof NativePushPersistenceError) throw error;
+    throw persistenceError(`${action}:unexpected`, error, [value.key, token]);
   });
   writes = operation;
   return operation;
 }
-function fail() {
+function fail(error?: Error) {
   publish("failed");
-  pending?.reject(new Error("Native notification registration failed. Please retry."));
+  pending?.reject(error ?? new Error("Native notification registration failed. Please retry."));
   pending = undefined;
 }
 async function initialize() {
   ready ??= (async () => {
     await PushNotifications.addListener("registration", ({ value }) => {
+      diagnostic("registration event", tokenFacts(value));
       const captured = context;
-      if (!captured || !current(captured)) return;
+      if (!captured || !current(captured)) { diagnostic("registration event ignored: no current session"); return; }
       void persist(value, captured.userId).then(() => {
         if (!current(captured)) return;
         publish("enabled"); pending?.resolve(); pending = undefined;
-      }, () => { if (current(captured)) fail(); });
+      }, error => { if (current(captured)) fail(error); });
     });
-    await PushNotifications.addListener("registrationError", () => { if (context && current(context)) fail(); });
+    await PushNotifications.addListener("registrationError", error => {
+      console.error("[Sleepy native push] registrationError event", safeErrorFields({ message: error.error }));
+      if (context && current(context)) fail();
+    });
     await PushNotifications.addListener("pushNotificationReceived", () => {
       // iOS presents the configured foreground banner; never log its private payload.
       if (context && current(context)) observers.forEach(listener => listener());
@@ -101,9 +179,17 @@ export async function enableNativePush(): Promise<void> {
     if (!userId) throw new Error("Sign in before enabling notifications.");
     const captured = { userId, epoch, generation: sessionGeneration() };
     await initialize();
-    let permission = await PushNotifications.checkPermissions();
+    let permission = await PushNotifications.checkPermissions().catch(error => {
+      console.error("[Sleepy native push] permission check failed", safeErrorFields(error));
+      throw new Error("Native notification permission check failed. Please retry. [permission:check]");
+    });
+    diagnostic("permission checked", { receive: permission.receive, cachedUserExists: Boolean(userId) });
     if (permission.receive === "prompt" || permission.receive === "prompt-with-rationale") {
-      permission = await PushNotifications.requestPermissions();
+      permission = await PushNotifications.requestPermissions().catch(error => {
+        console.error("[Sleepy native push] permission request failed", safeErrorFields(error));
+        throw new Error("Native notification permission request failed. Please retry. [permission:request]");
+      });
+      diagnostic("permission requested", { receive: permission.receive });
     }
     if (!current(captured)) throw new Error("Notification session changed. Please retry.");
     if (permission.receive !== "granted") {
@@ -116,12 +202,19 @@ export async function enableNativePush(): Promise<void> {
     context = captured;
     publish("registering");
     await new Promise<void>((resolve, reject) => {
-      const timer = window.setTimeout(() => { context = undefined; fail(); }, 20000);
+      const timer = window.setTimeout(() => { diagnostic("registration timed out"); context = undefined; fail(); }, 20000);
       pending = {
         resolve: () => { window.clearTimeout(timer); resolve(); },
         reject: error => { window.clearTimeout(timer); reject(error); },
       };
-      void PushNotifications.register().catch(fail);
+      diagnostic("PushNotifications.register called");
+      void PushNotifications.register().then(() => {
+        // Resolution only confirms the request was submitted, not an APNs token.
+        diagnostic("PushNotifications.register resolved");
+      }, error => {
+        console.error("[Sleepy native push] PushNotifications.register rejected", safeErrorFields(error));
+        fail();
+      });
     });
   })().finally(() => { registration = undefined; });
   return registration;
