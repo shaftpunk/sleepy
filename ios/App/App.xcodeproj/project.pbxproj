@@ -7,6 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A7400000000000000000001E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A7400000000000000000001F; };
+		A74000000000000000000001 /* SleepActivityAttributes.swift in App Sources */ = {isa = PBXBuildFile; fileRef = A74000000000000000000002; };
+		A74000000000000000000003 /* SleepLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A74000000000000000000004; };
+		A74000000000000000000005 /* SleepActivityPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A74000000000000000000006; };
+		A74000000000000000000007 /* SleepyWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A74000000000000000000008; };
+		A74000000000000000000009 /* SleepLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7400000000000000000000A; };
+		A7400000000000000000000B /* SleepActivityAttributes.swift in Widget Sources */ = {isa = PBXBuildFile; fileRef = A74000000000000000000002; };
+		A7400000000000000000000C /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = A7400000000000000000000D; };
+		A74000000000000000000010 /* SleepyWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A74000000000000000000011; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A73000000000000000000007 /* RemoteValidityPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A73000000000000000000008 /* RemoteValidityPolicy.swift */; };
 		A73000000000000000000005 /* MonitoringIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A73000000000000000000006 /* MonitoringIntent.swift */; };
 		A73000000000000000000001 /* SoundDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A73000000000000000000002 /* SoundDetector.swift */; };
@@ -24,7 +33,25 @@
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		A74000000000000000000012 = {isa = PBXContainerItemProxy; containerPortal = 504EC2FC1FED79650016851F; proxyType = 1; remoteGlobalIDString = A74000000000000000000013; remoteInfo = SleepyWidgets; };
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A74000000000000000000014 /* Embed App Extensions */ = {isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = ""; dstSubfolderSpec = 13; files = (A74000000000000000000010, ); name = "Embed App Extensions"; runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		A7400000000000000000001F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A74000000000000000000002 /* SleepActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/SleepActivityAttributes.swift; sourceTree = SOURCE_ROOT; };
+		A74000000000000000000004 /* SleepLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepLiveActivity.swift; sourceTree = "<group>"; };
+		A74000000000000000000006 /* SleepActivityPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ../../LiveActivityCore/Sources/LiveActivityCore/SleepActivityPolicy.swift; sourceTree = "<group>"; };
+		A74000000000000000000008 /* SleepyWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepyWidgets.swift; sourceTree = "<group>"; };
+		A7400000000000000000000A /* SleepLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepLiveActivityWidget.swift; sourceTree = "<group>"; };
+		A7400000000000000000000E /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		A7400000000000000000000F /* nb */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nb; path = nb.lproj/Localizable.strings; sourceTree = "<group>"; };
+		A74000000000000000000011 /* SleepyWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SleepyWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A74000000000000000000015 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A73000000000000000000008 /* RemoteValidityPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ../../NativeSoundCore/Sources/NativeSoundCore/RemoteValidityPolicy.swift; sourceTree = "<group>"; };
 		A73000000000000000000006 /* MonitoringIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ../../NativeSoundCore/Sources/NativeSoundCore/MonitoringIntent.swift; sourceTree = "<group>"; };
 		A73000000000000000000002 /* SoundDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ../../NativeSoundCore/Sources/NativeSoundCore/SoundDetector.swift; sourceTree = "<group>"; };
@@ -46,6 +73,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		A74000000000000000000016 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		504EC3011FED79650016851F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -62,6 +90,8 @@
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
+				A74000000000000000000017 /* SleepyWidgets */,
+				A74000000000000000000002 /* SleepActivityAttributes.swift */,
 				504EC3051FED79650016851F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -70,6 +100,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				A74000000000000000000011 /* SleepyWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -79,6 +110,9 @@
 			children = (
 				9582B6822FE993A50072D4E8 /* SceneDelegate.swift */,
 				A72000000000000000000002 /* SleepySoundMeter.swift */,
+				A74000000000000000000004 /* SleepLiveActivity.swift */,
+				A7400000000000000000001F /* PrivacyInfo.xcprivacy */,
+				A74000000000000000000006 /* SleepActivityPolicy.swift */,
 				A73000000000000000000002 /* SoundDetector.swift */,
 				A73000000000000000000004 /* SoundEventQueue.swift */,
 				A73000000000000000000006 /* MonitoringIntent.swift */,
@@ -96,6 +130,7 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		A74000000000000000000017 /* SleepyWidgets */ = {isa = PBXGroup; children = (A74000000000000000000008, A7400000000000000000000A, A74000000000000000000015, A7400000000000000000000D, ); path = SleepyWidgets; sourceTree = "<group>"; };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -106,10 +141,12 @@
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
+				A74000000000000000000014 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A74000000000000000000018 /* SleepyWidgets dependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -118,6 +155,14 @@
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
+		};
+		A74000000000000000000013 /* SleepyWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A74000000000000000000019;
+			buildPhases = (A7400000000000000000001A, A74000000000000000000016, A7400000000000000000001B, );
+			buildRules = (); dependencies = (); name = SleepyWidgets; productName = SleepyWidgets;
+			productReference = A74000000000000000000011;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -128,6 +173,7 @@
 				LastSwiftUpdateCheck = 0920;
 				LastUpgradeCheck = 0920;
 				TargetAttributes = {
+					A74000000000000000000013 = {CreatedOnToolsVersion = 26.0; ProvisioningStyle = Automatic; };
 					504EC3031FED79650016851F = {
 						CreatedOnToolsVersion = 9.2;
 						LastSwiftMigration = 1100;
@@ -153,16 +199,19 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				A74000000000000000000013 /* SleepyWidgets */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		A7400000000000000000001B /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A7400000000000000000000C, ); runOnlyForDeploymentPostprocessing = 0; };
 		504EC3021FED79650016851F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				A71000000000000000000001 /* InfoPlist.strings in Resources */,
+				A7400000000000000000001E /* PrivacyInfo.xcprivacy in Resources */,
 				504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */,
 				50B271D11FEDC1A000F3C39B /* public in Resources */,
 				504EC30F1FED79650016851F /* Assets.xcassets in Resources */,
@@ -175,11 +224,15 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		A7400000000000000000001A /* Widget Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A74000000000000000000007, A74000000000000000000009, A7400000000000000000000B, ); runOnlyForDeploymentPostprocessing = 0; };
 		504EC3001FED79650016851F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				A72000000000000000000001 /* SleepySoundMeter.swift in Sources */,
+				A74000000000000000000001 /* SleepActivityAttributes.swift in App Sources */,
+				A74000000000000000000003 /* SleepLiveActivity.swift in Sources */,
+				A74000000000000000000005 /* SleepActivityPolicy.swift in Sources */,
 				A73000000000000000000001 /* SoundDetector.swift in Sources */,
 				A73000000000000000000003 /* SoundEventQueue.swift in Sources */,
 				A73000000000000000000005 /* MonitoringIntent.swift in Sources */,
@@ -191,7 +244,12 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		A74000000000000000000018 = {isa = PBXTargetDependency; target = A74000000000000000000013; targetProxy = A74000000000000000000012; };
+/* End PBXTargetDependency section */
+
 /* Begin PBXVariantGroup section */
+		A7400000000000000000000D /* Localizable.strings */ = {isa = PBXVariantGroup; children = (A7400000000000000000000E, A7400000000000000000000F, ); name = Localizable.strings; sourceTree = "<group>"; };
 		A71000000000000000000002 /* InfoPlist.strings */ = {
 			isa = PBXVariantGroup;
 			children = (
@@ -378,9 +436,51 @@
 			};
 			name = Release;
 		};
+		A7400000000000000000001C /* Widget Debug */ = {
+			isa = XCBuildConfiguration; buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SleepyWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = no.strandeconsulting.sleepy.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			}; name = Debug;
+		};
+		A7400000000000000000001D /* Widget Release */ = {
+			isa = XCBuildConfiguration; buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_IDENTITY = "$(SLEEPY_CODE_SIGN_IDENTITY)";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "$(SLEEPY_DEVELOPMENT_TEAM)";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SleepyWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = no.strandeconsulting.sleepy.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "$(SLEEPY_WIDGET_PROVISIONING_PROFILE_SPECIFIER)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			}; name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		A74000000000000000000019 /* Widget configurations */ = {isa = XCConfigurationList; buildConfigurations = (A7400000000000000000001C, A7400000000000000000001D, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 		504EC2FF1FED79650016851F /* Build configuration list for PBXProject "App" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

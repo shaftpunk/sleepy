@@ -14,6 +14,7 @@ import { useTranslation } from "./i18n";
 import PixelIcon from "./themes/retro/PixelIcon";
 import NativePushNavigation from "./components/NativePushNavigation";
 import NativeSoundLifecycle from "./components/NativeSoundLifecycle";
+import SleepLiveActivityLifecycle from "./components/SleepLiveActivityLifecycle";
 
 // Route-level code splitting: the default route (Home) no longer needs to
 // download/parse the Analysis page's code (5 tabs plus the age-guide/
@@ -71,6 +72,7 @@ function App() {
       <BrowserRouter>
         <NativePushNavigation />
         <NativeSoundLifecycle />
+        <SleepLiveActivityLifecycle />
         <div className="app-shell">
           <Suspense fallback={<div className="empty-card">{t("common.loading")}</div>}>
             <Routes>

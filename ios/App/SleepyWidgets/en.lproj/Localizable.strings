@@ -1,0 +1,7 @@
+"baby_sleeping" = "%@ is sleeping";
+"sleep_started" = "Started";
+"sleep_elapsed" = "Elapsed sleep time";
+"sleep_activity" = "Sleepy sleep activity";
+"sleep_check_app" = "Open Sleepy to check sleep status";
+"sound_active" = "Sound monitoring active";
+"sound_off" = "Sound monitoring off";

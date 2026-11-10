@@ -51,6 +51,13 @@ public class SleepySoundMeterPlugin: CAPPlugin, CAPBridgedPlugin {
     private func now() -> Double { floor(Date().timeIntervalSince1970 * 1000) }
 
     public override func load() {
+        // A newly created native input plugin owns no running capture. Do not
+        // retain an old bridge instance's last-reported microphone flag.
+        if #available(iOS 16.2, *) {
+            Task { @MainActor in
+                await SleepLiveActivityCoordinator.shared.enqueue { await SleepLiveActivityCoordinator.shared.resetSoundStatus() }
+            }
+        }
         foreground = UIApplication.shared.applicationState != .background
         do {
             let root = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("SleepySound", isDirectory: true)
@@ -291,6 +298,7 @@ public class SleepySoundMeterPlugin: CAPPlugin, CAPBridgedPlugin {
         pendingStartCall?.reject("Monitoring session no longer valid", "CANCELLED"); pendingStartCall = nil
         stopReason = reason
         releaseEngine(); stage = "off"
+        publishLiveActivitySound(sleepId: context.sleepId, running: false)
         if foreground { notifyListeners("stopped", data: ["runId": context.runId, "reason": reason]) }
         log.info("[SoundMeter] capture stopped")
     }
@@ -300,7 +308,19 @@ public class SleepySoundMeterPlugin: CAPPlugin, CAPBridgedPlugin {
         if let context = session { result.merge(["runId": context.runId, "userId": context.userId, "babyId": context.babyId, "sleepId": context.sleepId, "threshold": context.threshold]) { _, new in new } }
         return result
     }
-    private func publishState() { if foreground { notifyListeners("state", data: stateData()) } }
+    private func publishState() {
+        if let context = session { publishLiveActivitySound(sleepId: context.sleepId, running: engine?.isRunning == true) }
+        if foreground { notifyListeners("state", data: stateData()) }
+    }
+    private func publishLiveActivitySound(sleepId: String, running: Bool) {
+        if #available(iOS 16.2, *) {
+            Task { @MainActor in
+                await SleepLiveActivityCoordinator.shared.enqueue {
+                    await SleepLiveActivityCoordinator.shared.soundChanged(sleepId: sleepId, running: running)
+                }
+            }
+        }
+    }
     @objc public func getState(_ call: CAPPluginCall) { DispatchQueue.main.async { [weak self] in call.resolve(self?.stateData() ?? ["active": false]) } }
     @objc public func stop(_ call: CAPPluginCall) { DispatchQueue.main.async { [weak self] in
         if let id = call.getString("runId"), self?.session?.runId == id { self?.finish(reason: "user-or-session-stop") }; call.resolve()
@@ -327,5 +347,9 @@ public class SleepySoundMeterPlugin: CAPPlugin, CAPBridgedPlugin {
 }
 
 class SleepyBridgeViewController: CAPBridgeViewController {
-    override func capacitorDidLoad() { super.capacitorDidLoad(); bridge?.registerPluginInstance(SleepySoundMeterPlugin()) }
+    override func capacitorDidLoad() {
+        super.capacitorDidLoad()
+        bridge?.registerPluginInstance(SleepySoundMeterPlugin())
+        bridge?.registerPluginInstance(SleepyLiveActivityPlugin())
+    }
 }

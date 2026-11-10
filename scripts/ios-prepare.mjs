@@ -24,6 +24,7 @@ try {
   }
   run(process.execPath, ['node_modules/typescript/bin/tsc', '-b']);
   run('swift', ['test', '--package-path', 'ios/NativeSoundCore']);
+  run('swift', ['test', '--package-path', 'ios/LiveActivityCore']);
   run(process.execPath, ['node_modules/vite/bin/vite.js', 'build', '--mode', 'native']);
   if (!existsSync('dist-ios/index.html')) throw new Error('Native web build is missing.');
   const cap = 'node_modules/@capacitor/cli/bin/capacitor';

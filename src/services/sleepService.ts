@@ -1,6 +1,7 @@
 import { supabase } from "../lib/supabase";
 import { useAppStore } from "../stores/appStore";
 import { translate, type TranslationKey } from "../i18n";
+import { notifySleepPresentationChanged } from "./sleepPresentationEvents";
 
 function t(key: TranslationKey): string {
   return translate(useAppStore.getState().language, key);
@@ -131,6 +132,7 @@ export async function startSleep(
     throw error;
   }
 
+  notifySleepPresentationChanged();
   return data as SleepRecord;
 }
 
@@ -184,6 +186,7 @@ export async function stopSleep(
     throw error;
   }
 
+  notifySleepPresentationChanged();
   return data as SleepRecord;
 }
 
@@ -232,6 +235,7 @@ export async function resumeSleep(
     throw error;
   }
 
+  notifySleepPresentationChanged();
   return data as SleepRecord;
 }
 
@@ -296,6 +300,7 @@ export async function createManualSleep(
     throw error;
   }
 
+  notifySleepPresentationChanged();
   return data as SleepRecord;
 }
 
@@ -351,6 +356,7 @@ export async function updateSleep(
     throw error;
   }
 
+  notifySleepPresentationChanged();
   return data as SleepRecord;
 }
 
@@ -387,6 +393,8 @@ export async function deleteSleep(
   if (error) {
     throw error;
   }
+
+  notifySleepPresentationChanged();
 }
 
 /**
@@ -416,6 +424,7 @@ export async function splitSleep(
     throw error;
   }
 
+  notifySleepPresentationChanged();
   return (
     data ?? []
   ) as SleepRecord[];
