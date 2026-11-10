@@ -2,6 +2,20 @@
   padding: max(18px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(18px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
 }
 .sleep-detail-modal { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+.sleep-detail-modal .form-field { grid-template-columns: minmax(0, 1fr); }
+/* iOS date/time controls have an intrinsic native width. Keep their outer
+   edges on the same grid as the rating and Save controls, retaining the picker. */
+.sleep-detail-modal .datetime-input {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  margin: 0;
+}
+.sleep-detail-modal .datetime-input::-webkit-datetime-edit { min-width: 0; padding: 0; }
+.sleep-detail-modal .datetime-input::-webkit-date-and-time-value { text-align: left; }
 .sleep-sound-activity {
   --sound-ink: #f3edff;
   --sound-muted: #c1b5d2;
