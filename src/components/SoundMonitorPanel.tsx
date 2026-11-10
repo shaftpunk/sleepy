@@ -25,6 +25,17 @@ export default function SoundMonitorPanel({ sleep }: { sleep: SleepRecord | null
   const userId = user?.id;
   const eligible = Boolean(enabled && sleepId && babyId && userId && !failed);
   const owner = `${userId}:${babyId}:${sleepId}:${sensitivity}`;
+  const lastLevelDiagnostic = useRef(0);
+  // Display-only amplitude expansion makes quiet/speech levels visible. The
+  // detector and stored event levels still receive the original linear RMS.
+  const meterLevel = nativeIOS ? Math.sqrt(state.level) : state.level;
+
+  useEffect(() => {
+    if (nativeIOS && eligible && state.owner === owner && ["listening", "detected"].includes(state.status) && Date.now() - lastLevelDiagnostic.current >= 1000) {
+      lastLevelDiagnostic.current = Date.now();
+      console.info("[Sleepy sound] React meter state", { rms: state.level, displayedLevel: meterLevel });
+    }
+  }, [nativeIOS, eligible, owner, state, meterLevel]);
 
   useEffect(() => {
     if (!eligible || !sleepId || !babyId || !userId) return;
@@ -61,7 +72,7 @@ export default function SoundMonitorPanel({ sleep }: { sleep: SleepRecord | null
       <span role="status">{t(nativeIOS ? `sound.native_${status}` : `sound.${status}`)}</span>
     </div>
     {eligible && (status === "listening" || status === "detected") &&
-      <meter min={0} max={1} value={state.level} aria-label={t("sound.level")} />}
+      <meter min={0} max={1} value={meterLevel} aria-label={t("sound.level")} />}
     {eligible && ["paused", "blocked", "error", "off", "unavailable"].includes(status) &&
       <button type="button" className="secondary-button" onClick={() => startRef.current?.()}>{t("sound.restart")}</button>}
     {eligible && ["starting", "listening", "detected"].includes(status) &&
