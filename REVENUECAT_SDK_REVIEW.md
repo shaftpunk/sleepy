@@ -214,6 +214,10 @@ Added:
 
 ## Deferred server work
 
+This section records the original SDK-only boundary. The subsequent coordinated
+server implementation is documented in REVENUECAT_SERVER_REVIEW.md and supersedes
+the deferred items below. Neither phase has been deployed to Supabase.
+
 Before production purchase UI: authenticated server purchase-context/binding
 flow, verified RevenueCat server reconciliation, idempotent authenticated
 webhooks, stable transaction identity/ownership validation, explicit household

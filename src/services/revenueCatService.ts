@@ -4,11 +4,15 @@ import { supabase } from "../lib/supabase";
 import { registerBeforeSignOut, sessionGeneration } from "../auth/sessionLifecycle";
 import { createRevenueCatClient } from "../purchases/revenueCatClient";
 import { getHouseholdCandidates } from "./householdContextService";
+import {prepareSubscriptionPurchase,reconcileSubscription,cancelSubscriptionPurchase} from "./subscriptionReconciliationService";
 
 const client = createRevenueCatClient({ sdk: Purchases,
   supported: () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios",
   apiKey: () => import.meta.env.VITE_REVENUECAT_IOS_API_KEY,
   generation: sessionGeneration,
+  preparePurchase:prepareSubscriptionPurchase,
+  cancelPurchase:cancelSubscriptionPurchase,
+  reconcilePurchase:reconcileSubscription,
   validatePurchaseContext: async context => (await getHouseholdCandidates(context.userId, context.babyId))
     .some(household => household.id === context.householdId),
   diagnostic: (issue, code) => { if (import.meta.env.DEV) console.warn("RevenueCat operation failed", { issue, code }); },

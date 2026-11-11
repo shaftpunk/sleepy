@@ -48,3 +48,19 @@ enabled = true
 # Issue: Supabase Auth + caller RLS. Validate: scoped HMAC capability, not Auth JWT.
 verify_jwt = false
 entrypoint = "./functions/sound-monitor-status/index.ts"
+[functions.subscription-reconcile]
+enabled = true
+# JWT verified by auth.getUser in the handler; supports current Supabase JWT keys.
+verify_jwt = false
+entrypoint = "./functions/subscription-reconcile/index.ts"
+
+[functions.subscription-maintenance]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/subscription-maintenance/index.ts"
+
+[functions.revenuecat-webhook]
+enabled = true
+# RevenueCat's configured Authorization secret is checked before parsing payloads.
+verify_jwt = false
+entrypoint = "./functions/revenuecat-webhook/index.ts"
