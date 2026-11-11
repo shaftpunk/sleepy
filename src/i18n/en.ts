@@ -124,6 +124,8 @@ const en = {
     estimatedNapRemaining: "~{{minutes}} min remaining",
     wakingSoon: "Likely waking soon",
     pastWakeEstimate: "Past estimated wake time",
+    likelyNightSleep: "Likely night sleep",
+    estimatedNapProgress: "Estimated nap progress",
     nextSleepPredicted: "Usually falls asleep around {{time}}",
     nextSleepAboutUsual: "Has been awake about as long as usual",
     nextSleepLonger: "Awake longer than usual (+{{duration}})",

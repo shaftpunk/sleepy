@@ -2,6 +2,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import { useAppStore } from "../stores/appStore";
@@ -39,8 +40,8 @@ import BabySprite from "../themes/retro/BabySprite";
 import { useAnalyticsData } from "../hooks/useAnalyticsData";
 import { computeNextFeedSide, computeNextSleepHint, computeTodayTotals } from "../analytics/home";
 import { computeWakeWindows } from "../analytics/wakeWindows";
-import { estimatedSleepProgress } from "../analytics/activeSleepEstimate";
-import { getActiveSleepEstimate } from "../services/sleepEstimateService";
+import { getActiveSleepEstimate, sleepEstimateHistoryRevision, subscribeSleepEstimateHistory, type SleepEstimatePresentation } from "../services/sleepEstimateService";
+import ActiveSleepEstimate from "../components/ActiveSleepEstimate";
 import { median } from "../analytics/time";
 import { feedTypeLabel, formatClock, formatDuration, sideLabel, stars } from "../lib/format";
 import { useTranslation } from "../i18n";
@@ -474,18 +475,16 @@ export default function Home() {
   }, []);
 
   const [sleepActionError, setSleepActionError] = useState<string | null>(null);
-  const [wakeEstimate, setWakeEstimate] = useState<{ sleep: SleepRecord; at: string | null } | null>(null);
+  const historyRevision = useSyncExternalStore(subscribeSleepEstimateHistory, sleepEstimateHistoryRevision, sleepEstimateHistoryRevision);
+  const [wakeEstimate, setWakeEstimate] = useState<{ sleep: SleepRecord; presentation: SleepEstimatePresentation } | null>(null);
   useEffect(() => {
     if (!activeSleep || activeSleep.baby_id !== currentBabyId) return;
     let current = true;
-    void getActiveSleepEstimate(activeSleep).catch(() => null).then(at => {
-      if (current) setWakeEstimate({ sleep: activeSleep, at });
+    void getActiveSleepEstimate(activeSleep).then(presentation => {
+      if (current) setWakeEstimate({ sleep: activeSleep, presentation });
     });
     return () => { current = false; };
-  }, [activeSleep, currentBabyId]);
-  const napProgress = activeSleep && activeSleep.baby_id === currentBabyId &&
-    wakeEstimate?.sleep === activeSleep && wakeEstimate.at
-    ? estimatedSleepProgress(Date.parse(activeSleep.starttime), Date.parse(wakeEstimate.at), now) : null;
+  }, [activeSleep, currentBabyId, historyRevision]);
 
   async function handleSleep(minutesAgo = 0) {
     if (saving) return;
@@ -570,11 +569,8 @@ export default function Home() {
                 : t("home.readyForNextNap")}
           </p>
 
-          {napProgress && <p className="sleep-subtitle">
-            {napProgress.phase === "past" ? t("home.pastWakeEstimate") :
-              napProgress.phase === "soon" ? t("home.wakingSoon") :
-                t("home.estimatedNapRemaining", { minutes: new Intl.NumberFormat(lang === "no" ? "nb" : "en").format(napProgress.remainingMinutes) })}
-          </p>}
+          {activeSleep && activeSleep.baby_id === currentBabyId && wakeEstimate?.sleep === activeSleep &&
+            <ActiveSleepEstimate presentation={wakeEstimate.presentation} sleepStartedAt={activeSleep.starttime} now={now} />}
 
           {activeSleep ? <SleepStopOptions key={currentBabyId}
             disabled={loading || saving} saving={saving} onStop={handleSleep} /> : <SleepStartOptions key={currentBabyId}

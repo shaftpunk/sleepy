@@ -16,8 +16,9 @@ function load(file) {
   vm.runInNewContext(js, { exports, Date, require: name => load(path.resolve(path.dirname(file), name + '.ts')) });
   return exports;
 }
-const { estimateActiveSleepWakeTime, estimatedSleepProgress } =
+const { estimateActiveSleep, estimatedSleepProgress } =
   load(path.resolve(__dirname, '../src/analytics/activeSleepEstimate.ts'));
+const estimateActiveSleepWakeTime = (history, active) => estimateActiveSleep(history, active).estimatedWakeTime;
 const minute = 60000, day = 1440 * minute;
 const start = Date.parse('2026-11-10T13:00:00+01:00');
 const active = { id: 'active', startMs: start, sleepTypeRaw: 'nap' };

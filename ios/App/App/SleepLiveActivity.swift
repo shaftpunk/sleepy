@@ -37,6 +37,7 @@ final class SleepLiveActivityCoordinator {
         let sleepId: String, babyId: String, babyName: String
         let startedAt: Date
         let estimatedWakeTime: Date?
+        let classification: ActiveSleepClassification
         init?(_ value: [String: Any]) {
             guard let id = value["sleepId"] as? String, UUID(uuidString: id) != nil,
                   let baby = value["babyId"] as? String, UUID(uuidString: baby) != nil,
@@ -45,7 +46,9 @@ final class SleepLiveActivityCoordinator {
             guard let start = SleepLiveActivityCoordinator.parseDate(date), start <= Date() else { return nil }
             sleepId = id; babyId = baby; babyName = name; startedAt = start
             let estimate = (value["estimatedWakeTime"] as? String).flatMap(SleepLiveActivityCoordinator.parseDate)
-            if let estimate, (60...43200).contains(estimate.timeIntervalSince(start)) {
+            classification = (value["classification"] as? String).flatMap(ActiveSleepClassification.init(rawValue:))
+                ?? (estimate == nil ? .uncertain : .shortSleepLike)
+            if classification == .shortSleepLike, let estimate, (60...43200).contains(estimate.timeIntervalSince(start)) {
                 estimatedWakeTime = estimate
             } else { estimatedWakeTime = nil }
         }
@@ -95,7 +98,7 @@ final class SleepLiveActivityCoordinator {
         do {
             _ = try Activity.request(attributes: attributes,
                 content: ActivityContent(state: SleepActivityAttributes.ContentState(soundMonitoringActive: sound[sleep.sleepId] ?? false,
-                    estimatedWakeTime: sleep.estimatedWakeTime), staleDate: expires), pushType: nil)
+                    estimatedWakeTime: sleep.estimatedWakeTime, classification: sleep.classification), staleDate: expires), pushType: nil)
             var ledger = attempted; ledger[sleep.sleepId] = Date().timeIntervalSince1970; attempted = ledger
             log.info("Live Activity started")
         } catch { log.info("Live Activity request unavailable; sleep data unchanged") }
@@ -117,8 +120,25 @@ final class SleepLiveActivityCoordinator {
             guard activity.attributes.presentationEndsAt > Date() else { await finish(activity); continue }
             var state = activity.content.state
             state.soundMonitoringActive = active
-            if let sleep { state.estimatedWakeTime = sleep.estimatedWakeTime }
+            if let sleep {
+                state.estimatedWakeTime = sleep.estimatedWakeTime
+                state.classification = sleep.classification
+            }
             if activity.content.state != state { await activity.update(ActivityContent(state: state, staleDate: activity.attributes.presentationEndsAt)) }
+        }
+    }
+    func updatePresentation(ownerId: String, sleep: Sleep) async {
+        guard let expectedOwner = UUID(uuidString: ownerId), ownerID == expectedOwner else { return }
+        for activity in Activity<SleepActivityAttributes>.activities where activity.attributes.sleepId == sleep.sleepId {
+            guard activity.activityState == .active, activity.attributes.presentationEndsAt > Date(),
+                  activity.attributes.babyId == sleep.babyId,
+                  abs(activity.attributes.startedAt.timeIntervalSince(sleep.startedAt)) < 1 else { continue }
+            var state = activity.content.state
+            state.classification = sleep.classification
+            state.estimatedWakeTime = sleep.estimatedWakeTime
+            if state != activity.content.state {
+                await activity.update(ActivityContent(state: state, staleDate: activity.attributes.presentationEndsAt))
+            }
         }
     }
     func showWakeFailure(activityID: String, failure: SleepWakeFailure) async {
@@ -164,7 +184,8 @@ public class SleepyLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "reconcile", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endAll", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setAuthSession", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "clearAuthSession", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "clearAuthSession", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "updatePresentation", returnType: CAPPluginReturnPromise)
     ]
     private var pending: Task<Void, Never>?
     private func perform(_ call: CAPPluginCall, operation: @escaping @MainActor () async -> Void) {
@@ -200,6 +221,15 @@ public class SleepyLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         perform(call) {
             if #available(iOS 16.2, *), let id = call.getString("sleepId"), let active = call.getBool("soundMonitoringActive") {
                 await SleepLiveActivityCoordinator.shared.update(sleepId: id, active: active)
+            }
+        }
+    }
+    @objc public func updatePresentation(_ call: CAPPluginCall) {
+        perform(call) {
+            if #available(iOS 16.2, *), let owner = call.getString("ownerId"),
+               let options = call.options as? [String: Any],
+               let sleep = SleepLiveActivityCoordinator.Sleep(options) {
+                await SleepLiveActivityCoordinator.shared.updatePresentation(ownerId: owner, sleep: sleep)
             }
         }
     }

@@ -6,6 +6,7 @@
 "sound_active" = "Sound monitoring active";
 "sound_off" = "Sound monitoring off";
 "wake_sleep" = "Wake up";
+"likely_night_sleep" = "Likely night sleep";
 "estimated_progress" = "Estimated nap progress";
 "estimated_wake" = "Estimated wake-up:";
 "estimated_time_left" = "Est. time remaining:";

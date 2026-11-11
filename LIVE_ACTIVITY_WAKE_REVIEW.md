@@ -1,10 +1,85 @@
 # Sleepy Live Activity: nap progress and Wake up review
 
+## Personalized active-sleep presentation update
+
+This working-tree update is intended for the single commit `Personalize active
+sleep estimates`. The following rules supersede the original estimate rules
+recorded in A–D below.
+
+Home and the Live Activity share `classifyPersonalSleep` and `estimateActiveSleep`.
+They return SHORT_SLEEP_LIKE, LONG_SLEEP_LIKE or UNCERTAIN. Only SHORT_SLEEP_LIKE
+contains an estimated wake date. LONG_SLEEP_LIKE displays the localized moon
+indicator “Likely night sleep” / “Trolig nattsøvn”. UNCERTAIN has neither a
+prediction nor a night indicator. Product text contains no internal evidence
+counts. Wake up, native sound status, authentication and the end-sleep command
+retain their existing behavior.
+
+Classification uses completed history in the 14 days preceding the active start,
+with existing invalid-duration and overlap cleaning. Explicit nap/night types
+are respected. For unlabelled history, a duration split requires at least three
+days in each group, a gap of at least 60 minutes, a boundary ratio of at least
+1.5 and a long-group median at least three times the short-group median. Select
+the largest eligible boundary ratio; ties select the lower-duration boundary.
+
+For an unlabelled current sleep, compare historical start times within 90 minutes
+using circular clock distance across midnight. Each group contributes its
+closest sample per distinct day. A winning group needs at least three days and
+twice the opposing support. Otherwise classification is UNCERTAIN. An explicit
+nap may use supported short-sleep history across three days. An explicit night
+maps to LONG_SLEEP_LIKE. Short-group estimates use the median of the selected
+samples, require at least one minute, and are anchored to the actual start.
+There is no global bedtime cutoff. Historical analytics retain their existing
+classification function.
+
+The previously audited 23:25 history was replayed locally through this code and
+returned LONG_SLEEP_LIKE, nine long-sleep days, one short-sleep day and a null
+estimated wake date. Its Lock Screen and Home copy is therefore “Trolig nattsøvn”.
+No night-duration prediction is returned or transported.
+
+To keep classification local, the estimate service now reuses the existing
+35-day reads from useAnalyticsData. It issues no database request. Its cache is
+scoped to baby, authenticated session generation and the returned time interval.
+Missing or incomplete history yields UNCERTAIN until a normal history load
+finishes. Babies whose history has not been loaded also remain UNCERTAIN. Older
+responses and responses from a previous account cannot overwrite fresh data.
+The normal analytics read schedule remains the source of history refreshes.
+
+History publication can update an already-created Live Activity through the
+new presentation-only bridge method. That method checks owner, baby, sleep ID,
+start time and activity state. It updates the classification/date on an existing
+activity while preserving sound and wake-failure state. It cannot create or end
+an activity. Identical results produce no ActivityKit update. Existing payloads
+without a classification remain readable; a previous non-null nap date maps to
+the short-sleep presentation. New long/uncertain payloads clear any nap date.
+
+The elapsed timer and system-driven nap progress/relative-time fallback retain
+their existing rendering. The progress view remains present past its estimate
+and never ends a sleep. The exact literal past-estimate text while suspended
+still requires the native rendering validation described in the initial review.
+
+New coverage exercises the known 23:25 case, late/early naps, daytime long sleeps,
+the 19:00 boundary, midnight matching, ambiguous evidence, three distinct days,
+explicit labels, history cleaning, EN/NO Home markup, native presentation gates,
+shared Home/bridge results, late history updates and account/baby isolation.
+Native Wake up, sound, elapsed and progress view definitions are compared with
+the current released source. Native rendering and compilation remain physical
+device/macOS checks.
+
+No database migration, server endpoint or Supabase deployment is required.
+
+Personalization validation passed all 128 Node tests, including the isolated
+PostgreSQL regression test. The 28 focused classification, rendering, bridge and
+project tests also passed after Capacitor sync. Lint passed with the existing
+Home effect warning. Production and native web builds and local iOS sync passed.
+Swift/Xcode compilation and physical Lock Screen rendering remain unavailable
+on this Windows host. The exact suspended past-estimate wording continues to use
+the previously approved system-formatting fallback pending native validation.
+
 Both features were reviewed before deployment. The SQL integration test uses
 disposable in-memory PostgreSQL with synthetic data. The previous Stage 2 review
 remains the record of the visual release.
 
-## A–D. Estimate and progression
+## A–D. Original estimate and progression
 
 **Algorithm.** `estimateActiveSleepWakeTime` runs against the active baby's
 completed history in the 14 days ending at the active sleep's start. It uses

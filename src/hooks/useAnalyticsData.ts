@@ -27,6 +27,8 @@ import {
   normalizeFeedRows,
   normalizeSleepRows,
 } from "../analytics";
+import { publishSleepEstimateHistory } from "../services/sleepEstimateService";
+import { sessionGeneration, isSessionGenerationCurrent } from "../auth/sessionLifecycle";
 
 // 30 days for the Month tab + a small buffer.
 const ANALYTICS_WINDOW_DAYS = 35;
@@ -66,13 +68,17 @@ export function useAnalyticsData(
             1000,
       );
 
+      const generation = sessionGeneration();
+      const to = new Date();
       const data =
         await getSleepsOverlappingPeriod(
           babyId,
           from.toISOString(),
-          new Date().toISOString(),
+          to.toISOString(),
         );
 
+      if (!isSessionGenerationCurrent(generation)) return;
+      publishSleepEstimateHistory(babyId, data, from.getTime(), to.getTime(), generation);
       setRawSleeps(data);
     }, [babyId]);
 

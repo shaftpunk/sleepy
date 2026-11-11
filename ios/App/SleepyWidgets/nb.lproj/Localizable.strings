@@ -6,6 +6,7 @@
 "sound_active" = "Lydmåling aktiv";
 "sound_off" = "Lydmåling av";
 "wake_sleep" = "Våkn opp";
+"likely_night_sleep" = "Trolig nattsøvn";
 "estimated_progress" = "Estimert fremdrift for luren";
 "estimated_wake" = "Estimert oppvåkning:";
 "estimated_time_left" = "Ca. tid igjen:";

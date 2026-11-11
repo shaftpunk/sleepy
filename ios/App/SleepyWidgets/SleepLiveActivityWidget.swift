@@ -81,9 +81,16 @@ private struct SleepLockScreen: View {
                     .font(.system(.title, design: .rounded).weight(.semibold))
                     .frame(maxWidth: 132, alignment: .trailing)
             }
+            if !context.isStale, context.state.presentationClassification == .longSleepLike {
+                Label("likely_night_sleep", systemImage: "moon.fill")
+                    .font(.subheadline).foregroundStyle(muted)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text("likely_night_sleep"))
+            }
             if let failure = context.state.wakeFailure, !context.isStale {
                 SleepWakeFeedback(failure: failure).foregroundStyle(muted)
-            } else if let wake = context.state.estimatedWakeTime, !context.isStale, wake > context.attributes.startedAt {
+            } else if context.state.presentationClassification == .shortSleepLike,
+                      let wake = context.state.estimatedWakeTime, !context.isStale, wake > context.attributes.startedAt {
                 SleepNapProgress(start: context.attributes.startedAt, wake: wake, accent: accent)
                     .foregroundStyle(muted)
             }

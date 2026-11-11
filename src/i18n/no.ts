@@ -123,6 +123,8 @@ const no = {
     estimatedNapRemaining: "~{{minutes}} min igjen",
     wakingSoon: "Våkner trolig snart",
     pastWakeEstimate: "Forbi estimert oppvåkning",
+    likelyNightSleep: "Trolig nattsøvn",
+    estimatedNapProgress: "Estimert fremdrift for luren",
     nextSleepPredicted: "Pleier å sovne rundt kl. {{time}}",
     nextSleepAboutUsual: "Har vært våken omtrent så lenge den pleier",
     nextSleepLonger: "Våken lenger enn vanlig (+{{duration}})",
