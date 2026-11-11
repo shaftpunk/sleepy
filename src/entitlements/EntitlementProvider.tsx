@@ -5,12 +5,15 @@ import { resolveHouseholdEntitlements } from "../services/entitlementService";
 import { entitlementAccess, sameHouseholdContext, type EntitlementResolution } from "./model";
 import { ENTITLEMENT_ENFORCEMENT_ENABLED } from "./features";
 import type { HouseholdContext } from "../households/context";
+import { usePurchaseEvidence } from "../purchases/PurchaseEvidenceContext";
+import type { PurchaseEvidence } from "../purchases/revenueCatModel";
 
 type Snapshot = { context: HouseholdContext; generation: number; resolution: EntitlementResolution | null };
 type Value = ReturnType<typeof entitlementAccess> & { householdId: string | null; loading: boolean;
-  verificationState: "verified" | "unknown"; enforcementEnabled: boolean };
+  verificationState: "verified" | "unknown"; enforcementEnabled: boolean; purchaseEvidence: PurchaseEvidence };
 const Context = createContext<Value | undefined>(undefined);
 export function EntitlementProvider({ children }: { children: ReactNode }) {
+  const purchaseEvidence = usePurchaseEvidence();
   const { userId, babyId, householdId, loading: contextLoading } = useHouseholdContext();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   useEffect(() => registerBeforeSignOut(async () => { setSnapshot(null); }), []);
@@ -44,7 +47,7 @@ export function EntitlementProvider({ children }: { children: ReactNode }) {
   const scoped = !contextLoading && snapshot && isSessionGenerationCurrent(snapshot.generation) && sameHouseholdContext(context, snapshot.context) ? snapshot : null;
   return <Context.Provider value={{ ...entitlementAccess(scoped?.resolution ?? null), householdId,
     loading: contextLoading || Boolean(context && !scoped), verificationState: scoped?.resolution ? "verified" : "unknown",
-    enforcementEnabled: ENTITLEMENT_ENFORCEMENT_ENABLED }}>{children}</Context.Provider>;
+    enforcementEnabled: ENTITLEMENT_ENFORCEMENT_ENABLED, purchaseEvidence }}>{children}</Context.Provider>;
 }
 // eslint-disable-next-line react-refresh/only-export-components
 export function useEntitlements(): Value {

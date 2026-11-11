@@ -10,6 +10,7 @@ import { useLoadAliveStyles } from "./themes/alive/useLoadAliveStyles";
 import { useLoadRetroStyles } from "./themes/retro/useLoadRetroStyles";
 import { HouseholdContextProvider } from "./households/HouseholdContextProvider";
 import { EntitlementProvider } from "./entitlements/EntitlementProvider";
+import { RevenueCatSession, RevenueCatHouseholdContext } from "./purchases/RevenueCatSession";
 
 // The splash is a brief branding overlay, not a gate on real readiness.
 // Previously it sat OUTSIDE the auth chain (in App.tsx) and blocked on the
@@ -50,13 +51,16 @@ export default function Root() {
   return (
     <div data-theme={theme} lang={language === "no" ? "nb" : "en"}>
       <AuthProvider>
+        <RevenueCatSession>
         <AuthGate>
           <BabyLoader>
             <HouseholdContextProvider>
+              <RevenueCatHouseholdContext />
               <EntitlementProvider><App /></EntitlementProvider>
             </HouseholdContextProvider>
           </BabyLoader>
         </AuthGate>
+        </RevenueCatSession>
       </AuthProvider>
 
       {showSplash && <SplashScreen />}

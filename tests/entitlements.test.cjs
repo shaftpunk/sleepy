@@ -86,6 +86,7 @@ test('entitlement service uses only the authenticated resolver and propagates un
 });
 test('real React provider starts loading without fabricating Plus and keeps compatibility capabilities available',()=>{
   const app=loader({'../households/HouseholdContextProvider':{useHouseholdContext:()=>({userId:'u',babyId:'b',householdId:'A',loading:false})},
+    '../services/subscriptionReconciliationService':{subscribeEntitlementReconciliation:()=>()=>{}},
     '../auth/sessionLifecycle':{sessionGeneration:()=>0,isSessionGenerationCurrent:()=>true,registerBeforeSignOut:()=>()=>{}},
     '../services/entitlementService':{resolveHouseholdEntitlements:async()=>{throw Error('not called by server render');}}});
   const {EntitlementProvider,useEntitlements}=app('src/entitlements/EntitlementProvider.tsx');
@@ -100,5 +101,5 @@ test('foundation introduces no feature gates into existing screens, native conte
   const migration=fs.readFileSync('supabase/migrations/20261112091000_entitlement_foundation.sql','utf8');
   assert.doesNotMatch(migration,/insert into (?:private\.)?(?:household_access_grants|entitlement_funding_sources)/i);
   assert.doesNotMatch(migration,/alter table public\.|create policy.*public\.|end_sleep|household_members set/i);
-  assert.equal(Object.keys(require('../package.json').dependencies).some(key=>/revenuecat|purchases/i.test(key)),false);
+  assert.deepEqual(Object.keys(require('../package.json').dependencies).filter(key=>/revenuecat|purchases/i.test(key)),['@revenuecat/purchases-capacitor']);
 });
