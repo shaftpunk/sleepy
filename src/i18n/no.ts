@@ -369,9 +369,15 @@ const no = {
     pageTitle: "Innstillinger",
     pageDescription:
       "Velg baby, administrer familien din, varsler og hvordan Sleepy skal se ut på denne enheten.",
-    tabBaby: "Baby og familie",
+    tabBaby: "Baby",
+    sleepTracking: "Søvnregistrering",
+    liveActivity: "Live Activity",
+    liveActivityDescription: "Vis aktiv søvn på låseskjermen og Dynamic Island.",
+    liveActivitySaveError: "Kunne ikke oppdatere Live Activity-innstillingene. Prøv igjen.",
+    appBuild: "Bygg {{build}}",
+    webVersion: "Nettversjon {{version}}",
     tabNotifications: "Varsler",
-    tabAppearance: "Utseende",
+    tabSleep: "Søvn",
     tabAccount: "Konto",
     babyTitle: "Baby",
     babyProfileNote: "Sleepy 3.0 babyprofil",
@@ -391,7 +397,6 @@ const no = {
     languageTitle: "Språk",
     languageNote: "Velg språket Sleepy skal vises på.",
     aboutTitle: "Om",
-    aboutVersion: "Sleepy 2.2.0 – migrering til flerbruker",
     birthDateLabel: "Fødselsdato",
     birthDateSave: "Lagre fødselsdato",
     birthDateInvalid: "Ugyldig dato.",
@@ -416,6 +421,7 @@ const no = {
   },
 
   notifications: {
+    errorCouldNotUpdate: "Kunne ikke oppdatere varslingsinnstillingene. Prøv igjen.",
     "native_not-requested": "Varsler er ikke aktivert for denne kontoen på denne iPhonen.",
     native_registering: "Registrerer denne iPhonen for varsler…",
     native_enabled: "Varsler er aktivert.",

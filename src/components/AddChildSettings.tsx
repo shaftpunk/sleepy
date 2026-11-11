@@ -44,11 +44,10 @@ export default function AddChildSettings() {
         setHouseholds(nextHouseholds);
         setHouseholdId((current) => current || nextHouseholds[0]?.id || "");
       } catch (loadError) {
+        console.error("Could not load families", loadError);
         if (!active) return;
         setError(
-          loadError instanceof Error
-            ? loadError.message
-            : t("family.errorCouldNotLoad"),
+          t("family.errorCouldNotLoad"),
         );
       } finally {
         if (active) setLoadingHouseholds(false);
@@ -91,10 +90,9 @@ export default function AddChildSettings() {
       setExpanded(false);
       setMessage(t("settings.addChildSuccess", { name: baby.name }));
     } catch (saveError) {
+      console.error("Could not add child", saveError);
       setError(
-        saveError instanceof Error
-          ? saveError.message
-          : t("settings.addChildError"),
+        t("settings.addChildError"),
       );
     } finally {
       setSaving(false);
@@ -124,6 +122,7 @@ export default function AddChildSettings() {
       </div>
 
       {message && <p className="settings-success">{message}</p>}
+      {error && <p className="settings-error" role="alert">{error}</p>}
 
       {!loadingHouseholds && households.length === 0 && (
         <p className="muted">{t("settings.addChildNoFamily")}</p>
@@ -169,7 +168,6 @@ export default function AddChildSettings() {
             />
           </label>
 
-          {error && <p className="settings-error">{error}</p>}
 
           <button type="submit" className="primary-button" disabled={saving}>
             {saving ? t("settings.addingChild") : t("settings.addChildSubmit")}

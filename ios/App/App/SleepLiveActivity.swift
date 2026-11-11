@@ -11,6 +11,11 @@ final class SleepLiveActivityCoordinator {
     private let defaults = UserDefaults.standard
     private var sound: [String: Bool] = [:]
     private var queued: Task<Void, Never>?
+    private var enabled: Bool { defaults.object(forKey: "SleepyLiveActivity.enabled.v1") as? Bool ?? true }
+    func setEnabled(_ value: Bool) async {
+        defaults.set(value, forKey: "SleepyLiveActivity.enabled.v1")
+        if !value { await endAll() }
+    }
     var ownerID: UUID? {
         defaults.string(forKey: "SleepyLiveActivity.owner.v1").flatMap(UUID.init(uuidString:))
     }
@@ -54,6 +59,7 @@ final class SleepLiveActivityCoordinator {
         }
     }
     func reconcile(ownerId: String, sleeps: [Sleep]) async {
+        guard enabled else { await endAll(); return }
         if let oldOwner = defaults.string(forKey: "SleepyLiveActivity.owner.v1"), oldOwner != ownerId { await endAll() }
         defaults.set(ownerId, forKey: "SleepyLiveActivity.owner.v1")
         let ids = Set(sleeps.map(\.sleepId))
@@ -79,6 +85,7 @@ final class SleepLiveActivityCoordinator {
         }
     }
     func start(ownerId: String, sleep: Sleep) async {
+        guard enabled else { return }
         if let oldOwner = defaults.string(forKey: "SleepyLiveActivity.owner.v1"), oldOwner != ownerId { await endAll() }
         defaults.set(ownerId, forKey: "SleepyLiveActivity.owner.v1")
         if Activity<SleepActivityAttributes>.activities.contains(where: { $0.attributes.sleepId == sleep.sleepId }) {
@@ -88,6 +95,7 @@ final class SleepLiveActivityCoordinator {
         request(sleep)
     }
     private func request(_ sleep: Sleep) {
+        guard enabled else { return }
         guard UIApplication.shared.applicationState == .active, ActivityAuthorizationInfo().areActivitiesEnabled else {
             log.info("Live Activity unavailable or not permitted in foreground"); return
         }
@@ -185,7 +193,9 @@ public class SleepyLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "endAll", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setAuthSession", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "clearAuthSession", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "updatePresentation", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "updatePresentation", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setEnabled", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getAppInfo", returnType: CAPPluginReturnPromise)
     ]
     private var pending: Task<Void, Never>?
     private func perform(_ call: CAPPluginCall, operation: @escaping @MainActor () async -> Void) {
@@ -238,6 +248,14 @@ public class SleepyLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
     }
     @objc public func endAll(_ call: CAPPluginCall) {
         perform(call) { if #available(iOS 16.2, *) { await SleepLiveActivityCoordinator.shared.endAll() } }
+    }
+    @objc public func setEnabled(_ call: CAPPluginCall) {
+        guard let enabled = call.getBool("enabled") else { call.reject("Missing enabled preference"); return }
+        perform(call) { if #available(iOS 16.2, *) { await SleepLiveActivityCoordinator.shared.setEnabled(enabled) } }
+    }
+    @objc public func getAppInfo(_ call: CAPPluginCall) {
+        call.resolve(["version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "",
+                      "build": Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""])
     }
     @objc public func setAuthSession(_ call: CAPPluginCall) {
         DispatchQueue.main.async {

@@ -3,6 +3,7 @@ import {
   useMemo,
   useState,
   useSyncExternalStore,
+  type ReactNode,
 } from "react";
 
 import type { BabyId } from "../stores/appStore";
@@ -12,7 +13,6 @@ import {
   disablePushNotifications,
   enablePushNotifications,
   hasPushSubscription,
-  sendTestNotification,
 } from "../services/pushService";
 
 import {
@@ -26,10 +26,12 @@ import { isNativeIOS, nativePushState, subscribeNativePush } from "../services/n
 
 interface NotificationSettingsProps {
   bbyid: BabyId;
+  children?: ReactNode;
 }
 
 export default function NotificationSettings({
   bbyid,
+  children,
 }: NotificationSettingsProps) {
   const { t } = useTranslation();
   const nativeState = useSyncExternalStore(subscribeNativePush, nativePushState);
@@ -128,9 +130,7 @@ export default function NotificationSettings({
 
         if (!cancelled) {
           setMessage(
-            error instanceof Error
-              ? error.message
-              : t("notifications.errorCouldNotLoad"),
+            t("notifications.errorCouldNotLoad"),
           );
         }
       } finally {
@@ -167,9 +167,7 @@ export default function NotificationSettings({
       console.error(error);
 
       setMessage(
-        error instanceof Error
-          ? error.message
-          : t("notifications.errorCouldNotEnable"),
+        t("notifications.errorCouldNotEnable"),
       );
     } finally {
       setSaving(false);
@@ -192,32 +190,7 @@ export default function NotificationSettings({
       console.error(error);
 
       setMessage(
-        error instanceof Error
-          ? error.message
-          : t("notifications.errorCouldNotDisable"),
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleTestNotification() {
-    try {
-      setSaving(true);
-      setMessage(null);
-
-      await sendTestNotification(bbyid);
-
-      setMessage(
-        t("notifications.messageTestSent"),
-      );
-    } catch (error) {
-      console.error(error);
-
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : t("notifications.errorCouldNotSendTest"),
+        t("notifications.errorCouldNotDisable"),
       );
     } finally {
       setSaving(false);
@@ -254,9 +227,7 @@ export default function NotificationSettings({
       );
 
       setMessage(
-        error instanceof Error
-          ? error.message
-          : t("notifications.errorCouldNotUpdateFeedingReminder"),
+        t("notifications.errorCouldNotUpdateFeedingReminder"),
       );
     } finally {
       setSaving(false);
@@ -291,9 +262,7 @@ export default function NotificationSettings({
       );
 
       setMessage(
-        error instanceof Error
-          ? error.message
-          : t("notifications.errorCouldNotUpdateReminderInterval"),
+        t("notifications.errorCouldNotUpdateReminderInterval"),
       );
     } finally {
       setSaving(false);
@@ -303,7 +272,7 @@ export default function NotificationSettings({
   if (loading) {
     return (
       <section className="notification-settings">
-        <h2>{t("notifications.heading")}</h2>
+        <h2>{t("notifications.pushNotifications")}</h2>
 
         <p>{t("notifications.loadingSettings")}</p>
       </section>
@@ -315,12 +284,7 @@ export default function NotificationSettings({
       {isNativeIOS() && <p role="status">{t(`notifications.native_${nativeState}`)}</p>}
       <div className="notification-settings__header">
         <div>
-          <h2>{t("notifications.heading")}</h2>
-
-          <p>
-            {t("notifications.notificationsFor")}{" "}
-            <strong>{bbyid}</strong>
-          </p>
+          <h2>{t("notifications.pushNotifications")}</h2>
         </div>
 
         <div
@@ -367,6 +331,8 @@ export default function NotificationSettings({
           )}
         </div>
       </div>
+
+      {children}
 
       <div className="notification-settings__section-title">
         {t("common.feeding")}
@@ -449,19 +415,8 @@ export default function NotificationSettings({
           </div>
         )}
 
-      {pushEnabled && (
-        <button
-          type="button"
-          className="notification-settings__test"
-          disabled={saving}
-          onClick={handleTestNotification}
-        >
-          {t("notifications.sendTestButton")}
-        </button>
-      )}
-
       {message && (
-        <p className="notification-settings__message">
+        <p className="notification-settings__message" role="status">
           {message}
         </p>
       )}

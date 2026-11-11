@@ -33,7 +33,7 @@ message:React.createElement(Message,{babyId:'baby',babyName:baby.name,onClose:do
 DOM.createRoot(document.getElementById('root')).render(view?React.createElement('div',{'data-theme':theme},views[view]):React.createElement(App));`;
 const params = `const p=new URLSearchParams(location.search);`;
 const records = `${params}const now=Date.now(),iso=n=>new Date(n).toISOString();const sleeps=p.has('empty')?[]:Array.from({length:35},(_,i)=>({id:i?'sleep-'+i:'sleep',baby_id:'baby',starttime:iso(now-(i*24+12)*3600000),endtime:iso(now-(i*24+2)*3600000),durationminutes:600,sleep_type:'sleep',rate:'5',deleted_at:null,note:p.has('long')?'Et langt notat som skal være lesbart på små skjermer. '+ 'x'.repeat(65):'A short note'}));const feeds=p.has('empty')?[]:Array.from({length:5},(_,i)=>({id:'feed-'+i,baby_id:'baby',feedtype:['bottle','breast','food'][i%3],amountml:120,side:'left',starttime:iso(now-i*7200000),note:'A synthetic feeding note'}));`;
-const failure = `const blocked=async()=>{throw Error('Layout fixture: no writes permitted')};`;
+const failure = `const blocked=async()=>{throw Error('duplicate key value violates unique constraint synthetic_settings_test')};`;
 function mock(url) {
   if (url === '/src/auth/AuthProvider.tsx') return `${params}export const useAuth=()=>({user:{id:'user',email:'parent.with.a.long.synthetic.email@example.invalid',user_metadata:{full_name:'Alexandra Strande Engevik'}},session:{user:{id:'user'}},loading:p.has('loading'),signOut:async()=>{}});`;
   if (url === '/src/lib/supabase.ts') return `export const supabase={auth:{onAuthStateChange:f=>{window.recovery=()=>f('PASSWORD_RECOVERY');return {data:{subscription:{unsubscribe(){}}}}},getUser:async()=>({data:{user:{id:'user'}}})}};`;
@@ -45,13 +45,13 @@ function mock(url) {
   if (url.endsWith('/invitationService.ts')) return `export const createHouseholdInvitation=async()=>({token:'synthetic-layout-only-'+ 'A'.repeat(65),expires_at:new Date().toISOString()}),acceptHouseholdInvitation=async()=>({household_name:'Synthetic family'});`;
   if (url.endsWith('/pushService.ts')) return `export const hasPushSubscription=async()=>true,attributePushSubscription=async()=>{},enablePushNotifications=async()=>{},disablePushNotifications=async()=>{},sendTestNotification=async()=>{};`;
   if (url.endsWith('/nativePushService.ts')) return `export const isNativeIOS=()=>true,nativePushState=()=> 'enabled',subscribeNativePush=()=>()=>{};`;
-  if (url.endsWith('/notificationSettingsService.ts')) return params + failure + `export const getNotificationSettings=async()=>{if(p.has('error'))throw Error('Synthetic notification settings failure');return {feeding_reminder_enabled:true,feeding_reminder_minutes:180}},getSleepEventNotificationSettings=async()=>({notify_sleep_started:true,notify_sleep_ended:true});export {blocked as updateFeedingReminder,blocked as updateFeedingReminderMinutes,blocked as updateSleepEventNotificationSettings};`;
+  if (url.endsWith('/notificationSettingsService.ts')) return params + failure + `export const getNotificationSettings=async()=>{if(p.has('error'))throw Error('duplicate key value violates unique constraint synthetic_settings_test');return {feeding_reminder_enabled:true,feeding_reminder_minutes:180}},getSleepEventNotificationSettings=async()=>({notify_sleep_started:true,notify_sleep_ended:true});export {blocked as updateFeedingReminder,blocked as updateFeedingReminderMinutes,blocked as updateSleepEventNotificationSettings};`;
   if (url.endsWith('/appleAuthService.ts')) return params + failure + `export const appleSignInSupported=()=>!p.has('web');export {blocked as signInWithApple};`;
   if (url.endsWith('/nativeSoundMonitoring.ts')) return `${params}const state={active:p.get('sound')==='listening',running:p.get('sound')==='listening',status:p.get('sound')||'off',queueCount:0,level:.6,rms:.1,syncFailed:false};export const nativeSoundSupported=()=>true,nativeSoundSnapshot=()=>state,subscribeNativeSound=()=>()=>{},startNativeSound=async()=>{},stopNativeSound=async()=>{},synchronizeNativeSoundEvents=async()=>{},validateNativeSoundSleep=async()=>{};`;
   if (url.endsWith('/soundEventService.ts')) return params + `export async function getSoundEventsForSleep(id){await new Promise(r=>setTimeout(r,80));if(p.has('error'))throw Error('Synthetic read error');if(p.has('empty'))return [];const end=Date.now()-2*3600000;return Array.from({length:6},(_,i)=>({id:'event-'+i,sleep_id:id,baby_id:'baby',started_at:new Date(end-(i+1)*3600000).toISOString(),ended_at:new Date(end-(i+1)*3600000+64000).toISOString(),avg_level:.04,max_level:i%2?.3:.06}));};export const createSoundEvent=async()=>{};`;
   if (url.endsWith('/familyMessageService.ts')) return failure + `export {blocked as sendFamilyMessage};`;
   if (url.endsWith('/NativeSoundLifecycle.tsx') || url.endsWith('/NativePushNavigation.tsx')) return `export default function(){return null}`;
-  if (url.includes('@capacitor_core')) return `export const Capacitor={isNativePlatform:()=>true,getPlatform:()=>'ios',isPluginAvailable:()=>true};export const registerPlugin=()=>({});`;
+  if (url.includes('@capacitor_core')) return `export const Capacitor={isNativePlatform:()=>true,getPlatform:()=>'ios',isPluginAvailable:()=>true};export const registerPlugin=()=>({setEnabled:async()=>{if(window.__sleepyBridgeFailure)throw Error('Synthetic native bridge failure')},reconcile:async()=>{},endAll:async()=>{},getAppInfo:async()=>({version:'1.0',build:'14'})});`;
 }
 
 async function main() {
@@ -119,6 +119,48 @@ async function main() {
       const skin=(process.argv.find(value=>value.startsWith('--skin='))||'--skin=default').split('=')[1];
       context=`${width}x${height}-${theme}-${lang}-${skin}`;query=`theme=${theme}&lang=${lang}&skin=${skin}&long`;
       await page.setViewportSize({width,height});
+      if(process.argv.includes('--settings-only')){
+        await visit('/settings');await page.waitForSelector('.family-settings select');
+        const tabs=page.getByRole('tab');
+        assert.equal(await tabs.count(),4);
+        assert.deepEqual(await tabs.allTextContents(),lang==='en'?['Baby','Sleep','Notifications','Account']:['Baby','S\u00f8vn','Varsler','Konto']);
+        await check('settings-baby',true);
+        await page.locator('.add-child-heading button').click();await check('settings-add-baby');
+        await page.locator('.family-settings > .primary-button').click();await page.waitForSelector('.invitation-code');await check('settings-invitation');
+        await tabs.nth(0).focus();await page.keyboard.press('ArrowRight');
+        assert.equal(await tabs.nth(1).getAttribute('aria-selected'),'true');
+        const toggle=page.getByRole('switch');assert.equal(await toggle.isChecked(),true);
+        await check('settings-sleep',true);await toggle.uncheck();
+        await page.reload();await tabs.nth(1).click();assert.equal(await toggle.isChecked(),false);
+        await toggle.check();assert.equal(await toggle.isChecked(),true);
+        await page.evaluate(()=>{window.__sleepyBridgeFailure=true;});
+        await toggle.uncheck();await page.waitForSelector('[role="alert"]');
+        assert.ok(!(await page.getByRole('alert').textContent()).includes('Synthetic'));
+        await check('settings-live-activity-error',true);
+        await page.evaluate(()=>{window.__sleepyBridgeFailure=false;});
+        await toggle.check();await page.waitForSelector('[role="alert"]',{state:'detached'});
+        assert.equal(await page.locator('.sound-settings select').count(),1);
+        await tabs.nth(2).click();await page.waitForSelector('.notification-settings__card');
+        assert.equal(await page.locator('.sound-settings').count(),0);
+        assert.equal(await page.locator('.notification-settings__test').count(),0);
+        await check('settings-notifications',true);
+        await tabs.nth(3).click();await page.waitForSelector('.appearance-card');
+        assert.equal(await page.getByRole('button',{name:'Norsk',exact:true}).count(),1);
+        assert.equal(await page.getByRole('button',{name:'English',exact:true}).count(),1);
+        assert.ok((await page.locator('.settings-about').textContent()).includes('14'));
+        assert.ok(!(await page.locator('main').textContent()).includes('2.2.0'));
+        await check('settings-account',true);
+        await visit('/settings','error');await page.waitForSelector('.family-settings .settings-error');
+        await check('settings-baby-error');
+        await tabs.nth(2).click();await page.waitForSelector('.notification-settings__message');
+        await page.locator('.notification-toggle input').first().click();
+        await page.waitForTimeout(40);
+        assert.equal(await page.locator('.notification-toggle input').first().isChecked(),true,'failed notification update must restore its prior state');
+        const content=await page.locator('main').textContent();
+        assert.ok(!/Synthetic|duplicate key|unique constraint|PostgreSQL/.test(content));
+        await check('settings-notification-error',true);
+        console.log(context+' settings checked');continue;
+      }
       if(process.argv.includes('--analysis-only')){
         await visit('/analysis');await page.waitForSelector('.analysis-tab-content');
         for(let i=0;i<5;i++){await page.locator('.analysis-tab').nth(i).click();await check('analysis-'+i,true);}

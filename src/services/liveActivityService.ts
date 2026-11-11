@@ -3,11 +3,14 @@ import { getActiveSleep, type SleepRecord } from "./sleepService";
 import { getActiveSleepEstimate, subscribeSleepEstimateHistory } from "./sleepEstimateService";
 import type { ActiveSleepClassification } from "../analytics/personalSleepClassification";
 import { registerBeforeSignOut, sessionGeneration, isSessionGenerationCurrent } from "../auth/sessionLifecycle";
+import { liveActivityEnabled, saveLiveActivityEnabled } from "./liveActivityPreference";
 
 export type LiveActivityBaby = { id: string; name: string };
 export type LiveSleep = { sleepId: string; babyId: string; babyName: string; startedAt: string;
   classification: ActiveSleepClassification; estimatedWakeTime: string | null };
 type Bridge = {
+  setEnabled(options: { enabled: boolean }): Promise<void>;
+  getAppInfo(): Promise<{ version: string; build: string }>;
   reconcile(options: { ownerId: string; sleeps: LiveSleep[] }): Promise<void>;
   startSleep(options: LiveSleep & { ownerId: string }): Promise<void>;
   updateSleep(options: { sleepId: string; soundMonitoringActive: boolean }): Promise<void>;
@@ -35,15 +38,19 @@ export function configureSleepLiveActivities(userId: string | null, accessibleBa
   owner = userId; babies = accessibleBabies.map(({ id, name }) => ({ id, name })); revision++;
   presented = [];
   if (!liveActivitiesSupported()) return Promise.resolve();
+  void enqueue(() => bridge.setEnabled({ enabled: liveActivityEnabled() }));
   if (changedAccount || !userId) void enqueue(() => bridge.endAll());
   return refreshSleepLiveActivities();
 }
 export function refreshSleepLiveActivities(): Promise<void> {
-  if (!liveActivitiesSupported() || !owner || !babies.length || document.hidden) return Promise.resolve();
+  if (!liveActivitiesSupported()) return Promise.resolve();
+  if (!liveActivityEnabled()) return enqueue(() => bridge.setEnabled({ enabled: false }));
+  if (!owner || !babies.length || document.hidden) return Promise.resolve();
   const version = ++revision, userId = owner, catalog = babies, authGeneration = sessionGeneration();
   presented = [];
   return enqueue(async () => {
-    if (version !== revision || owner !== userId || !isSessionGenerationCurrent(authGeneration)) return;
+    if (!liveActivityEnabled() || version !== revision || owner !== userId || !isSessionGenerationCurrent(authGeneration)) return;
+    await bridge.setEnabled({ enabled: true });
     // A failed/incomplete read must never masquerade as "no active sleeps".
     const rows = await Promise.all(catalog.map(async baby => ({ baby, sleep: await getActiveSleep(baby.id) })));
     if (version !== revision || owner !== userId || document.hidden || !isSessionGenerationCurrent(authGeneration)) return;
@@ -59,6 +66,16 @@ export function refreshSleepLiveActivities(): Promise<void> {
     presented = snapshots;
   });
 }
+export async function setSleepLiveActivitiesEnabled(enabled: boolean): Promise<void> {
+  saveLiveActivityEnabled(enabled);
+  revision++;
+  presented = [];
+  if (!liveActivitiesSupported()) return;
+  // Do not wait for an offline/in-flight database read to dismiss presentation.
+  // The native plugin serializes bridge calls; revision fences the old read.
+  await bridge.setEnabled({ enabled });
+  if (liveActivityEnabled()) await refreshSleepLiveActivities();
+}
 export function clearSleepLiveActivities(): Promise<void> {
   revision++; owner = null; babies = [];
   presented = [];
@@ -70,7 +87,7 @@ registerBeforeSignOut(clearSleepLiveActivities);
 // A normal history read may finish after the activity was created. Update only
 // existing matching activities, without a database read or a new activity request.
 export function refreshSleepLiveActivityEstimates(): Promise<void> {
-  if (!liveActivitiesSupported() || !owner || document.hidden) return Promise.resolve();
+  if (!liveActivityEnabled() || !liveActivitiesSupported() || !owner || document.hidden) return Promise.resolve();
   const version = revision, userId = owner, generation = sessionGeneration();
   return enqueue(async () => {
     if (version !== revision || owner !== userId || document.hidden || !isSessionGenerationCurrent(generation)) return;

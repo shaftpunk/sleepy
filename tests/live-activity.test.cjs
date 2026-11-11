@@ -12,14 +12,20 @@ function load(file, imports, globals = {}) {
   new vm.Script(output).runInNewContext({ exports, require: name => imports[name], console: { info() {} }, ...globals });
   return exports;
 }
-function fixture({ native = true, failRead = false, failBridge = false, gate, estimate, estimateGate, classification = 'UNCERTAIN' } = {}) {
+function fixture({ native = true, failRead = false, failBridge = false, gate, estimate, estimateGate, classification = 'UNCERTAIN', storage = new Map() } = {}) {
   const calls = [], records = new Map(), document = { hidden: false }; let generation = 0, logout;
-  const bridge = { reconcile: async data => { if (failBridge) throw Error('optional failure'); calls.push(['reconcile', data]); },
+  const enabledCalls = [];
+  const bridge = { setEnabled: async ({ enabled }) => { enabledCalls.push(enabled); if (!enabled) calls.push(['clear']); },
+    reconcile: async data => { if (failBridge) throw Error('optional failure'); calls.push(['reconcile', data]); },
     endAll: async () => { calls.push(['clear']); if (failBridge) throw Error('optional failure'); },
     updatePresentation: async data => calls.push(['presentation', data]) };
   let historyChanged;
   let currentEstimate = { classification, estimatedWakeTime: estimate ?? null };
+  const preference = load('src/services/liveActivityPreference.ts', {}, { localStorage: {
+    getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value),
+  } });
   const service = load('src/services/liveActivityService.ts', {
+    './liveActivityPreference': preference,
     '@capacitor/core': { Capacitor: { isNativePlatform: () => native, getPlatform: () => 'ios', isPluginAvailable: () => true }, registerPlugin: () => bridge },
     './sleepService': { getActiveSleep: async id => { if (gate) await gate; if (failRead) throw Error('offline'); return records.get(id) ?? null; } },
     './sleepEstimateService': {
@@ -28,7 +34,7 @@ function fixture({ native = true, failRead = false, failBridge = false, gate, es
     },
     '../auth/sessionLifecycle': { registerBeforeSignOut: fn => { logout = fn; }, sessionGeneration: () => generation, isSessionGenerationCurrent: value => value === generation },
   }, { document });
-  return { service, calls, records, document,
+  return { service, calls, records, document, preference, storage, enabledCalls,
     setEstimate: value => { currentEstimate = value; historyChanged(); },
     invalidate: () => generation++, logout: async () => { generation++; await logout(); },
     baby: { id: 'baby', name: 'Amalie' }, sleep: { id: 'sleep', baby_id: 'baby', starttime: '2026-11-10T19:48:00Z', endtime: null, deleted_at: null } };
@@ -154,4 +160,51 @@ test('successful sleep writes notify optional UI only afterward; failed writes n
   const bad = sleepWriter({ databaseError: true }); await assert.rejects(bad.service.startSleep('baby')); assert.equal(bad.notifications(), 0);
   const optional = sleepWriter({ presentationError: true }); assert.equal(await optional.service.startSleep('baby'), optional.record);
   await optional.service.stopSleep('sleep', new Date(Date.now() - 60000).toISOString()); assert.equal(optional.notifications(), 2);
+});
+
+
+test('device Live Activity preference defaults ON, persists OFF across restart and login, and never writes sleep or sound', async () => {
+  const f = fixture(); assert.equal(f.preference.liveActivityEnabled(), true);
+  f.records.set('baby', f.sleep); await f.service.configureSleepLiveActivities('owner', [f.baby]);
+  await f.service.setSleepLiveActivitiesEnabled(false);
+  assert.equal(f.calls.at(-1)[0], 'clear');
+  const reconciles = f.calls.filter(([name]) => name === 'reconcile').length;
+  await f.service.refreshSleepLiveActivities(); await f.service.refreshSleepLiveActivityEstimates();
+  assert.equal(f.calls.filter(([name]) => name === 'reconcile').length, reconciles);
+  assert.equal(f.records.get('baby').endtime, null);
+  await f.logout();
+  assert.equal(f.preference.liveActivityEnabled(), false, 'logout preserves the device preference');
+  const restarted = fixture({ storage: f.storage });
+  assert.equal(restarted.preference.liveActivityEnabled(), false);
+  restarted.records.set('baby', restarted.sleep);
+  await restarted.service.configureSleepLiveActivities('other-owner', [restarted.baby]);
+  assert.equal(restarted.calls.filter(([name]) => name === 'reconcile').length, 0);
+  await restarted.service.setSleepLiveActivitiesEnabled(true);
+  assert.equal(restarted.calls.at(-1)[0], 'reconcile');
+  assert.equal(restarted.calls.at(-1)[1].sleeps[0].sleepId, 'sleep');
+  assert.equal(restarted.preference.liveActivityEnabled(), true);
+});
+
+test('OFF fences a pending authoritative read and foreground/history refresh cannot recreate it', async () => {
+  let release; const f = fixture({ gate: new Promise(resolve => { release = resolve; }) });
+  f.records.set('baby', f.sleep);
+  const initial = f.service.configureSleepLiveActivities('owner', [f.baby]);
+  await new Promise(resolve => setImmediate(resolve));
+  const disabled = f.service.setSleepLiveActivitiesEnabled(false);
+  await disabled;
+  assert.equal(f.calls.at(-1)[0], 'clear', 'OFF dismisses without waiting for the pending database read');
+  release(); await Promise.all([initial, disabled]);
+  f.document.hidden = true; await f.service.refreshSleepLiveActivities();
+  f.document.hidden = false; await f.service.refreshSleepLiveActivities();
+  f.setEstimate({ classification: 'LONG_SLEEP_LIKE', estimatedWakeTime: null });
+  await f.service.refreshSleepLiveActivityEstimates();
+  assert.ok(f.calls.every(([name]) => name === 'clear'));
+});
+
+test('web preference also persists and OFF-to-ON never calls a native bridge on web', async () => {
+  const f = fixture({ native: false });
+  await f.service.setSleepLiveActivitiesEnabled(false);
+  await f.service.configureSleepLiveActivities('owner', [f.baby]);
+  await f.service.setSleepLiveActivitiesEnabled(true);
+  assert.equal(f.calls.length, 0); assert.equal(f.enabledCalls.length, 0);
 });

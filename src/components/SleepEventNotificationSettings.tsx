@@ -51,9 +51,10 @@ export default function SleepEventNotificationSettings({
           setSettings(loaded);
         }
       } catch (error) {
+        console.error("Sleep notification settings failed", error);
         if (!cancelled) {
           setMessage(
-            error instanceof Error ? error.message : t("errors.generic"),
+            t("notifications.errorCouldNotLoad"),
           );
         }
       } finally {
@@ -86,9 +87,10 @@ export default function SleepEventNotificationSettings({
         [field]: value,
       });
     } catch (error) {
+      console.error("Sleep notification settings failed", error);
       setSettings(previous);
       setMessage(
-        error instanceof Error ? error.message : t("errors.generic"),
+        t("notifications.errorCouldNotUpdate"),
       );
     }
   }
@@ -143,7 +145,7 @@ export default function SleepEventNotificationSettings({
         </>
       )}
 
-      {message && <p className="notification-settings__message">{message}</p>}
+      {message && <p className="notification-settings__message" role="status">{message}</p>}
     </section>
   );
 }

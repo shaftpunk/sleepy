@@ -370,9 +370,15 @@ const en = {
     pageTitle: "Settings",
     pageDescription:
       "Choose your baby, manage your family, notifications and how Sleepy should look on this device.",
-    tabBaby: "Baby & family",
+    tabBaby: "Baby",
+    sleepTracking: "Sleep tracking",
+    liveActivity: "Live Activity",
+    liveActivityDescription: "Show active sleep on the Lock Screen and Dynamic Island.",
+    liveActivitySaveError: "Could not update Live Activity settings. Please try again.",
+    appBuild: "Build {{build}}",
+    webVersion: "Web version {{version}}",
     tabNotifications: "Notifications",
-    tabAppearance: "Appearance",
+    tabSleep: "Sleep",
     tabAccount: "Account",
     babyTitle: "Baby",
     babyProfileNote: "Sleepy 3.0 baby profile",
@@ -392,7 +398,6 @@ const en = {
     languageTitle: "Language",
     languageNote: "Choose the language Sleepy is displayed in.",
     aboutTitle: "About",
-    aboutVersion: "Sleepy 2.2.0 - Multi-user migration",
     birthDateLabel: "Date of birth",
     birthDateSave: "Save birth date",
     birthDateInvalid: "Invalid date.",
@@ -417,6 +422,7 @@ const en = {
   },
 
   notifications: {
+    errorCouldNotUpdate: "Could not update notification settings. Please try again.",
     "native_not-requested": "Notifications have not been enabled for this account on this iPhone.",
     native_registering: "Registering this iPhone for notifications…",
     native_enabled: "Native notifications enabled.",

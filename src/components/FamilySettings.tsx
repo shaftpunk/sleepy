@@ -112,9 +112,7 @@ export default function FamilySettings() {
 
         if (mounted) {
           setError(
-            err instanceof Error
-              ? err.message
-              : t("family.errorCouldNotLoad")
+            t("family.errorCouldNotLoad")
           );
         }
 
@@ -171,9 +169,7 @@ export default function FamilySettings() {
       );
 
       setError(
-        err instanceof Error
-          ? err.message
-          : t("family.errorCouldNotCreateInvitation")
+        t("family.errorCouldNotCreateInvitation")
       );
 
     } finally {
@@ -342,7 +338,7 @@ export default function FamilySettings() {
 
 
       {error && (
-        <p className="settings-error">
+        <p className="settings-error" role="alert">
           {error}
         </p>
       )}

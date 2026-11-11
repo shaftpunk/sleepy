@@ -145,7 +145,7 @@ test('existing history read feeds one shared Home and bridge result, with no ext
     sleep_type: 'sleep', endtime: null, deleted_at: null };
   const app = loader({
     '@capacitor/core': { Capacitor: { isNativePlatform: () => true, getPlatform: () => 'ios', isPluginAvailable: () => true },
-      registerPlugin: () => ({ reconcile: async payload => bridgeCalls.push(['reconcile', payload]),
+      registerPlugin: () => ({ setEnabled: async () => {}, reconcile: async payload => bridgeCalls.push(['reconcile', payload]),
         updatePresentation: async payload => bridgeCalls.push(['update', payload]), endAll: async () => {} }) },
     'src/auth/sessionLifecycle.ts': { sessionGeneration: () => generation, isSessionGenerationCurrent: n => n === generation, registerBeforeSignOut() {} },
     'src/services/sleepService.ts': { getActiveSleep: async () => { databaseReads++; return active; } },

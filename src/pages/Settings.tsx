@@ -10,13 +10,15 @@ import AddChildSettings from "../components/AddChildSettings";
 import { useTranslation } from "../i18n";
 import { isValidBirthDateInput } from "../analytics/localDate";
 import { updateBabyBirthDate } from "../services/householdService";
+import LiveActivitySettings from "../components/LiveActivitySettings";
+import AppVersion from "../components/AppVersion";
 import "./Settings.css";
 
 export default function Settings() {
   const { t } = useTranslation();
   const { signOut, user } = useAuth();
   const [activeTab, setActiveTab] = useState<
-    "baby" | "notifications" | "appearance" | "account"
+    "baby" | "sleep" | "notifications" | "account"
   >("baby");
 
   // Still read (not shown in the UI anymore, see below) because
@@ -110,8 +112,9 @@ export default function Settings() {
       setLoggingOut(true);
       await signOut();
     } catch (error) {
+      console.error("Settings update failed", error);
       setLogoutError(
-        error instanceof Error ? error.message : t("settings.logoutError"),
+        t("settings.logoutError"),
       );
       setLoggingOut(false);
     }
@@ -149,8 +152,9 @@ export default function Settings() {
 
       setBirthDateMessage(t("settings.birthDateSaved"));
     } catch (error) {
+      console.error("Settings update failed", error);
       setBirthDateError(
-        error instanceof Error ? error.message : t("errors.generic"),
+        t("errors.generic"),
       );
     } finally {
       setSavingBirthDate(false);
@@ -177,14 +181,25 @@ export default function Settings() {
         {(
           [
             ["baby", t("settings.tabBaby")],
+            ["sleep", t("settings.tabSleep")],
             ["notifications", t("settings.tabNotifications")],
-            ["appearance", t("settings.tabAppearance")],
             ["account", t("settings.tabAccount")],
           ] as const
         ).map(([key, label]) => (
           <button
             key={key}
             type="button"
+            id={`settings-tab-${key}`}
+            aria-controls="settings-panel"
+            tabIndex={activeTab === key ? 0 : -1}
+            onKeyDown={(event) => {
+              const tabs = Array.from(event.currentTarget.parentElement!.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+              const index = tabs.indexOf(event.currentTarget);
+              const next = event.key === "ArrowRight" ? (index + 1) % tabs.length
+                : event.key === "ArrowLeft" ? (index + tabs.length - 1) % tabs.length
+                : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : -1;
+              if (next >= 0) { event.preventDefault(); tabs[next].focus(); tabs[next].click(); }
+            }}
             role="tab"
             aria-selected={activeTab === key}
             className={activeTab === key ? "settings-tab active" : "settings-tab"}
@@ -195,8 +210,9 @@ export default function Settings() {
         ))}
       </div>
 
-      <div className="settings-tab-content" role="tabpanel">
+      <div id="settings-panel" className="settings-tab-content" role="tabpanel" aria-labelledby={`settings-tab-${activeTab}`} tabIndex={0}>
       {activeTab === "baby" && <>
+      <h2 className="settings-section-title">{t("settings.tabBaby")}</h2>
       <section className="settings-card">
         <div className="setting-copy">
           <p className="setting-title">
@@ -283,7 +299,51 @@ export default function Settings() {
       <FamilySettings />
       </>}
 
-      {activeTab === "appearance" && <>
+      {activeTab === "sleep" && <>
+        <h2 className="settings-section-title">{t("settings.sleepTracking")}</h2>
+        <LiveActivitySettings />
+        <SoundMonitoringSettings />
+      </>}
+
+      {activeTab === "notifications" && <>
+      <NotificationSettings
+        bbyid={currentBbyId}
+      >
+
+      {currentBabyId && selectedBaby && (
+        <SleepEventNotificationSettings
+          key={currentBabyId}
+          babyId={currentBabyId}
+          babyName={selectedBaby.name}
+        />
+      )}
+      </NotificationSettings>
+
+      </>}
+
+      {activeTab === "account" && <>
+      <section className="settings-card account-card">
+        <div className="account-identity" aria-hidden="true">
+          {accountName.slice(0, 1).toLocaleUpperCase()}
+        </div>
+
+        <div className="setting-copy">
+          <p className="setting-title">
+            {t("settings.accountTitle")}
+          </p>
+
+          <p className="account-name">{accountName}</p>
+
+          {user?.email && user.email !== accountName && (
+            <p className="muted account-email">{user.email}</p>
+          )}
+
+          {logoutError && (
+            <p className="settings-error" role="alert">{logoutError}</p>
+          )}
+        </div>
+
+      </section>
       <section className="settings-card appearance-card">
         <div className="appearance-row">
           <div className="setting-copy">
@@ -396,58 +456,8 @@ export default function Settings() {
           </button>
         </div>
       </section>
-      </>}
-
-      {activeTab === "notifications" && <>
-      <NotificationSettings
-        bbyid={currentBbyId}
-      />
-
-      {currentBabyId && selectedBaby && (
-        <SleepEventNotificationSettings
-          key={currentBabyId}
-          babyId={currentBabyId}
-          babyName={selectedBaby.name}
-        />
-      )}
-
-      <SoundMonitoringSettings />
-      </>}
-
-      {activeTab === "account" && <>
-      <section className="settings-card">
-        <div className="setting-copy">
-          <p className="setting-title">
-            {t("settings.aboutTitle")}
-          </p>
-
-          <p className="muted">
-            {t("settings.aboutVersion")}
-          </p>
-        </div>
-      </section>
-
-      <section className="settings-card account-card">
-        <div className="account-identity" aria-hidden="true">
-          {accountName.slice(0, 1).toLocaleUpperCase()}
-        </div>
-
-        <div className="setting-copy">
-          <p className="setting-title">
-            {t("settings.accountTitle")}
-          </p>
-
-          <p className="account-name">{accountName}</p>
-
-          {user?.email && user.email !== accountName && (
-            <p className="muted account-email">{user.email}</p>
-          )}
-
-          {logoutError && (
-            <p className="settings-error">{logoutError}</p>
-          )}
-        </div>
-
+      <AppVersion />
+      <section className="settings-card settings-card--stack">
         <button
           type="button"
           className="secondary-button"
