@@ -18,6 +18,9 @@ import AuthGate from '/src/components/AuthGate.tsx';import Splash from '/src/com
 import FeedModal from '/src/components/FeedModal.tsx';import SleepModal from '/src/components/SleepModal.tsx';
 import Split from '/src/components/SleepSplitModal.tsx';import Message from '/src/components/FamilyMessageModal.tsx';
 import {useAppStore} from '/src/stores/appStore.ts';import {useSoundStore} from '/src/stores/soundStore.ts';
+import {HouseholdContextProvider,useHouseholdContext} from '/src/households/HouseholdContextProvider.tsx';
+import {EntitlementProvider,useEntitlements} from '/src/entitlements/EntitlementProvider.tsx';
+import HouseholdContextSelector from '/src/households/HouseholdContextSelector.tsx';
 import '/src/index.css';import '/src/themes/alive/alive.css';import '/src/themes/retro/retro.css';
 const p=new URLSearchParams(location.search),view=p.get('view'),theme=p.get('theme')||'dark';
 document.documentElement.dataset.visualTheme=p.get('skin')||'default';
@@ -30,11 +33,16 @@ gate:React.createElement(AuthGate,null,'Ready'),splash:React.createElement(Splas
 feed:React.createElement(FeedModal,{onClose:done,onSaved:done}),sleep:React.createElement(SleepModal,{sleep,onClose:done,onSaved:done}),
 newSleep:React.createElement(SleepModal,{onClose:done,onSaved:done}),split:React.createElement(Split,{sleep,onClose:done,onSaved:done}),
 message:React.createElement(Message,{babyId:'baby',babyName:baby.name,onClose:done})};
-DOM.createRoot(document.getElementById('root')).render(view?React.createElement('div',{'data-theme':theme},views[view]):React.createElement(App));`;
+function Probe(){const h=useHouseholdContext(),e=useEntitlements();window.__probe={h,e};window.__setBaby=id=>useAppStore.setState({currentBabyId:id});return React.createElement('main',null,React.createElement(HouseholdContextSelector),React.createElement('output',{id:'probe'},JSON.stringify({user:h.userId,baby:h.babyId,household:h.householdId,loading:e.loading,tier:e.tier,isPlus:e.isPlus,verification:e.verificationState,canUse:e.canUse('family'),wouldAllow:e.wouldAllow('family')})));}
+const wrapped=child=>React.createElement(HouseholdContextProvider,null,React.createElement(EntitlementProvider,null,child));
+DOM.createRoot(document.getElementById('root')).render(view==='entitlements'?wrapped(React.createElement(Probe)):view?React.createElement('div',{'data-theme':theme},views[view]):wrapped(React.createElement(App)));`;
 const params = `const p=new URLSearchParams(location.search);`;
 const records = `${params}const now=Date.now(),iso=n=>new Date(n).toISOString();const sleeps=p.has('empty')?[]:Array.from({length:35},(_,i)=>({id:i?'sleep-'+i:'sleep',baby_id:'baby',starttime:iso(now-(i*24+12)*3600000),endtime:iso(now-(i*24+2)*3600000),durationminutes:600,sleep_type:'sleep',rate:'5',deleted_at:null,note:p.has('long')?'Et langt notat som skal være lesbart på små skjermer. '+ 'x'.repeat(65):'A short note'}));const feeds=p.has('empty')?[]:Array.from({length:5},(_,i)=>({id:'feed-'+i,baby_id:'baby',feedtype:['bottle','breast','food'][i%3],amountml:120,side:'left',starttime:iso(now-i*7200000),note:'A synthetic feeding note'}));`;
 const failure = `const blocked=async()=>{throw Error('duplicate key value violates unique constraint synthetic_settings_test')};`;
 function mock(url) {
+  if(process.argv.includes('--entitlements-only')&&url==='/src/auth/AuthProvider.tsx')return `import React from '/node_modules/.vite/deps/react.js';const {useSyncExternalStore}=React;let user='user';const listeners=new Set();window.__setUser=id=>{user=id;for(const f of listeners)f()};export const useAuth=()=>{const id=useSyncExternalStore(f=>{listeners.add(f);return()=>listeners.delete(f)},()=>user);return {user:id?{id}:null,loading:false}};`;
+  if(url.endsWith('/householdContextService.ts'))return `${params}export async function getHouseholdCandidates(user,baby){await new Promise(r=>setTimeout(r,window.__contextDelay||0));if(window.__contextFailure)throw Error('Synthetic offline');return window.__candidates||(p.has('multiple')?[{id:'A',name:'Household A',role:'viewer'},{id:'B',name:'Household B',role:'parent'}]:[{id:'household',name:'Synthetic household',role:'owner'}])};export const subscribeHouseholdContext=()=>()=>{};`;
+  if(url.endsWith('/entitlementService.ts'))return `import features from '/src/entitlements/features.json';export async function resolveHouseholdEntitlements(householdId){const tier=window.__tier||'free',delay=window.__resolutionDelay||0;await new Promise(r=>setTimeout(r,delay));if(window.__resolutionFailure)throw Error('Synthetic unavailable RPC');return {householdId,tier,isPlus:tier==='plus',features:Object.keys(features).filter(f=>tier==='plus'||features[f].requiredTier==='free'),verificationState:'verified',verifiedAt:new Date().toISOString(),validUntil:null,recheckAt:new Date(Date.now()+300000).toISOString(),policyVersion:1}};`;
   if (url === '/src/auth/AuthProvider.tsx') return `${params}export const useAuth=()=>({user:{id:'user',email:'parent.with.a.long.synthetic.email@example.invalid',user_metadata:{full_name:'Alexandra Strande Engevik'}},session:{user:{id:'user'}},loading:p.has('loading'),signOut:async()=>{}});`;
   if (url === '/src/lib/supabase.ts') return `export const supabase={auth:{onAuthStateChange:f=>{window.recovery=()=>f('PASSWORD_RECOVERY');return {data:{subscription:{unsubscribe(){}}}}},getUser:async()=>({data:{user:{id:'user'}}})}};`;
   if (url === '/src/services/sleepService.ts') return records + failure + `
@@ -69,7 +77,7 @@ async function main() {
     browser = await chromium.launch({ headless: true, ...(process.env.SLEEPY_CHROMIUM_PATH ? { executablePath: process.env.SLEEPY_CHROMIUM_PATH } : {}) });
     const page = await browser.newPage();
     const errors = [], failures = [], screens = [];
-    page.on('pageerror', e => errors.push(e.message));
+    page.on('pageerror', e => { errors.push(e.message); if(process.argv.includes('--entitlements-only'))console.error(e.message); });
     await page.route('**/*', route => {
       const u = new URL(route.request().url());
       if (u.origin !== base) return route.abort();
@@ -127,6 +135,45 @@ async function main() {
         await page.evaluate(()=>window.scrollTo(0,0));
         await page.screenshot({path:path.join(output,`${context}-${name}-viewport.png`)});
       }
+    }
+    if(process.argv.includes('--entitlements-only')){
+      const state=()=>page.locator('#probe').textContent().then(JSON.parse);
+      const wait=async predicate=>page.waitForFunction(predicate);
+      await page.goto(base+'/?view=entitlements');
+      await wait(()=>window.__probe?.e.verificationState==='verified');
+      assert.deepEqual(await state(),{user:'user',baby:'baby',household:'household',loading:false,tier:'free',isPlus:false,verification:'verified',canUse:true,wouldAllow:false});
+      await page.evaluate(()=>{window.__tier='plus';document.dispatchEvent(new Event('resume'))});
+      await wait(()=>window.__probe.e.isPlus);assert.equal((await state()).wouldAllow,true);
+      await page.evaluate(()=>{window.__resolutionFailure=true;document.dispatchEvent(new Event('resume'))});
+      await wait(()=>window.__probe.e.verificationState==='unknown');assert.equal((await state()).tier,null);assert.equal((await state()).canUse,true);
+      await page.evaluate(()=>{window.__resolutionFailure=false;window.__candidates=[{id:'A',name:'Household A',role:'viewer'},{id:'B',name:'Household B',role:'parent'}];window.__probe.h.refresh()});
+      await wait(()=>window.__probe.h.candidates.length===2);assert.equal((await state()).household,null,'multiple households require choice');
+      await page.locator('.household-context-notice select').selectOption('B');await wait(()=>window.__probe.e.isPlus&&window.__probe.h.householdId==='B');
+      await page.evaluate(()=>window.__setBaby('baby-2'));await wait(()=>window.__probe.h.babyId==='baby-2'&&!window.__probe.h.loading);
+      assert.equal((await state()).household,null,'another baby must not inherit the choice');
+      await page.evaluate(()=>window.__setBaby('baby'));await wait(()=>window.__probe.h.householdId==='B');
+      await page.evaluate(()=>history.replaceState(null,'','/?view=entitlements&multiple'));await page.reload();
+      await wait(()=>window.__probe?.h.householdId==='B'&&window.__probe.e.verificationState==='verified');
+      assert.equal((await state()).household,'B','selection survives browser restart with fresh membership validation');
+      // Stored selection remains user/baby scoped and is validated against fresh candidates.
+      await page.evaluate(()=>{window.__probe.h.refresh()});await page.waitForTimeout(100);assert.equal((await state()).household,'B');
+      await page.evaluate(()=>{window.__candidates=[{id:'A',name:'Household A',role:'viewer'}];window.__probe.h.refresh()});
+      await wait(()=>window.__probe.h.householdId==='A');
+      await page.evaluate(()=>{window.__candidates=[];window.__probe.h.refresh()});
+      await wait(()=>window.__probe.h.candidates.length===0);assert.equal((await state()).household,null);assert.equal((await state()).tier,null);
+      await page.evaluate(()=>{window.__candidates=[{id:'A',name:'Household A',role:'viewer'},{id:'B',name:'Household B',role:'parent'}];window.__probe.h.refresh()});
+      await wait(()=>window.__probe.h.candidates.length===2);
+      await page.evaluate(()=>{window.__resolutionDelay=250;window.__tier='plus';window.__probe.h.choose('A')});
+      await wait(()=>window.__probe.h.householdId==='A');
+      await page.evaluate(()=>{window.__resolutionDelay=0;window.__tier='free';window.__probe.h.choose('B')});
+      await wait(()=>window.__probe.e.tier==='free'&&window.__probe.h.householdId==='B');
+      await page.waitForTimeout(350);assert.equal((await state()).tier,'free','old Plus response must not leak into new household');
+      await page.evaluate(()=>{window.__contextDelay=150;window.__setUser('other')});
+      await wait(()=>window.__probe.h.userId==='other');assert.equal((await state()).household,null,'account switch fences previous context immediately');
+      await wait(()=>window.__probe.h.candidates.length===2);assert.equal((await state()).household,null,'another user cannot inherit stored household');
+      await page.evaluate(()=>window.__setUser(null));await wait(()=>window.__probe.h.userId===null);
+      assert.equal((await state()).tier,null);assert.equal((await state()).canUse,true);
+      assert.deepEqual(errors,[]);console.log('Entitlement/provider browser lifecycle checks passed');return;
     }
     for (const [width,height] of sizes) for (const theme of themes) for (const lang of ['no','en']) {
       const skin=(process.argv.find(value=>value.startsWith('--skin='))||'--skin=default').split('=')[1];

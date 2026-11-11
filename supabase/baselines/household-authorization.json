@@ -1,0 +1,1029 @@
+{
+  "columns": [
+    {
+      "column_default": "gen_random_uuid()",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "ordinal_position": 1,
+      "table_name": "babies"
+    },
+    {
+      "column_default": null,
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "ordinal_position": 2,
+      "table_name": "babies"
+    },
+    {
+      "column_default": null,
+      "column_name": "birth_date",
+      "data_type": "date",
+      "is_nullable": "YES",
+      "ordinal_position": 3,
+      "table_name": "babies"
+    },
+    {
+      "column_default": null,
+      "column_name": "created_by_user_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "ordinal_position": 4,
+      "table_name": "babies"
+    },
+    {
+      "column_default": "now()",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 5,
+      "table_name": "babies"
+    },
+    {
+      "column_default": "now()",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 6,
+      "table_name": "babies"
+    },
+    {
+      "column_default": null,
+      "column_name": "baby_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "ordinal_position": 1,
+      "table_name": "baby_households"
+    },
+    {
+      "column_default": null,
+      "column_name": "household_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "ordinal_position": 2,
+      "table_name": "baby_households"
+    },
+    {
+      "column_default": "now()",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 3,
+      "table_name": "baby_households"
+    },
+    {
+      "column_default": "gen_random_uuid()",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "ordinal_position": 1,
+      "table_name": "household_invitations"
+    },
+    {
+      "column_default": null,
+      "column_name": "household_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "ordinal_position": 2,
+      "table_name": "household_invitations"
+    },
+    {
+      "column_default": null,
+      "column_name": "created_by_user_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "ordinal_position": 3,
+      "table_name": "household_invitations"
+    },
+    {
+      "column_default": "'parent'::text",
+      "column_name": "role",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "ordinal_position": 4,
+      "table_name": "household_invitations"
+    },
+    {
+      "column_default": null,
+      "column_name": "token_hash",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "ordinal_position": 5,
+      "table_name": "household_invitations"
+    },
+    {
+      "column_default": null,
+      "column_name": "expires_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 6,
+      "table_name": "household_invitations"
+    },
+    {
+      "column_default": null,
+      "column_name": "used_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "ordinal_position": 7,
+      "table_name": "household_invitations"
+    },
+    {
+      "column_default": null,
+      "column_name": "used_by_user_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "ordinal_position": 8,
+      "table_name": "household_invitations"
+    },
+    {
+      "column_default": "now()",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 9,
+      "table_name": "household_invitations"
+    },
+    {
+      "column_default": null,
+      "column_name": "household_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "ordinal_position": 1,
+      "table_name": "household_members"
+    },
+    {
+      "column_default": null,
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "ordinal_position": 2,
+      "table_name": "household_members"
+    },
+    {
+      "column_default": null,
+      "column_name": "role",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "ordinal_position": 3,
+      "table_name": "household_members"
+    },
+    {
+      "column_default": "now()",
+      "column_name": "joined_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 4,
+      "table_name": "household_members"
+    },
+    {
+      "column_default": "gen_random_uuid()",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "ordinal_position": 1,
+      "table_name": "households"
+    },
+    {
+      "column_default": null,
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "ordinal_position": 2,
+      "table_name": "households"
+    },
+    {
+      "column_default": null,
+      "column_name": "created_by_user_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "ordinal_position": 3,
+      "table_name": "households"
+    },
+    {
+      "column_default": "now()",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 4,
+      "table_name": "households"
+    },
+    {
+      "column_default": "now()",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 5,
+      "table_name": "households"
+    },
+    {
+      "column_default": null,
+      "column_name": "user_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "ordinal_position": 1,
+      "table_name": "profiles"
+    },
+    {
+      "column_default": null,
+      "column_name": "display_name",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "ordinal_position": 2,
+      "table_name": "profiles"
+    },
+    {
+      "column_default": "now()",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 3,
+      "table_name": "profiles"
+    },
+    {
+      "column_default": "now()",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 4,
+      "table_name": "profiles"
+    }
+  ],
+  "constraints": [
+    {
+      "definition": "CHECK (((birth_date IS NULL) OR (birth_date <= CURRENT_DATE)))",
+      "name": "babies_birth_date_not_future",
+      "table": "babies"
+    },
+    {
+      "definition": "FOREIGN KEY (created_by_user_id) REFERENCES auth.users(id)",
+      "name": "babies_created_by_user_id_fkey",
+      "table": "babies"
+    },
+    {
+      "definition": "CHECK (((char_length(TRIM(BOTH FROM name)) >= 1) AND (char_length(TRIM(BOTH FROM name)) <= 100)))",
+      "name": "babies_name_check",
+      "table": "babies"
+    },
+    {
+      "definition": "PRIMARY KEY (id)",
+      "name": "babies_pkey",
+      "table": "babies"
+    },
+    {
+      "definition": "FOREIGN KEY (baby_id) REFERENCES babies(id) ON DELETE CASCADE",
+      "name": "baby_households_baby_id_fkey",
+      "table": "baby_households"
+    },
+    {
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE",
+      "name": "baby_households_household_id_fkey",
+      "table": "baby_households"
+    },
+    {
+      "definition": "PRIMARY KEY (baby_id, household_id)",
+      "name": "baby_households_pkey",
+      "table": "baby_households"
+    },
+    {
+      "definition": "FOREIGN KEY (created_by_user_id) REFERENCES auth.users(id)",
+      "name": "household_invitations_created_by_user_id_fkey",
+      "table": "household_invitations"
+    },
+    {
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE",
+      "name": "household_invitations_household_id_fkey",
+      "table": "household_invitations"
+    },
+    {
+      "definition": "PRIMARY KEY (id)",
+      "name": "household_invitations_pkey",
+      "table": "household_invitations"
+    },
+    {
+      "definition": "CHECK ((role = ANY (ARRAY['parent'::text, 'caregiver'::text, 'viewer'::text])))",
+      "name": "household_invitations_role_check",
+      "table": "household_invitations"
+    },
+    {
+      "definition": "UNIQUE (token_hash)",
+      "name": "household_invitations_token_hash_key",
+      "table": "household_invitations"
+    },
+    {
+      "definition": "FOREIGN KEY (used_by_user_id) REFERENCES auth.users(id)",
+      "name": "household_invitations_used_by_user_id_fkey",
+      "table": "household_invitations"
+    },
+    {
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE",
+      "name": "household_members_household_id_fkey",
+      "table": "household_members"
+    },
+    {
+      "definition": "PRIMARY KEY (household_id, user_id)",
+      "name": "household_members_pkey",
+      "table": "household_members"
+    },
+    {
+      "definition": "CHECK ((role = ANY (ARRAY['owner'::text, 'parent'::text, 'caregiver'::text, 'viewer'::text])))",
+      "name": "household_members_role_check",
+      "table": "household_members"
+    },
+    {
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+      "name": "household_members_user_id_fkey",
+      "table": "household_members"
+    },
+    {
+      "definition": "FOREIGN KEY (created_by_user_id) REFERENCES auth.users(id)",
+      "name": "households_created_by_user_id_fkey",
+      "table": "households"
+    },
+    {
+      "definition": "CHECK (((char_length(TRIM(BOTH FROM name)) >= 1) AND (char_length(TRIM(BOTH FROM name)) <= 100)))",
+      "name": "households_name_check",
+      "table": "households"
+    },
+    {
+      "definition": "PRIMARY KEY (id)",
+      "name": "households_pkey",
+      "table": "households"
+    },
+    {
+      "definition": "PRIMARY KEY (user_id)",
+      "name": "profiles_pkey",
+      "table": "profiles"
+    },
+    {
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+      "name": "profiles_user_id_fkey",
+      "table": "profiles"
+    }
+  ],
+  "functions": [
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "arguments": "target_household_id uuid, allowed_roles text[]",
+      "definition": "CREATE OR REPLACE FUNCTION private.has_household_role(target_household_id uuid, allowed_roles text[])\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\n  select exists (\r\n    select 1\r\n    from public.household_members hm\r\n    where hm.household_id = target_household_id\r\n      and hm.user_id = (select auth.uid())\r\n      and hm.role = any(allowed_roles)\r\n  );\r\n$function$\n",
+      "fingerprint": "1847bad0e45d94d920131dfa9ece6853",
+      "name": "has_household_role",
+      "schema": "private"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "arguments": "target_baby_id uuid",
+      "definition": "CREATE OR REPLACE FUNCTION private.can_access_baby(target_baby_id uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\n  select exists (\r\n    select 1\r\n    from public.baby_households bh\r\n    join public.household_members hm\r\n      on hm.household_id = bh.household_id\r\n    where bh.baby_id = target_baby_id\r\n      and hm.user_id = (select auth.uid())\r\n  );\r\n$function$\n",
+      "fingerprint": "a23338be07c77b63d840e5f72a2e6750",
+      "name": "can_access_baby",
+      "schema": "private"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "arguments": "target_household_id uuid",
+      "definition": "CREATE OR REPLACE FUNCTION private.is_household_member(target_household_id uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\n  select exists (\r\n    select 1\r\n    from public.household_members hm\r\n    where hm.household_id = target_household_id\r\n      and hm.user_id = (select auth.uid())\r\n  );\r\n$function$\n",
+      "fingerprint": "608ed6945d554515e2170119d5b2ab94",
+      "name": "is_household_member",
+      "schema": "private"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "arguments": "target_baby_id uuid, allowed_roles text[]",
+      "definition": "CREATE OR REPLACE FUNCTION private.has_baby_role(target_baby_id uuid, allowed_roles text[])\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\n  select exists (\r\n    select 1\r\n    from public.baby_households bh\r\n    join public.household_members hm\r\n      on hm.household_id = bh.household_id\r\n    where bh.baby_id = target_baby_id\r\n      and hm.user_id = (select auth.uid())\r\n      and hm.role = any(allowed_roles)\r\n  );\r\n$function$\n",
+      "fingerprint": "3bd751e5273d7ad52aeb9cf8b980b1cc",
+      "name": "has_baby_role",
+      "schema": "private"
+    },
+    {
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.handle_new_user()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\nbegin\r\n  insert into public.profiles (\r\n    user_id,\r\n    display_name\r\n  )\r\n  values (\r\n    new.id,\r\n    coalesce(\r\n      new.raw_user_meta_data ->> 'display_name',\r\n      split_part(new.email, '@', 1)\r\n    )\r\n  )\r\n  on conflict (user_id) do nothing;\r\n\r\n  return new;\r\nend;\r\n$function$\n",
+      "fingerprint": "c93a5843c868135cec231e4411cbef29",
+      "name": "handle_new_user",
+      "schema": "public"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "arguments": "household_name text, baby_name text, baby_birth_date date",
+      "definition": "CREATE OR REPLACE FUNCTION public.create_household_with_baby(household_name text, baby_name text, baby_birth_date date DEFAULT NULL::date)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare\r\n  current_user_id uuid;\r\n  new_household_id uuid;\r\n  new_baby_id uuid;\r\nbegin\r\n\r\n  -- ----------------------------------------------------------\r\n  -- 1. Require authenticated user\r\n  -- ----------------------------------------------------------\r\n\r\n  current_user_id := auth.uid();\r\n\r\n  if current_user_id is null then\r\n    raise exception 'Authentication required';\r\n  end if;\r\n\r\n\r\n  -- ----------------------------------------------------------\r\n  -- 2. Validate household name\r\n  -- ----------------------------------------------------------\r\n\r\n  household_name := trim(household_name);\r\n\r\n  if household_name is null\r\n     or char_length(household_name) < 1\r\n     or char_length(household_name) > 100 then\r\n    raise exception 'Invalid household name';\r\n  end if;\r\n\r\n\r\n  -- ----------------------------------------------------------\r\n  -- 3. Validate baby name\r\n  -- ----------------------------------------------------------\r\n\r\n  baby_name := trim(baby_name);\r\n\r\n  if baby_name is null\r\n     or char_length(baby_name) < 1\r\n     or char_length(baby_name) > 100 then\r\n    raise exception 'Invalid baby name';\r\n  end if;\r\n\r\n\r\n  -- ----------------------------------------------------------\r\n  -- 4. Prevent future birth dates\r\n  -- ----------------------------------------------------------\r\n\r\n  if baby_birth_date is not null\r\n     and baby_birth_date > current_date then\r\n    raise exception 'Birth date cannot be in the future';\r\n  end if;\r\n\r\n\r\n  -- ----------------------------------------------------------\r\n  -- 5. Create household\r\n  -- ----------------------------------------------------------\r\n\r\n  insert into public.households (\r\n    name,\r\n    created_by_user_id\r\n  )\r\n  values (\r\n    household_name,\r\n    current_user_id\r\n  )\r\n  returning id\r\n  into new_household_id;\r\n\r\n\r\n  -- ----------------------------------------------------------\r\n  -- 6. Make current user owner\r\n  -- ----------------------------------------------------------\r\n\r\n  insert into public.household_members (\r\n    household_id,\r\n    user_id,\r\n    role\r\n  )\r\n  values (\r\n    new_household_id,\r\n    current_user_id,\r\n    'owner'\r\n  );\r\n\r\n\r\n  -- ----------------------------------------------------------\r\n  -- 7. Create baby\r\n  -- ----------------------------------------------------------\r\n\r\n  insert into public.babies (\r\n    name,\r\n    birth_date,\r\n    created_by_user_id\r\n  )\r\n  values (\r\n    baby_name,\r\n    baby_birth_date,\r\n    current_user_id\r\n  )\r\n  returning id\r\n  into new_baby_id;\r\n\r\n\r\n  -- ----------------------------------------------------------\r\n  -- 8. Connect baby to household\r\n  -- ----------------------------------------------------------\r\n\r\n  insert into public.baby_households (\r\n    baby_id,\r\n    household_id\r\n  )\r\n  values (\r\n    new_baby_id,\r\n    new_household_id\r\n  );\r\n\r\n\r\n  -- ----------------------------------------------------------\r\n  -- 9. Return created IDs\r\n  -- ----------------------------------------------------------\r\n\r\n  return jsonb_build_object(\r\n    'household_id', new_household_id,\r\n    'baby_id', new_baby_id\r\n  );\r\n\r\nend;\r\n$function$\n",
+      "fingerprint": "b707eb43a5a6bff66821cf93e1026910",
+      "name": "create_household_with_baby",
+      "schema": "public"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "arguments": "p_household_id uuid, p_role text, p_expires_hours integer",
+      "definition": "CREATE OR REPLACE FUNCTION public.create_household_invitation(p_household_id uuid, p_role text DEFAULT 'parent'::text, p_expires_hours integer DEFAULT 24)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare\r\n  v_user_id uuid;\r\n  v_token text;\r\n  v_token_hash text;\r\n  v_invitation_id uuid;\r\n  v_expires_at timestamptz;\r\n  v_recent_count integer;\r\nbegin\r\n  v_user_id := auth.uid();\r\n\r\n  if v_user_id is null then\r\n    raise exception 'Authentication required';\r\n  end if;\r\n\r\n\r\n  if p_role not in (\r\n    'parent',\r\n    'caregiver',\r\n    'viewer'\r\n  ) then\r\n    raise exception 'Invalid household role';\r\n  end if;\r\n\r\n\r\n  if p_expires_hours < 1\r\n     or p_expires_hours > 168 then\r\n    raise exception 'Invitation expiry must be between 1 and 168 hours';\r\n  end if;\r\n\r\n\r\n  if not private.has_household_role(\r\n    p_household_id,\r\n    array['owner']\r\n  ) then\r\n    raise exception 'Only household owners can create invitations';\r\n  end if;\r\n\r\n\r\n  select count(*)\r\n  into v_recent_count\r\n  from public.household_invitations\r\n  where household_id = p_household_id\r\n    and created_by_user_id = v_user_id\r\n    and created_at > now() - interval '1 hour';\r\n\r\n\r\n  if v_recent_count >= 10 then\r\n    raise exception 'Too many invitations created recently';\r\n  end if;\r\n\r\n\r\n  v_token :=\r\n    encode(\r\n      extensions.gen_random_bytes(32),\r\n      'hex'\r\n    );\r\n\r\n\r\n  v_token_hash :=\r\n    encode(\r\n      extensions.digest(\r\n        v_token,\r\n        'sha256'\r\n      ),\r\n      'hex'\r\n    );\r\n\r\n\r\n  v_expires_at :=\r\n    now()\r\n    + make_interval(\r\n        hours => p_expires_hours\r\n      );\r\n\r\n\r\n  insert into public.household_invitations (\r\n    household_id,\r\n    created_by_user_id,\r\n    role,\r\n    token_hash,\r\n    expires_at\r\n  )\r\n  values (\r\n    p_household_id,\r\n    v_user_id,\r\n    p_role,\r\n    v_token_hash,\r\n    v_expires_at\r\n  )\r\n  returning id\r\n  into v_invitation_id;\r\n\r\n\r\n  return jsonb_build_object(\r\n    'invitation_id',\r\n    v_invitation_id,\r\n    'household_id',\r\n    p_household_id,\r\n    'role',\r\n    p_role,\r\n    'token',\r\n    v_token,\r\n    'expires_at',\r\n    v_expires_at\r\n  );\r\nend;\r\n$function$\n",
+      "fingerprint": "70c94bbfc95fa538eec01f54232a971a",
+      "name": "create_household_invitation",
+      "schema": "public"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "arguments": "p_token text",
+      "definition": "CREATE OR REPLACE FUNCTION public.accept_household_invitation(p_token text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare\r\n  v_user_id uuid;\r\n  v_token_hash text;\r\n  v_invitation public.household_invitations%rowtype;\r\n  v_household_name text;\r\nbegin\r\n  v_user_id := auth.uid();\r\n\r\n  if v_user_id is null then\r\n    raise exception 'Authentication required';\r\n  end if;\r\n\r\n\r\n  if p_token is null\r\n     or length(trim(p_token)) < 20 then\r\n    raise exception 'Invalid invitation';\r\n  end if;\r\n\r\n\r\n  v_token_hash :=\r\n    encode(\r\n      extensions.digest(\r\n        trim(p_token),\r\n        'sha256'\r\n      ),\r\n      'hex'\r\n    );\r\n\r\n\r\n  select *\r\n  into v_invitation\r\n  from public.household_invitations\r\n  where token_hash = v_token_hash\r\n  for update;\r\n\r\n\r\n  if not found then\r\n    raise exception 'Invalid invitation';\r\n  end if;\r\n\r\n\r\n  if v_invitation.used_at is not null then\r\n    raise exception 'Invitation has already been used';\r\n  end if;\r\n\r\n\r\n  if v_invitation.expires_at <= now() then\r\n    raise exception 'Invitation has expired';\r\n  end if;\r\n\r\n\r\n  if exists (\r\n    select 1\r\n    from public.household_members\r\n    where household_id = v_invitation.household_id\r\n      and user_id = v_user_id\r\n  ) then\r\n    raise exception 'You are already a member of this household';\r\n  end if;\r\n\r\n\r\n  insert into public.household_members (\r\n    household_id,\r\n    user_id,\r\n    role,\r\n    joined_at\r\n  )\r\n  values (\r\n    v_invitation.household_id,\r\n    v_user_id,\r\n    v_invitation.role,\r\n    now()\r\n  );\r\n\r\n\r\n  update public.household_invitations\r\n  set\r\n    used_at = now(),\r\n    used_by_user_id = v_user_id\r\n  where id = v_invitation.id;\r\n\r\n\r\n  select name\r\n  into v_household_name\r\n  from public.households\r\n  where id = v_invitation.household_id;\r\n\r\n\r\n  return jsonb_build_object(\r\n    'household_id',\r\n    v_invitation.household_id,\r\n    'household_name',\r\n    v_household_name,\r\n    'role',\r\n    v_invitation.role\r\n  );\r\nend;\r\n$function$\n",
+      "fingerprint": "a560cb7ee66376a4f2422d3f460b3587",
+      "name": "accept_household_invitation",
+      "schema": "public"
+    },
+    {
+      "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "arguments": "target_household_id uuid, baby_name text, baby_birth_date date",
+      "definition": "CREATE OR REPLACE FUNCTION public.create_baby_for_household(target_household_id uuid, baby_name text, baby_birth_date date DEFAULT NULL::date)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare\r\n  current_user_id uuid := auth.uid();\r\n  normalized_name text := trim(baby_name);\r\n  new_baby_id uuid;\r\nbegin\r\n  if current_user_id is null then\r\n    raise exception 'Authentication required';\r\n  end if;\r\n\r\n  if target_household_id is null then\r\n    raise exception 'Household is required';\r\n  end if;\r\n\r\n  if not exists (\r\n    select 1\r\n    from public.household_members hm\r\n    where hm.household_id = target_household_id\r\n      and hm.user_id = current_user_id\r\n      and hm.role in ('owner', 'parent')\r\n  ) then\r\n    raise exception 'Only household owners and parents can add children';\r\n  end if;\r\n\r\n  if normalized_name is null\r\n     or char_length(normalized_name) < 1\r\n     or char_length(normalized_name) > 100 then\r\n    raise exception 'Invalid child name';\r\n  end if;\r\n\r\n  if baby_birth_date is not null\r\n     and baby_birth_date > current_date then\r\n    raise exception 'Birth date cannot be in the future';\r\n  end if;\r\n\r\n  insert into public.babies (\r\n    name,\r\n    birth_date,\r\n    created_by_user_id\r\n  )\r\n  values (\r\n    normalized_name,\r\n    baby_birth_date,\r\n    current_user_id\r\n  )\r\n  returning id into new_baby_id;\r\n\r\n  insert into public.baby_households (\r\n    baby_id,\r\n    household_id\r\n  )\r\n  values (\r\n    new_baby_id,\r\n    target_household_id\r\n  );\r\n\r\n  return jsonb_build_object(\r\n    'id', new_baby_id,\r\n    'name', normalized_name,\r\n    'birth_date', baby_birth_date\r\n  );\r\nend;\r\n$function$\n",
+      "fingerprint": "e69f6cf85e2a1ed1a089fa3d5b11df8d",
+      "name": "create_baby_for_household",
+      "schema": "public"
+    }
+  ],
+  "grants": [
+    {
+      "grantee": "authenticated",
+      "privilege_type": "INSERT",
+      "table_name": "profiles"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "SELECT",
+      "table_name": "profiles"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE",
+      "table_name": "profiles"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "DELETE",
+      "table_name": "profiles"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "TRUNCATE",
+      "table_name": "profiles"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "REFERENCES",
+      "table_name": "profiles"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "TRIGGER",
+      "table_name": "profiles"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "INSERT",
+      "table_name": "profiles"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "SELECT",
+      "table_name": "profiles"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "UPDATE",
+      "table_name": "profiles"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "DELETE",
+      "table_name": "profiles"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE",
+      "table_name": "profiles"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES",
+      "table_name": "profiles"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER",
+      "table_name": "profiles"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "INSERT",
+      "table_name": "households"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "SELECT",
+      "table_name": "households"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE",
+      "table_name": "households"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "DELETE",
+      "table_name": "households"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "TRUNCATE",
+      "table_name": "households"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "REFERENCES",
+      "table_name": "households"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "TRIGGER",
+      "table_name": "households"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "INSERT",
+      "table_name": "households"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "SELECT",
+      "table_name": "households"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "UPDATE",
+      "table_name": "households"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "DELETE",
+      "table_name": "households"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE",
+      "table_name": "households"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES",
+      "table_name": "households"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER",
+      "table_name": "households"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "INSERT",
+      "table_name": "household_members"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "SELECT",
+      "table_name": "household_members"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE",
+      "table_name": "household_members"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "DELETE",
+      "table_name": "household_members"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "TRUNCATE",
+      "table_name": "household_members"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "REFERENCES",
+      "table_name": "household_members"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "TRIGGER",
+      "table_name": "household_members"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "INSERT",
+      "table_name": "household_members"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "SELECT",
+      "table_name": "household_members"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "UPDATE",
+      "table_name": "household_members"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "DELETE",
+      "table_name": "household_members"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE",
+      "table_name": "household_members"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES",
+      "table_name": "household_members"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER",
+      "table_name": "household_members"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "INSERT",
+      "table_name": "babies"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "SELECT",
+      "table_name": "babies"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE",
+      "table_name": "babies"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "DELETE",
+      "table_name": "babies"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "TRUNCATE",
+      "table_name": "babies"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "REFERENCES",
+      "table_name": "babies"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "TRIGGER",
+      "table_name": "babies"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "INSERT",
+      "table_name": "babies"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "SELECT",
+      "table_name": "babies"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "UPDATE",
+      "table_name": "babies"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "DELETE",
+      "table_name": "babies"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE",
+      "table_name": "babies"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES",
+      "table_name": "babies"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER",
+      "table_name": "babies"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "INSERT",
+      "table_name": "baby_households"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "SELECT",
+      "table_name": "baby_households"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE",
+      "table_name": "baby_households"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "DELETE",
+      "table_name": "baby_households"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "TRUNCATE",
+      "table_name": "baby_households"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "REFERENCES",
+      "table_name": "baby_households"
+    },
+    {
+      "grantee": "authenticated",
+      "privilege_type": "TRIGGER",
+      "table_name": "baby_households"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "INSERT",
+      "table_name": "baby_households"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "SELECT",
+      "table_name": "baby_households"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "UPDATE",
+      "table_name": "baby_households"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "DELETE",
+      "table_name": "baby_households"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE",
+      "table_name": "baby_households"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES",
+      "table_name": "baby_households"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER",
+      "table_name": "baby_households"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "INSERT",
+      "table_name": "household_invitations"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "SELECT",
+      "table_name": "household_invitations"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "UPDATE",
+      "table_name": "household_invitations"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "DELETE",
+      "table_name": "household_invitations"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE",
+      "table_name": "household_invitations"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES",
+      "table_name": "household_invitations"
+    },
+    {
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER",
+      "table_name": "household_invitations"
+    }
+  ],
+  "policies": [
+    {
+      "check": "(created_by_user_id = ( SELECT auth.uid() AS uid))",
+      "command": "INSERT",
+      "name": "babies_insert_authenticated",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "babies"
+    },
+    {
+      "check": null,
+      "command": "SELECT",
+      "name": "babies_select_member",
+      "qual": "( SELECT private.can_access_baby(babies.id) AS can_access_baby)",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "babies"
+    },
+    {
+      "check": "( SELECT private.has_baby_role(babies.id, ARRAY['owner'::text, 'parent'::text]) AS has_baby_role)",
+      "command": "UPDATE",
+      "name": "babies_update_parent",
+      "qual": "( SELECT private.has_baby_role(babies.id, ARRAY['owner'::text, 'parent'::text]) AS has_baby_role)",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "babies"
+    },
+    {
+      "check": null,
+      "command": "SELECT",
+      "name": "baby_households_select_member",
+      "qual": "( SELECT private.is_household_member(baby_households.household_id) AS is_household_member)",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "baby_households"
+    },
+    {
+      "check": "private.has_baby_role(baby_id, ARRAY['owner'::text, 'parent'::text, 'caregiver'::text])",
+      "command": "INSERT",
+      "name": "feed_insert_caregiver",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "feed"
+    },
+    {
+      "check": null,
+      "command": "SELECT",
+      "name": "feed_select_household",
+      "qual": "private.can_access_baby(baby_id)",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "feed"
+    },
+    {
+      "check": "private.has_baby_role(baby_id, ARRAY['owner'::text, 'parent'::text, 'caregiver'::text])",
+      "command": "UPDATE",
+      "name": "feed_update_caregiver",
+      "qual": "private.has_baby_role(baby_id, ARRAY['owner'::text, 'parent'::text, 'caregiver'::text])",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "feed"
+    },
+    {
+      "check": null,
+      "command": "SELECT",
+      "name": "household_members_select_member",
+      "qual": "( SELECT private.is_household_member(household_members.household_id) AS is_household_member)",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "household_members"
+    },
+    {
+      "check": "(created_by_user_id = ( SELECT auth.uid() AS uid))",
+      "command": "INSERT",
+      "name": "households_insert_authenticated",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "households"
+    },
+    {
+      "check": null,
+      "command": "SELECT",
+      "name": "households_select_member",
+      "qual": "( SELECT private.is_household_member(households.id) AS is_household_member)",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "households"
+    },
+    {
+      "check": "( SELECT private.has_household_role(households.id, ARRAY['owner'::text]) AS has_household_role)",
+      "command": "UPDATE",
+      "name": "households_update_owner",
+      "qual": "( SELECT private.has_household_role(households.id, ARRAY['owner'::text]) AS has_household_role)",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "households"
+    },
+    {
+      "check": "(user_id = ( SELECT auth.uid() AS uid))",
+      "command": "INSERT",
+      "name": "profiles_insert_own",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "profiles"
+    },
+    {
+      "check": null,
+      "command": "SELECT",
+      "name": "profiles_select_own",
+      "qual": "(user_id = ( SELECT auth.uid() AS uid))",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "profiles"
+    },
+    {
+      "check": "(user_id = ( SELECT auth.uid() AS uid))",
+      "command": "UPDATE",
+      "name": "profiles_update_own",
+      "qual": "(user_id = ( SELECT auth.uid() AS uid))",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "profiles"
+    },
+    {
+      "check": "private.has_baby_role(baby_id, ARRAY['owner'::text, 'parent'::text, 'caregiver'::text])",
+      "command": "INSERT",
+      "name": "sleep_insert_caregiver",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "sleep"
+    },
+    {
+      "check": null,
+      "command": "SELECT",
+      "name": "sleep_select_household",
+      "qual": "private.can_access_baby(baby_id)",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "sleep"
+    },
+    {
+      "check": "private.has_baby_role(baby_id, ARRAY['owner'::text, 'parent'::text, 'caregiver'::text])",
+      "command": "UPDATE",
+      "name": "sleep_update_caregiver",
+      "qual": "private.has_baby_role(baby_id, ARRAY['owner'::text, 'parent'::text, 'caregiver'::text])",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "sleep"
+    }
+  ],
+  "rls": [
+    {
+      "enabled": true,
+      "forced": false,
+      "table": "babies"
+    },
+    {
+      "enabled": true,
+      "forced": false,
+      "table": "baby_households"
+    },
+    {
+      "enabled": true,
+      "forced": false,
+      "table": "household_invitations"
+    },
+    {
+      "enabled": true,
+      "forced": false,
+      "table": "household_members"
+    },
+    {
+      "enabled": true,
+      "forced": false,
+      "table": "households"
+    },
+    {
+      "enabled": true,
+      "forced": false,
+      "table": "profiles"
+    }
+  ]
+}

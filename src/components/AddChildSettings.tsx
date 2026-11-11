@@ -8,6 +8,8 @@ import {
   type Household,
 } from "../services/householdService";
 import { useAppStore } from "../stores/appStore";
+import { useHouseholdContext } from "../households/HouseholdContextProvider";
+import { chooseHouseholdId } from "../households/context";
 
 function localTodayInputValue(): string {
   const today = new Date();
@@ -19,12 +21,14 @@ function localTodayInputValue(): string {
 
 export default function AddChildSettings() {
   const { t } = useTranslation();
+  const { householdId: activeHouseholdId } = useHouseholdContext();
   const babies = useAppStore((state) => state.babies);
   const setBabies = useAppStore((state) => state.setBabies);
   const setCurrentBabyId = useAppStore((state) => state.setCurrentBabyId);
 
   const [households, setHouseholds] = useState<Household[]>([]);
-  const [householdId, setHouseholdId] = useState("");
+  const [householdChoice, setHouseholdId] = useState("");
+  const householdId = chooseHouseholdId(households, householdChoice || activeHouseholdId) ?? "";
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [expanded, setExpanded] = useState(false);
@@ -42,7 +46,6 @@ export default function AddChildSettings() {
         if (!active) return;
 
         setHouseholds(nextHouseholds);
-        setHouseholdId((current) => current || nextHouseholds[0]?.id || "");
       } catch (loadError) {
         console.error("Could not load families", loadError);
         if (!active) return;
@@ -137,6 +140,7 @@ export default function AddChildSettings() {
                 value={householdId}
                 onChange={(event) => setHouseholdId(event.target.value)}
               >
+                <option value="" disabled>{t("family.chooseHousehold")}</option>
                 {households.map((household) => (
                   <option key={household.id} value={household.id}>
                     {household.name}

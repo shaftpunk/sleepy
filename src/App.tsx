@@ -15,6 +15,7 @@ import PixelIcon from "./themes/retro/PixelIcon";
 import NativePushNavigation from "./components/NativePushNavigation";
 import NativeSoundLifecycle from "./components/NativeSoundLifecycle";
 import SleepLiveActivityLifecycle from "./components/SleepLiveActivityLifecycle";
+import HouseholdContextSelector from "./households/HouseholdContextSelector";
 
 // Route-level code splitting: the default route (Home) no longer needs to
 // download/parse the Analysis page's code (5 tabs plus the age-guide/
@@ -74,6 +75,7 @@ function App() {
         <NativeSoundLifecycle />
         <SleepLiveActivityLifecycle />
         <div className="app-shell">
+          <HouseholdContextSelector />
           <Suspense fallback={<div className="empty-card">{t("common.loading")}</div>}>
             <Routes>
               <Route path="/" element={<Home />} />

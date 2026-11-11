@@ -1,0 +1,4 @@
+.household-context-notice { display: grid; gap: 8px; margin-bottom: 16px; color: var(--ui-text); font-size: .9rem; }
+.household-context-notice p { margin: 0; }
+.household-context-notice button { justify-self: start; }
+.household-context-notice select { width: 100%; min-width: 0; min-height: 46px; }

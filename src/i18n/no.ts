@@ -502,6 +502,9 @@ const no = {
   },
 
   family: {
+    activeHousehold: "Aktiv familie",
+    chooseHousehold: "Velg familie",
+    contextUnavailable: "Kunne ikke bekrefte aktiv familie. Eksisterende funksjoner er fortsatt tilgjengelige.",
     eyebrow: "Sleepy 3.0",
     loadingFamily: "Laster familie…",
     heading: "Familie",

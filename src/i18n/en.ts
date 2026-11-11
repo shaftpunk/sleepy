@@ -503,6 +503,9 @@ const en = {
   },
 
   family: {
+    activeHousehold: "Active family",
+    chooseHousehold: "Choose a family",
+    contextUnavailable: "Could not verify the active family. Your existing features remain available.",
     eyebrow: "Sleepy 3.0",
     loadingFamily: "Loading family…",
     heading: "Family",

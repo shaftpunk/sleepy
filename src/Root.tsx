@@ -8,6 +8,8 @@ import SplashScreen from "./components/SplashScreen";
 import { useAppStore } from "./stores/appStore";
 import { useLoadAliveStyles } from "./themes/alive/useLoadAliveStyles";
 import { useLoadRetroStyles } from "./themes/retro/useLoadRetroStyles";
+import { HouseholdContextProvider } from "./households/HouseholdContextProvider";
+import { EntitlementProvider } from "./entitlements/EntitlementProvider";
 
 // The splash is a brief branding overlay, not a gate on real readiness.
 // Previously it sat OUTSIDE the auth chain (in App.tsx) and blocked on the
@@ -50,7 +52,9 @@ export default function Root() {
       <AuthProvider>
         <AuthGate>
           <BabyLoader>
-            <App />
+            <HouseholdContextProvider>
+              <EntitlementProvider><App /></EntitlementProvider>
+            </HouseholdContextProvider>
           </BabyLoader>
         </AuthGate>
       </AuthProvider>

@@ -1,0 +1,41 @@
+{
+  "core_tracking": {
+    "requiredTier": "free"
+  },
+  "basic_history": {
+    "requiredTier": "free"
+  },
+  "basic_analysis": {
+    "requiredTier": "free"
+  },
+  "basic_live_activity": {
+    "requiredTier": "free"
+  },
+  "notifications": {
+    "requiredTier": "free"
+  },
+  "family": {
+    "requiredTier": "plus"
+  },
+  "sound_monitoring": {
+    "requiredTier": "plus"
+  },
+  "sound_activity": {
+    "requiredTier": "plus"
+  },
+  "smart_live_activity": {
+    "requiredTier": "plus"
+  },
+  "advanced_analysis": {
+    "requiredTier": "plus"
+  },
+  "full_history": {
+    "requiredTier": "plus"
+  },
+  "export": {
+    "requiredTier": "plus"
+  },
+  "smart_insights": {
+    "requiredTier": "plus"
+  }
+}

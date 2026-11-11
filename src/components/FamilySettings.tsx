@@ -14,10 +14,13 @@ import {
 } from "../services/householdService";
 
 import { LOCALES, useTranslation } from "../i18n";
+import { useHouseholdContext } from "../households/HouseholdContextProvider";
+import { chooseHouseholdId } from "../households/context";
 
 
 export default function FamilySettings() {
   const { t, lang } = useTranslation();
+  const { householdId: activeHouseholdId } = useHouseholdContext();
 
   const [
     households,
@@ -26,7 +29,7 @@ export default function FamilySettings() {
     useState<Household[]>([]);
 
   const [
-    selectedHouseholdId,
+    householdChoice,
     setSelectedHouseholdId,
   ] =
     useState("");
@@ -81,6 +84,9 @@ export default function FamilySettings() {
   ] =
     useState(false);
 
+  const selectedHouseholdId = chooseHouseholdId(households, householdChoice || activeHouseholdId) ?? "";
+  const [invitationHouseholdId, setInvitationHouseholdId] = useState<string | null>(null);
+
 
   useEffect(() => {
     let mounted = true;
@@ -98,11 +104,6 @@ export default function FamilySettings() {
 
         setHouseholds(data);
 
-        if (data.length > 0) {
-          setSelectedHouseholdId(
-            data[0].id
-          );
-        }
 
       } catch (err) {
         console.error(
@@ -157,6 +158,7 @@ export default function FamilySettings() {
       setInviteToken(
         invitation.token
       );
+      setInvitationHouseholdId(selectedHouseholdId);
 
       setExpiresAt(
         invitation.expires_at
@@ -270,6 +272,7 @@ export default function FamilySettings() {
                 setExpiresAt(null);
               }}
             >
+              <option value="" disabled>{t("family.chooseHousehold")}</option>
               {households.map(
                 (household) => (
                   <option
@@ -344,7 +347,7 @@ export default function FamilySettings() {
       )}
 
 
-      {inviteToken && (
+      {inviteToken && invitationHouseholdId === selectedHouseholdId && (
         <div className="settings-card invitation-result">
 
           <strong>
