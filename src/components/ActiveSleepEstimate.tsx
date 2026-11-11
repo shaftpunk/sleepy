@@ -1,6 +1,7 @@
 import { estimatedSleepProgress } from "../analytics/activeSleepEstimate";
 import type { SleepEstimatePresentation } from "../services/sleepEstimateService";
 import { useTranslation } from "../i18n";
+import { formatClock } from "../lib/format";
 
 type Props = { presentation: SleepEstimatePresentation; sleepStartedAt: string; now: number };
 
@@ -21,5 +22,6 @@ export default function ActiveSleepEstimate({ presentation, sleepStartedAt, now 
   return <div className="active-sleep-estimate">
     <progress value={progress.progress} max={1} aria-label={t("home.estimatedNapProgress")} aria-valuetext={`${percentage}, ${remaining}`} />
     <p className="sleep-subtitle">{remaining}</p>
+    <p className="sleep-subtitle home-wake-time">{t("home.estimatedWakeAround", { time: formatClock(Date.parse(presentation.estimatedWakeTime), lang) })}</p>
   </div>;
 }

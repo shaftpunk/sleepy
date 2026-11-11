@@ -21,7 +21,9 @@ export default function NativeSoundMonitorPanel({ sleep }: { sleep: SleepRecord 
     unavailable: "sound.native_unavailable", error: "sound.native_error", validating: "sound.native_validating",
     "validation-error": "sound.native_validation_error" } as const;
   const status = Object.hasOwn(keys, state.status) ? state.status as keyof typeof keys : "error";
-  return <aside className="sound-panel" aria-label={t("sound.title")}>
+  return <details className="home-sound-controls">
+    <summary>{t(eligible && state.running ? "home.soundMonitoringActive" : "sound.title")}</summary>
+    <aside className="sound-panel" aria-label={t("sound.title")}>
     <div className="sound-line"><strong>{t("sound.title")}</strong><span role="status">{t(keys[status])}</span></div>
     {state.running && <NativeSoundLevelMeter level={state.level} label={t("sound.level")} />}
     {state.active ? <button className="secondary-button" onClick={() => void stopNativeSound("manual-stop").then(synchronizeNativeSoundEvents).catch(() => {})}>{t("sound.stop")}</button>
@@ -30,5 +32,5 @@ export default function NativeSoundMonitorPanel({ sleep }: { sleep: SleepRecord 
     {!state.active && state.stopReason?.startsWith("remote-") && <small role="status">{t("sound.remoteStopped")}</small>}
     {state.syncFailed && <div role="status"><p>{t("sound.nativeSaveError")}</p><button className="secondary-button" onClick={() => void synchronizeNativeSoundEvents().catch(() => {})}>{t("sound.retrySave")}</button></div>}
     <small>{t("sound.privacy")}</small>
-  </aside>;
+  </aside></details>;
 }

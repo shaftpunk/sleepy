@@ -1,6 +1,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -43,52 +44,12 @@ import { computeWakeWindows } from "../analytics/wakeWindows";
 import { getActiveSleepEstimate, sleepEstimateHistoryRevision, subscribeSleepEstimateHistory, type SleepEstimatePresentation } from "../services/sleepEstimateService";
 import ActiveSleepEstimate from "../components/ActiveSleepEstimate";
 import { median } from "../analytics/time";
-import { feedTypeLabel, formatClock, formatDuration, sideLabel, stars } from "../lib/format";
+import { feedTypeLabel, formatClock, formatDuration, sideLabel } from "../lib/format";
 import { useTranslation } from "../i18n";
 import "./SleepButton.css";
-import SleepStartOptions from "../components/SleepStartOptions";
-import SleepStopOptions from "../components/SleepStopOptions";
-
-function durationFrom(
-  dateString: string
-) {
-  const seconds = Math.max(
-    0,
-    Math.floor(
-      (
-        Date.now() -
-        new Date(
-          dateString
-        ).getTime()
-      ) / 1000
-    )
-  );
-
-  const hours =
-    Math.floor(seconds / 3600);
-
-  const minutes =
-    Math.floor(
-      (seconds % 3600) / 60
-    );
-
-  const secs =
-    seconds % 60;
-
-  return [
-    hours
-      .toString()
-      .padStart(2, "0"),
-
-    minutes
-      .toString()
-      .padStart(2, "0"),
-
-    secs
-      .toString()
-      .padStart(2, "0"),
-  ].join(":");
-}
+import SleepPrimaryAction from "../components/SleepPrimaryAction";
+import "./Home.css";
+import { formatHomeDuration } from "../lib/homePresentation";
 
 export default function Home() {
   const { t, lang } = useTranslation();
@@ -196,14 +157,6 @@ export default function Home() {
     useState(false);
 
   const [familyMessageOpen, setFamilyMessageOpen] = useState(false);
-
-  const [
-    timer,
-    setTimer,
-  ] =
-    useState(
-      "00:00:00"
-    );
 
   const [
     loading,
@@ -414,64 +367,10 @@ export default function Home() {
   }, [currentBabyId]);
 
   useEffect(() => {
-    function update() {
-      if (activeSleep) {
-        setTimer(
-          durationFrom(
-            activeSleep.starttime
-          )
-        );
-
-        return;
-      }
-
-      if (lastSleep?.endtime) {
-        setTimer(
-          durationFrom(
-            lastSleep.endtime
-          )
-        );
-
-        return;
-      }
-
-      setTimer(
-        "00:00:00"
-      );
-    }
-
-    update();
-
-    const interval =
-      window.setInterval(
-        update,
-        1000
-      );
-
-    return () =>
-      window.clearInterval(
-        interval
-      );
-  }, [
-    activeSleep,
-    lastSleep,
-  ]);
-
-  useEffect(() => {
-    const interval =
-      window.setInterval(
-        () => {
-          setNow(
-            Date.now()
-          );
-        },
-        30000
-      );
-
-    return () =>
-      window.clearInterval(
-        interval
-      );
+    const update = () => setNow(Date.now());
+    const interval = window.setInterval(update, 1000);
+    document.addEventListener("visibilitychange", update);
+    return () => { window.clearInterval(interval); document.removeEventListener("visibilitychange", update); };
   }, []);
 
   const [sleepActionError, setSleepActionError] = useState<string | null>(null);
@@ -486,8 +385,11 @@ export default function Home() {
     return () => { current = false; };
   }, [activeSleep, currentBabyId, historyRevision]);
 
-  async function handleSleep(minutesAgo = 0) {
-    if (saving) return;
+  const sleepActionBusy = useRef(false);
+  async function handleSleep(minutesAgo = 0): Promise<boolean> {
+    if (sleepActionBusy.current || saving || loading) return false;
+    sleepActionBusy.current = true;
+    const restoreActionFocus = Boolean(document.activeElement?.closest(".home-sleep-actions"));
     try {
       setSleepActionError(null);
       setSaving(true);
@@ -500,7 +402,7 @@ export default function Home() {
         );
       } else {
         if (!currentBabyId) {
-          return;
+          return false;
         }
 
         await startSleep(
@@ -510,13 +412,20 @@ export default function Home() {
       }
 
       await loadSleepData();
+      if (restoreActionFocus) requestAnimationFrame(() => {
+        if (!document.hidden) document.querySelector<HTMLButtonElement>(".home-sleep-actions > .sleep-action")?.focus({ preventScroll: true });
+      });
+      return true;
     } catch (error) {
-      setSleepActionError(error instanceof Error ? error.message : t("errors.generic"));
+      const safeMessages = [t("sleepStart.overlap"), t("sleepStart.invalid"), t("errors.endTimeAfterStart")];
+      setSleepActionError(error instanceof Error && safeMessages.includes(error.message) ? error.message : t("errors.couldNotSaveSleep"));
       console.error(
         "Sleep action failed:",
         error
       );
+      return false;
     } finally {
+      sleepActionBusy.current = false;
       setSaving(false);
     }
   }
@@ -544,7 +453,7 @@ export default function Home() {
           </div>
         </header>
 
-        <section className="sleep-card">
+        <section className="sleep-card home-live-state" aria-label={t(activeSleep ? "common.sleeping" : "common.awake")}>
           {isRetro && (
             <div className="baby-sprite-panel">
               <BabySprite asleep={Boolean(activeSleep)} />
@@ -558,7 +467,9 @@ export default function Home() {
           </p>
 
           <div className="sleep-timer">
-            {timer}
+            {loading ? t("common.loading") : activeSleep || lastSleep?.endtime
+              ? formatHomeDuration(Math.floor(Math.max(0, now - Date.parse(activeSleep?.starttime ?? lastSleep!.endtime!)) / 60000), lang)
+              : t("common.notRegistered")}
           </div>
 
           <p className="sleep-subtitle">
@@ -569,34 +480,32 @@ export default function Home() {
                 : t("home.readyForNextNap")}
           </p>
 
-          {activeSleep && activeSleep.baby_id === currentBabyId && wakeEstimate?.sleep === activeSleep &&
-            <ActiveSleepEstimate presentation={wakeEstimate.presentation} sleepStartedAt={activeSleep.starttime} now={now} />}
-
-          {activeSleep ? <SleepStopOptions key={currentBabyId}
-            disabled={loading || saving} saving={saving} onStop={handleSleep} /> : <SleepStartOptions key={currentBabyId}
-            disabled={loading || saving || !currentBabyId} saving={saving} onStart={handleSleep} />}
+          <div className="home-sleep-insight">
+            {activeSleep && activeSleep.baby_id === currentBabyId && wakeEstimate?.sleep === activeSleep &&
+              <ActiveSleepEstimate presentation={wakeEstimate.presentation} sleepStartedAt={activeSleep.starttime} now={now} />}
+            {!activeSleep && nextSleepHint && <div className="home-next-sleep">
+              {nextSleepHint.kind === "predicted" ? <>
+                <p>{t("home.nextSleepAround", { time: formatClock(nextSleepHint.predictedTs, lang) })}</p>
+                <p className="sleep-subtitle">{t("home.nextSleepRemaining", { duration: formatHomeDuration(Math.ceil(Math.max(0, nextSleepHint.predictedTs - now) / 60000), lang) })}</p>
+              </> : <p className="sleep-subtitle">{nextSleepHint.kind === "about-usual" ? t("home.nextSleepAboutUsual")
+                : t("home.nextSleepLonger", { duration: formatDuration(nextSleepHint.overMinutes, lang) })}</p>}
+            </div>}
+          </div>
+          <SleepPrimaryAction key={`${currentBabyId}:${activeSleep?.id ?? "awake"}:${activeSleep?.starttime ?? lastSleep?.endtime ?? ""}`} ending={Boolean(activeSleep)}
+            after={activeSleep ? Date.parse(activeSleep.starttime) : lastSleep?.endtime ? Date.parse(lastSleep.endtime) : null}
+            babyName={currentBaby?.name ?? t("common.appName")} disabled={loading || saving || !currentBabyId || Boolean(activeSleep && activeSleep.baby_id !== currentBabyId)}
+            saving={saving} onCommit={handleSleep} />
           {sleepActionError && <p role="alert">{sleepActionError}</p>}
         </section>
 
         <SoundMonitorPanel sleep={activeSleep} />
 
-        {!activeSleep && nextSleepHint && (
-          <p className="next-sleep-hint">
-            {nextSleepHint.kind === "predicted" &&
-              t("home.nextSleepPredicted", { time: formatClock(nextSleepHint.predictedTs, lang) })}
-
-            {nextSleepHint.kind === "about-usual" &&
-              t("home.nextSleepAboutUsual")}
-
-            {nextSleepHint.kind === "longer-than-usual" &&
-              t("home.nextSleepLonger", { duration: formatDuration(nextSleepHint.overMinutes, lang) })}
-          </p>
-        )}
-
+        <section className="home-today" aria-labelledby="home-today-title">
+        <h2 className="card-label" id="home-today-title">{t("common.today")}</h2>
         <section className="today-stats">
           <div>
-            <span>{t("home.sleepToday")}</span>
-            <strong>{formatDuration(todayStats.totalMinutes, lang)}</strong>
+            <span>{t("common.sleep")}</span>
+            <strong>{formatHomeDuration(todayStats.totalMinutes, lang)}</strong>
           </div>
 
           <div>
@@ -606,8 +515,10 @@ export default function Home() {
 
           <div>
             <span>{t("home.avgQuality")}</span>
-            <strong>{stars(todayStats.avgRating)}</strong>
+            <strong>{todayStats.avgRating == null || todayStats.avgRating <= 0 ? "-" : <><span aria-hidden="true">★ </span>{new Intl.NumberFormat(lang === "no" ? "nb" : "en", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(todayStats.avgRating)}</>}</strong>
           </div>
+        </section>
+
         </section>
 
         <SleepStrip

@@ -37,7 +37,14 @@ const failure = `const blocked=async()=>{throw Error('duplicate key value violat
 function mock(url) {
   if (url === '/src/auth/AuthProvider.tsx') return `${params}export const useAuth=()=>({user:{id:'user',email:'parent.with.a.long.synthetic.email@example.invalid',user_metadata:{full_name:'Alexandra Strande Engevik'}},session:{user:{id:'user'}},loading:p.has('loading'),signOut:async()=>{}});`;
   if (url === '/src/lib/supabase.ts') return `export const supabase={auth:{onAuthStateChange:f=>{window.recovery=()=>f('PASSWORD_RECOVERY');return {data:{subscription:{unsubscribe(){}}}}},getUser:async()=>({data:{user:{id:'user'}}})}};`;
-  if (url === '/src/services/sleepService.ts') return records + failure + `export const getActiveSleep=async()=>p.has('active')?{...sleeps[0],endtime:null}:null,getLastCompletedSleep=async()=>sleeps[0]||null,getRecentSleeps=async()=>sleeps.slice(0,8),getAllSleeps=async()=>sleeps,getSleepsFromDate=async()=>sleeps,getSleepsOverlappingPeriod=async()=>sleeps;export {blocked as startSleep,blocked as stopSleep,blocked as resumeSleep,blocked as updateSleep,blocked as deleteSleep,blocked as splitSleep,blocked as createManualSleep};`;
+  if (url === '/src/services/sleepService.ts') return records + failure + `
+    if(p.has('home-fixture')&&!p.has('empty')){sleeps.splice(0,sleeps.length,...Array.from({length:24},(_,i)=>({...sleeps[0],id:'history-'+i,baby_id:'baby',starttime:iso(now-(63+i*120)*60000),endtime:iso(now-(18+i*120)*60000),durationminutes:45,sleep_type:'sleep',rate:'4.8',deleted_at:null})));}
+    export const getActiveSleep=async()=>window.__homeActive!==undefined?window.__homeActive:p.has('active')?{...sleeps[0],id:'active',starttime:p.has('home-fixture')?iso(now-42*60000):sleeps[0].starttime,endtime:null}:null,
+    getLastCompletedSleep=async()=>window.__homeLast||sleeps[0]||null,getRecentSleeps=async()=>sleeps.slice(0,8),getAllSleeps=async()=>sleeps,getSleepsFromDate=async()=>sleeps,getSleepsOverlappingPeriod=async()=>sleeps;
+    export async function startSleep(babyId,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'start',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));return window.__homeActive={...sleeps[0],id:'started',baby_id:babyId,starttime:iso(Date.now()-minutes*60000),endtime:null};}
+    export async function stopSleep(id,start,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'stop',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));window.__homeActive=null;return window.__homeLast={...sleeps[0],id,starttime:start,endtime:iso(Date.now()-minutes*60000)};}
+    export {blocked as resumeSleep,blocked as updateSleep,blocked as deleteSleep,blocked as splitSleep,blocked as createManualSleep};`;
+  if(url.endsWith('/sleepEstimateService.ts')&&process.argv.includes('--home-only'))return params+`export const getActiveSleepEstimate=async sleep=>({classification:p.get('classification')||'SHORT_SLEEP_LIKE',estimatedWakeTime:!p.has('classification')||p.get('classification')==='SHORT_SLEEP_LIKE'?new Date(Date.parse(sleep.starttime)+57*60000).toISOString():null}),sleepEstimateHistoryRevision=()=>0,subscribeSleepEstimateHistory=()=>()=>{},publishSleepEstimateHistory=()=>{};`;
   if (url === '/src/services/feedService.ts') return records + failure + `export const getLastFeed=async()=>feeds[0]||null,getRecentFeeds=async()=>feeds,getFeedsFromDate=async()=>feeds;export {blocked as createFeed,blocked as updateFeed,blocked as deleteFeed};`;
   if (url.endsWith('/sleepRealtime.ts')) return `export const subscribeToSleepChanges=()=>()=>{};`;
   if (url.endsWith('/feedRealtime.ts')) return `export const subscribeToFeedChanges=()=>()=>{};`;
@@ -51,7 +58,7 @@ function mock(url) {
   if (url.endsWith('/soundEventService.ts')) return params + `export async function getSoundEventsForSleep(id){await new Promise(r=>setTimeout(r,80));if(p.has('error'))throw Error('Synthetic read error');if(p.has('empty'))return [];const end=Date.now()-2*3600000;return Array.from({length:6},(_,i)=>({id:'event-'+i,sleep_id:id,baby_id:'baby',started_at:new Date(end-(i+1)*3600000).toISOString(),ended_at:new Date(end-(i+1)*3600000+64000).toISOString(),avg_level:.04,max_level:i%2?.3:.06}));};export const createSoundEvent=async()=>{};`;
   if (url.endsWith('/familyMessageService.ts')) return failure + `export {blocked as sendFamilyMessage};`;
   if (url.endsWith('/NativeSoundLifecycle.tsx') || url.endsWith('/NativePushNavigation.tsx')) return `export default function(){return null}`;
-  if (url.includes('@capacitor_core')) return `export const Capacitor={isNativePlatform:()=>true,getPlatform:()=>'ios',isPluginAvailable:()=>true};export const registerPlugin=()=>({setEnabled:async()=>{if(window.__sleepyBridgeFailure)throw Error('Synthetic native bridge failure')},reconcile:async()=>{},endAll:async()=>{},getAppInfo:async()=>({version:'1.0',build:'14'})});`;
+  if (url.includes('@capacitor_core')) return `export const Capacitor={isNativePlatform:()=>true,getPlatform:()=>'ios',isPluginAvailable:()=>true};export const registerPlugin=()=>({selection:async()=>{window.__haptics=(window.__haptics||0)+1},setEnabled:async()=>{if(window.__sleepyBridgeFailure)throw Error('Synthetic native bridge failure')},reconcile:async()=>{},endAll:async()=>{},getAppInfo:async()=>({version:'1.0',build:'14'})});`;
 }
 
 async function main() {
@@ -114,11 +121,89 @@ async function main() {
       screens.push(context+'/'+name);
       if (findings.length) failures.push({ screen: context+'/'+name, findings });
       if (screenshot || findings.length) await page.screenshot({ path: path.join(output, `${context}-${name}.png`.replace(/[^\w.-]/g,'_')), fullPage: true });
+      // A full-page capture relocates Alive's fixed landscape to the current
+      // viewport. Also capture the real initial viewport for Home visual review.
+      if(process.argv.includes('--home-only')&&['home-awake','home-sleeping-short'].includes(name)){
+        await page.evaluate(()=>window.scrollTo(0,0));
+        await page.screenshot({path:path.join(output,`${context}-${name}-viewport.png`)});
+      }
     }
     for (const [width,height] of sizes) for (const theme of themes) for (const lang of ['no','en']) {
       const skin=(process.argv.find(value=>value.startsWith('--skin='))||'--skin=default').split('=')[1];
       context=`${width}x${height}-${theme}-${lang}-${skin}`;query=`theme=${theme}&lang=${lang}&skin=${skin}&long`;
       await page.setViewportSize({width,height});
+      if(process.argv.includes('--home-only')){
+        const action=page.locator('.home-sleep-actions > .sleep-action'),change=page.locator('.home-change-time');
+        const ready=async(extra='')=>{await visit('/','home-fixture&home-actions&'+extra);await page.waitForFunction(()=>{const e=document.querySelector('.home-sleep-actions > .sleep-action');return e&&!e.disabled;});};
+        await ready();assert.ok((await page.locator('.sleep-timer').textContent()).includes('18'));
+        assert.equal(await page.locator('.home-next-sleep').count(),1);
+        assert.match(await page.locator('.today-stats > div').last().textContent(),lang==='en'?/4\.8/:/4,8/);
+        await check('home-awake',true);
+        await change.click();await page.waitForSelector('[role="dialog"]');await check('home-start-sheet',true);
+        await page.getByRole('button',{name:lang==='en'?'Choose time':'Velg tidspunkt',exact:true}).click();await check('home-start-explicit-time',true);
+        await page.keyboard.press('Escape');assert.equal(await page.locator('[role="dialog"]').count(),0);
+        assert.equal(await change.evaluate(e=>e===document.activeElement),true);
+        await action.focus();await page.keyboard.down('Enter');await page.waitForTimeout(180);
+        await page.keyboard.down('Enter');await page.keyboard.up('Enter');
+        assert.deepEqual(await page.evaluate(()=>window.__sleepActions),[{kind:'start',minutes:0}]);
+        assert.equal(await action.evaluate(e=>e===document.activeElement),true,'state transition should preserve keyboard action focus');
+        await ready('active&sound=listening');await page.waitForSelector('progress');
+        assert.equal(await page.locator('.home-wake-time').count(),1);await check('home-sleeping-short',true);
+        assert.ok((await page.locator('.home-sound-controls > summary').textContent()).includes(lang==='en'?'Sound monitoring active':'Lydm\u00e5ling aktiv'));
+        await page.locator('.home-sound-controls > summary').click();await check('home-sound-expanded');
+        await action.click();await page.waitForTimeout(180);assert.deepEqual(await page.evaluate(()=>window.__sleepActions),[{kind:'stop',minutes:0}]);
+        for(const ending of [false,true]){
+          await ready(ending?'active':'');await action.evaluate(e=>e.scrollIntoView({block:'center'}));let r=await action.boundingBox();
+          await page.mouse.move(r.x+r.width/2,r.y+r.height/2);await page.mouse.down();await page.waitForTimeout(1300);
+          assert.ok((await action.textContent()).includes('10'),JSON.stringify({context,ending,text:await action.textContent(),bounds:await action.boundingBox(),point:r}));await page.mouse.up();await page.waitForTimeout(180);
+          assert.deepEqual(await page.evaluate(()=>window.__sleepActions),[{kind:ending?'stop':'start',minutes:10}]);
+          assert.equal(await page.evaluate(()=>window.__haptics),2,'activation and first increment each produce one haptic');
+          await ready(ending?'active':'');await action.evaluate(e=>e.scrollIntoView({block:'center'}));r=await action.boundingBox();
+          await page.mouse.move(r.x+r.width/2,r.y+r.height/2);await page.mouse.down();await page.waitForTimeout(700);await page.mouse.move(r.x+r.width/2+20,r.y+r.height/2);await page.mouse.up();
+          assert.equal(await page.evaluate(()=>(window.__sleepActions||[]).length),0);
+          if(process.argv.includes('--quick')){
+            for(const reason of ['capture-failure','outside-release','lost-capture','blur','unmount']){
+              await ready(ending?'active':'');await action.evaluate(e=>e.scrollIntoView({block:'center'}));
+              if(reason==='capture-failure'){
+                await action.evaluate(e=>{e.setPointerCapture=()=>{throw Error('Synthetic capture failure')};});await action.click();
+              }else{
+                await action.evaluate(e=>e.addEventListener('pointerdown',ev=>{window.__heldPointer=ev.pointerId;},{once:true}));
+                const box=await action.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.waitForTimeout(700);
+                if(reason==='outside-release')await action.dispatchEvent('pointerup',{pointerId:await page.evaluate(()=>window.__heldPointer),clientX:box.x-20,clientY:box.y});
+                if(reason==='lost-capture')await action.evaluate(e=>e.releasePointerCapture(window.__heldPointer));
+                if(reason==='blur')await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
+                if(reason==='unmount')await page.locator('.bottom-nav a[href="/history"]').evaluate(e=>e.click());
+                await page.waitForTimeout(30);await page.mouse.up();
+              }
+              assert.equal(await page.evaluate(()=>(window.__sleepActions||[]).length),0,reason+' must not write sleep');
+            }
+            await ready(ending?'active':'');
+          }
+          await change.click();await page.getByRole('dialog').getByRole('button',{name:lang==='en'?'5 minutes ago':'5 minutter siden',exact:true}).click();await page.waitForTimeout(180);
+          assert.deepEqual(await page.evaluate(()=>window.__sleepActions),[{kind:ending?'stop':'start',minutes:5}]);
+          await ready(ending?'active':'');await action.evaluate(e=>{e.click();e.click();});await page.waitForTimeout(180);
+          assert.deepEqual(await page.evaluate(()=>window.__sleepActions),[{kind:ending?'stop':'start',minutes:0}],'same-event-loop clicks must not duplicate writes');
+          await ready(ending?'active':'');await change.click();
+          await page.getByRole('dialog').getByRole('button',{name:lang==='en'?'Choose time':'Velg tidspunkt',exact:true}).click();
+          const input=page.locator('input[type="datetime-local"]');
+          const local=await page.evaluate(()=>{const d=new Date(Date.now()-10*60000);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);});
+          await input.fill(local);await page.locator('.sleep-time-sheet button[type="submit"]').click();await page.waitForTimeout(180);
+          assert.deepEqual(await page.evaluate(()=>window.__sleepActions),[{kind:ending?'stop':'start',minutes:10}]);
+        }
+        for(const classification of ['LONG_SLEEP_LIKE','UNCERTAIN']){
+          await ready('active&classification='+classification);await page.waitForTimeout(60);
+          assert.equal(await page.locator('progress,.home-wake-time').count(),0);
+          const text=await page.locator('.home-sleep-insight').textContent();
+          assert.equal(/Likely night sleep|Trolig natts\u00f8vn/.test(text),classification==='LONG_SLEEP_LIKE');
+          await check('home-'+classification,true);
+        }
+        await ready('empty');assert.equal(await page.locator('.home-next-sleep').count(),0);await check('home-no-history');
+        await ready('action-error');await change.click();await page.getByRole('dialog').getByRole('button',{name:lang==='en'?'Now':'Nå',exact:true}).click();
+        await page.getByRole('dialog').getByRole('alert').waitFor();
+        assert.ok(!/duplicate key|unique constraint/.test(await page.getByRole('dialog').textContent()));
+        await check('home-failed-action',true);await page.keyboard.press('Escape');
+        console.log(context+' Home checked');continue;
+      }
       if(process.argv.includes('--settings-only')){
         await visit('/settings');await page.waitForSelector('.family-settings select');
         const tabs=page.getByRole('tab');

@@ -111,7 +111,7 @@ test('cleaning, future rows and outside-window history cannot create support and
 
 function uiLoad(language) {
   const resources = load(`src/i18n/${language}.ts`).default;
-  return loader({ '../i18n': { useTranslation: () => ({ lang: language,
+  return loader({ '../i18n': { LOCALES: { en: 'en-GB', no: 'nb-NO' }, useTranslation: () => ({ lang: language,
     t: (key, values = {}) => key.split('.').reduce((part, field) => part[field], resources)
       .replace(/\{\{(\w+)\}\}/g, (_, name) => values[name]),
   }) } })('src/components/ActiveSleepEstimate.tsx').default;

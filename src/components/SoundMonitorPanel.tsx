@@ -72,7 +72,9 @@ function WebSoundMonitorPanel({ sleep }: { sleep: SleepRecord | null }) {
 
   if (!enabled && !failed && pending === 0) return null;
   const status = eligible && state.owner === owner ? state.status : "off";
-  return <aside className="sound-panel" aria-label={t("sound.title")}>
+  return <details className="home-sound-controls">
+    <summary>{t(eligible && ["listening", "detected"].includes(status) ? "home.soundMonitoringActive" : "sound.title")}</summary>
+    <aside className="sound-panel" aria-label={t("sound.title")}>
     <div className="sound-line"><strong>{t("sound.title")}</strong>
       <span role="status">{t(nativeIOS ? `sound.native_${status}` : `sound.${status}`)}</span>
     </div>
@@ -87,5 +89,5 @@ function WebSoundMonitorPanel({ sleep }: { sleep: SleepRecord | null }) {
     </div>}
     {pending > 0 && !failed && <small>{t("sound.saving")}</small>}
     <small>{t("sound.privacy")}</small>
-  </aside>;
+  </aside></details>;
 }

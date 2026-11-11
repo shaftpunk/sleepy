@@ -1,0 +1,61 @@
+/* Shared awake/asleep geometry; the landscape and theme still belong to App. */
+.home-page .home-header { flex-direction: row; align-items: center; }
+.home-page .home-header > div:first-child { flex: 1; }
+.home-page .home-header h1 { font-size: clamp(1.3rem, 6vw, 1.8rem); }
+.home-page .status-pill { color: inherit; }
+.home-page .home-live-state {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  padding: 16px 12px 12px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+}
+.home-page .home-live-state .sleep-label { color: var(--ui-muted); font-size: .95rem; }
+.home-page .home-live-state .sleep-timer {
+  margin: 0; font-size: clamp(2.2rem, 9.2vw, 3.6rem);
+  letter-spacing: -.045em; line-height: 1.2; font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.home-page .home-live-state .sleep-subtitle { margin: 0; color: var(--ui-muted); font-size: .9rem; line-height: 1.5; }
+.home-sleep-insight { display: grid; align-content: center; min-height: 80px; padding: 8px 0; }
+.home-next-sleep p { margin: 0 0 4px; line-height: 1.5; }
+.home-live-state .active-sleep-estimate { display: grid; gap: 5px; width: 100%; max-width: 320px; margin: 0 auto; }
+.home-live-state .active-sleep-estimate progress { height: 8px; margin: 0 0 4px; appearance: none; border: 0; border-radius: 4px; overflow: hidden; background: rgba(149, 117, 225, .24); }
+.home-live-state progress::-webkit-progress-bar { background: rgba(149, 117, 225, .24); }
+.home-live-state progress::-webkit-progress-value { background: #bca0ff; }
+.home-live-state progress::-moz-progress-bar { background: #bca0ff; }
+[data-theme="light"] .home-live-state progress::-webkit-progress-value { background: #7959c5; }
+[data-theme="light"] .home-live-state progress::-moz-progress-bar { background: #7959c5; }
+.home-live-state .home-wake-time { font-size: .85rem; }
+.home-sleep-actions { display: grid; justify-items: stretch; gap: 3px; }
+.home-sleep-actions .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.home-page .sleep-action { touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.home-page .home-hold-hint { margin: 5px 0 0; font-size: .75rem; color: var(--ui-muted); line-height: 1.5; }
+.home-page .home-change-time { justify-self: center; min-height: 44px; color: var(--ui-text); }
+.home-page .home-today { display: grid; gap: 8px; }
+.home-page .home-today h2 { margin: 0; color: var(--ui-muted); font-size: .75rem; }
+.home-page .home-today .today-stats {
+  border: 0; border-radius: 0; background: transparent; box-shadow: none; padding: 8px 0;
+}
+.home-page .home-today .today-stats > div { flex-direction: column-reverse; justify-content: flex-end; gap: 5px; }
+.home-page .home-today .today-stats > div + div { border-left: 1px solid var(--ui-border); }
+.home-page .home-today .today-stats strong { font-size: clamp(.95rem, 4vw, 1.2rem); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.home-page .home-today .today-stats strong span { font-size: inherit; color: inherit; }
+.home-sound-controls { font-size: .875rem; color: var(--ui-muted); }
+.home-sound-controls > summary { min-height: 44px; padding: 10px 8px; cursor: pointer; text-align: center; }
+.home-sound-controls .sound-panel { margin-top: 6px; }
+.sleep-time-sheet { display: grid; gap: 12px; }
+.sleep-time-sheet .modal-header { align-items: flex-start; }
+.sleep-time-sheet .modal-header h2 { font-size: 1.2rem; line-height: 1.4; overflow-wrap: anywhere; }
+.sleep-time-presets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.sleep-time-presets button:first-child { grid-column: 1 / -1; }
+.sleep-time-sheet .text-button { color: var(--ui-text); }
+[data-visual-theme="retro"] .home-page .home-live-state { border: 0; background: transparent; box-shadow: none; }
+[data-visual-theme="retro"] .home-live-state .baby-sprite-panel { position: absolute; top: 4px; left: 12px; padding: 0; }
+[data-visual-theme="retro"] .home-live-state .baby-sprite { width: 32px; height: 32px; }
+@media (prefers-reduced-motion: no-preference) {
+  .home-live-state .sleep-action { transition: background-color .2s ease; }
+}

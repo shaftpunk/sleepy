@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A76000000000000000000001 /* SleepyFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = A76000000000000000000002; };
 		A75000000000000000000001 /* WakeSleepIntent.swift in App Sources */ = {isa = PBXBuildFile; fileRef = A75000000000000000000002; };
 		A75000000000000000000003 /* WakeSleepIntent.swift in Widget Sources */ = {isa = PBXBuildFile; fileRef = A75000000000000000000002; };
 		A75000000000000000000004 /* SleepWakeCommand.swift in App Sources */ = {isa = PBXBuildFile; fileRef = A75000000000000000000005; };
@@ -48,6 +49,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A76000000000000000000002 /* SleepyFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/SleepyFeedback.swift; sourceTree = SOURCE_ROOT; };
 		A75000000000000000000002 /* WakeSleepIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/WakeSleepIntent.swift; sourceTree = SOURCE_ROOT; };
 		A75000000000000000000005 /* SleepWakeCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/SleepWakeCommand.swift; sourceTree = SOURCE_ROOT; };
 		A75000000000000000000007 /* SleepWakeOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ../LiveActivityCore/Sources/LiveActivityCore/SleepWakeOperation.swift; sourceTree = SOURCE_ROOT; };
@@ -123,6 +125,7 @@
 				A72000000000000000000002 /* SleepySoundMeter.swift */,
 				A74000000000000000000004 /* SleepLiveActivity.swift */,
 				A75000000000000000000005 /* SleepWakeCommand.swift */,
+				A76000000000000000000002 /* SleepyFeedback.swift */,
 				A7400000000000000000001F /* PrivacyInfo.xcprivacy */,
 				A74000000000000000000006 /* SleepActivityPolicy.swift */,
 				A73000000000000000000002 /* SoundDetector.swift */,
@@ -247,6 +250,7 @@
 				A74000000000000000000003 /* SleepLiveActivity.swift in Sources */,
 				A75000000000000000000001 /* WakeSleepIntent.swift in App Sources */,
 				A75000000000000000000004 /* SleepWakeCommand.swift in App Sources */,
+				A76000000000000000000001 /* SleepyFeedback.swift in Sources */,
 				A75000000000000000000006 /* SleepWakeOperation.swift in App Sources */,
 				A74000000000000000000005 /* SleepActivityPolicy.swift in Sources */,
 				A73000000000000000000001 /* SoundDetector.swift in Sources */,
