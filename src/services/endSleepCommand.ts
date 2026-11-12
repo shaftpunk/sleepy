@@ -10,6 +10,6 @@ export async function endSleep(sleepId: string, endedAt: string): Promise<SleepR
   if (error) throw error;
   const row = data as SleepRecord | null;
   if (!row || row.id !== sleepId || !row.endtime || row.deleted_at) throw new Error("Sleep end was not confirmed");
-  notifySleepPresentationChanged();
+  notifySleepPresentationChanged({ endedSleepId: row.id });
   return row;
 }

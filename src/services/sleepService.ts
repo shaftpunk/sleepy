@@ -1,8 +1,10 @@
 import { supabase } from "../lib/supabase";
 import { useAppStore } from "../stores/appStore";
 import { translate, type TranslationKey } from "../i18n";
-import { notifySleepPresentationChanged } from "./sleepPresentationEvents";
+import { notifySleepPresentationChanged, sleepPresentationRevision } from "./sleepPresentationEvents";
 import { endSleep } from "./endSleepCommand";
+import { sessionGeneration } from "../auth/sessionLifecycle";
+const activePresentationReads = new Map<string, number>();
 
 function t(key: TranslationKey): string {
   return translate(useAppStore.getState().language, key);
@@ -397,11 +399,12 @@ export async function splitSleep(
 
 export async function getActiveSleep(
   babyId: string,
+  options: { notifyPresentation?: boolean; signal?: AbortSignal } = {},
 ) {
-  const {
-    data,
-    error,
-  } = await supabase
+  const generation = sessionGeneration(), writeRevision = sleepPresentationRevision();
+  const readRevision = (activePresentationReads.get(babyId) ?? 0) + 1;
+  if (options.notifyPresentation !== false) activePresentationReads.set(babyId, readRevision);
+  let query = supabase
     .from("sleep")
     .select("*")
     .eq(
@@ -422,14 +425,22 @@ export async function getActiveSleep(
         ascending: false,
       },
     )
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+  if (options.signal) query = query.abortSignal(options.signal);
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
     throw error;
   }
 
-  return data as SleepRecord | null;
+  const row = data as SleepRecord | null;
+  // Share the same authoritative knowledge Home just received. Cleanup must
+  // not depend on a second independent request succeeding on foreground.
+  if (options.notifyPresentation !== false && writeRevision === sleepPresentationRevision() && readRevision === activePresentationReads.get(babyId) &&
+      (!row || (row.baby_id === babyId && !row.endtime && !row.deleted_at))) {
+    notifySleepPresentationChanged({ snapshot: { babyId, activeSleepId: row?.id ?? null, generation } });
+  }
+  return row;
 }
 
 export async function getLastCompletedSleep(

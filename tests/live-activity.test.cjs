@@ -9,13 +9,16 @@ function load(file, imports, globals = {}) {
   const output = ts.transpileModule(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
-  new vm.Script(output).runInNewContext({ exports, require: name => imports[name], console: { info() {} }, ...globals });
+  new vm.Script(output).runInNewContext({ exports, require: name => imports[name], console: { info() {} }, AbortController, setTimeout, clearTimeout, ...globals });
   return exports;
 }
 function fixture({ native = true, failRead = false, failBridge = false, gate, estimate, estimateGate, classification = 'UNCERTAIN', storage = new Map() } = {}) {
-  const calls = [], records = new Map(), document = { hidden: false }; let generation = 0, logout;
+  const calls = [], contexts = [], records = new Map(), document = { hidden: false }; let generation = 0, logout;
   const enabledCalls = [];
   const bridge = { setEnabled: async ({ enabled }) => { enabledCalls.push(enabled); if (!enabled) calls.push(['clear']); },
+    setContext: async data => contexts.push(data),
+    endSleep: async data => calls.push(['end', data]),
+    reconcileBaby: async data => calls.push(['baby', data]),
     reconcile: async data => { if (failBridge) throw Error('optional failure'); calls.push(['reconcile', data]); },
     endAll: async () => { calls.push(['clear']); if (failBridge) throw Error('optional failure'); },
     updatePresentation: async data => calls.push(['presentation', data]) };
@@ -34,7 +37,7 @@ function fixture({ native = true, failRead = false, failBridge = false, gate, es
     },
     '../auth/sessionLifecycle': { registerBeforeSignOut: fn => { logout = fn; }, sessionGeneration: () => generation, isSessionGenerationCurrent: value => value === generation },
   }, { document });
-  return { service, calls, records, document, preference, storage, enabledCalls,
+  return { service, bridge, calls, contexts, records, document, preference, storage, enabledCalls,
     setEstimate: value => { currentEstimate = value; historyChanged(); },
     invalidate: () => generation++, logout: async () => { generation++; await logout(); },
     baby: { id: 'baby', name: 'Amalie' }, sleep: { id: 'sleep', baby_id: 'baby', starttime: '2026-11-10T19:48:00Z', endtime: null, deleted_at: null } };
@@ -143,7 +146,7 @@ function sleepWriter({ databaseError = false, presentationError = false } = {}) 
     q.single = async () => ({ data: record, error: databaseError ? Error('DB failed') : null });
     return q;
   };
-  const notifier = load('src/services/sleepPresentationEvents.ts', {}, { Event: class {}, window: { dispatchEvent() { notifications++; if (presentationError) throw Error('UI failed'); } } });
+  const notifier = load('src/services/sleepPresentationEvents.ts', {}, { Event: class {}, window: { dispatchEvent(event) { if(!event.sleepChange?.snapshot)notifications++; if (presentationError) throw Error('UI failed'); } } });
   const supabase = { from: query, auth: { getUser: async () => ({ data: { user: { id: 'user' } }, error: null }) },
     rpc: (_name, args) => ({ single: async () => ({ data: { ...record, endtime: args.p_ended_at }, error: databaseError ? Error('DB failed') : null }) }) };
   const command = load('src/services/endSleepCommand.ts', { '../lib/supabase': { supabase }, './sleepPresentationEvents': notifier });
@@ -152,6 +155,7 @@ function sleepWriter({ databaseError = false, presentationError = false } = {}) 
     '../stores/appStore': { useAppStore: { getState: () => ({ language: 'en' }) } }, '../i18n': { translate: (_, key) => key },
     './sleepPresentationEvents': notifier,
     './endSleepCommand': command,
+    '../auth/sessionLifecycle': {sessionGeneration:()=>0},
   });
   return { service, notifications: () => notifications, record };
 }
@@ -207,4 +211,78 @@ test('web preference also persists and OFF-to-ON never calls a native bridge on 
   await f.service.configureSleepLiveActivities('owner', [f.baby]);
   await f.service.setSleepLiveActivitiesEnabled(true);
   assert.equal(f.calls.length, 0); assert.equal(f.enabledCalls.length, 0);
+});
+
+test('confirmed Home/long-press/change-time end dismisses exact activity without a second database read',async()=>{
+  const f=fixture({failRead:true});
+  await f.service.configureSleepLiveActivities('owner',[f.baby]);
+  for(const sleepId of ['normal-stop','long-press-stop','change-time-stop'])await f.service.applySleepPresentationChange({endedSleepId:sleepId});
+  assert.deepEqual(f.calls.map(([name,payload])=>[name,payload.sleepId]),[['end','normal-stop'],['end','long-press-stop'],['end','change-time-stop']]);
+});
+
+test('the same authoritative no-active result Home receives dismisses stale presentation even when independent reads fail',async()=>{
+  const f=fixture({failRead:true});await f.service.configureSleepLiveActivities('owner',[f.baby]);
+  await f.service.applySleepPresentationChange({snapshot:{babyId:'baby',activeSleepId:null,generation:0}});
+  assert.equal(f.calls.length,1);assert.equal(f.calls[0][0],'baby');assert.equal(f.calls[0][1].activeSleepId,null);
+});
+
+test('direct authoritative end and logout do not wait for a stalled read and fence its eventual response',async()=>{
+  let release;const f=fixture({gate:new Promise(resolve=>{release=resolve;})});f.records.set('baby',f.sleep);
+  const pending=f.service.configureSleepLiveActivities('owner',[f.baby]);await new Promise(r=>setImmediate(r));
+  await f.service.applySleepPresentationChange({endedSleepId:'sleep'});assert.equal(f.calls.at(-1)[0],'end');
+  await f.logout();assert.equal(f.calls.at(-1)[0],'clear');release();await pending;
+  assert.equal(f.calls.filter(([name])=>name==='reconcile').length,0);
+});
+
+test('foreground/cold-start no-active snapshot dismisses, and changed active identity replaces stale activities',async()=>{
+  const cold=fixture();await cold.service.configureSleepLiveActivities('owner',[cold.baby]);assert.equal(cold.calls[0][1].sleeps.length,0);
+  const f=fixture();f.records.set('baby',f.sleep);await f.service.configureSleepLiveActivities('owner',[f.baby]);
+  f.document.hidden=true;f.records.delete('baby');f.document.hidden=false;await f.service.refreshSleepLiveActivities();assert.equal(f.calls.at(-1)[1].sleeps.length,0);
+  f.records.set('baby',{...f.sleep,id:'new-sleep'});await f.service.refreshSleepLiveActivities();assert.equal(f.calls.at(-1)[1].sleeps[0].sleepId,'new-sleep');
+});
+
+test('wrong baby and previous-account knowledge cannot affect the current presentation',async()=>{
+  const f=fixture();await f.service.configureSleepLiveActivities('owner',[f.baby]);const count=f.calls.length;
+  await f.service.applySleepPresentationChange({snapshot:{babyId:'other-baby',activeSleepId:null,generation:0}});
+  f.invalidate();await f.service.applySleepPresentationChange({snapshot:{babyId:'baby',activeSleepId:null,generation:0}});
+  assert.equal(f.calls.length,count);
+});
+
+test('Home active-sleep read publishes the exact successful snapshot; errors publish no false empty state',async()=>{
+  const f=fixture({failRead:true});await f.service.configureSleepLiveActivities('owner',[f.baby]);
+  const deliveries=[],events=[];let error=null;
+  const notifier=load('src/services/sleepPresentationEvents.ts',{}, {Event:class{},window:{dispatchEvent:event=>{
+    events.push(event.sleepChange);deliveries.push(f.service.applySleepPresentationChange(event.sleepChange));
+  }}});
+  const query={};for(const key of ['select','eq','is','order','limit'])query[key]=()=>query;
+  query.maybeSingle=async()=>({data:null,error});
+  const reads=load('src/services/sleepService.ts',{'../lib/supabase':{supabase:{from:()=>query}},'../stores/appStore':{},'../i18n':{},
+    './sleepPresentationEvents':notifier,'./endSleepCommand':{},'../auth/sessionLifecycle':{sessionGeneration:()=>0}});
+  assert.equal(await reads.getActiveSleep('baby'),null);await Promise.all(deliveries);assert.equal(f.calls.at(-1)[0],'baby');
+  assert.equal(events[0].snapshot.babyId,'baby');assert.equal(events[0].snapshot.activeSleepId,null);
+  error=Error('offline');await assert.rejects(reads.getActiveSleep('baby'));assert.equal(events.length,1);
+  let release;query.maybeSingle=()=>new Promise(resolve=>{release=resolve;});
+  const beforeWrite=reads.getActiveSleep('baby');notifier.notifySleepPresentationChanged();release({data:null,error:null});await beforeWrite;
+  assert.equal(events.filter(event=>event.snapshot).length,1,'a read started before a successful write cannot dismiss its newer activity');
+  let count=0;query.maybeSingle=()=>++count===1?new Promise(resolve=>{release=resolve;}):Promise.resolve({data:{...f.sleep,id:'new-active'},error:null});
+  const older=reads.getActiveSleep('baby');await reads.getActiveSleep('baby');release({data:null,error:null});await older;await Promise.all(deliveries);
+  assert.equal(events.at(-1).snapshot.activeSleepId,'new-active','an older read cannot overtake the latest authoritative snapshot');
+});
+
+test('app lifecycle scopes to selected baby and native didBecomeActive recovers a missed early resume',async()=>{
+  const f=fixture(),effects=[],nativeEvents=new Map(),windowEvents=new Map();
+  f.records.set('baby',f.sleep);f.bridge.addListener=async(name,callback)=>{nativeEvents.set(name,callback);return {remove:async()=>nativeEvents.delete(name)};};
+  f.document.addEventListener=()=>{};f.document.removeEventListener=()=>{};
+  const store={babies:[f.baby,{id:'other',name:'Alex'}],currentBabyId:'baby'};
+  const component=load('src/components/SleepLiveActivityLifecycle.tsx',{
+    react:{useEffect:fn=>effects.push(fn)},'../auth/AuthProvider':{useAuth:()=>({user:{id:'owner'},loading:false})},
+    '../stores/appStore':{useAppStore:selector=>selector(store)},'../services/liveActivityService':f.service,
+    '../services/sleepPresentationEvents':{SLEEP_PRESENTATION_CHANGED:'changed'},'../services/sleepRealtime':{subscribeToSleepChanges:()=>()=>{}},
+  },{document:f.document,window:{addEventListener:(name,cb)=>windowEvents.set(name,cb),removeEventListener:()=>{}}}).default;
+  component();const cleanup=effects.map(effect=>effect());await new Promise(r=>setImmediate(r));
+  assert.deepEqual(Array.from(f.contexts[0].babyIds),['baby']);
+  f.records.clear();f.document.hidden=true;await f.service.refreshSleepLiveActivities();const count=f.calls.length;
+  f.document.hidden=false;nativeEvents.get('foreground')();await new Promise(r=>setImmediate(r));
+  assert.ok(f.calls.length>count);assert.equal(f.calls.at(-1)[1].sleeps.length,0);
+  for(const close of cleanup)close?.();
 });

@@ -20,7 +20,7 @@ function loader(overrides = {}) {
     const code = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
       compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
     }).outputText;
-    vm.runInNewContext(code, { exports, Date, console, document: { hidden: false }, require: name => {
+    vm.runInNewContext(code, { exports, Date, console, AbortController, setTimeout, clearTimeout, document: { hidden: false }, require: name => {
       if (overrides[name]) return overrides[name];
       if (!name.startsWith('.')) return require(name);
       const resolved = path.resolve(path.dirname(filename), name);
@@ -145,7 +145,7 @@ test('existing history read feeds one shared Home and bridge result, with no ext
     sleep_type: 'sleep', endtime: null, deleted_at: null };
   const app = loader({
     '@capacitor/core': { Capacitor: { isNativePlatform: () => true, getPlatform: () => 'ios', isPluginAvailable: () => true },
-      registerPlugin: () => ({ setEnabled: async () => {}, reconcile: async payload => bridgeCalls.push(['reconcile', payload]),
+      registerPlugin: () => ({ setEnabled: async () => {}, setContext: async () => {}, reconcile: async payload => bridgeCalls.push(['reconcile', payload]),
         updatePresentation: async payload => bridgeCalls.push(['update', payload]), endAll: async () => {} }) },
     'src/auth/sessionLifecycle.ts': { sessionGeneration: () => generation, isSessionGenerationCurrent: n => n === generation, registerBeforeSignOut() {} },
     'src/services/sleepService.ts': { getActiveSleep: async () => { databaseReads++; return active; } },

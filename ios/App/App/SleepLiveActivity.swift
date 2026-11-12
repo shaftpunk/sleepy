@@ -11,6 +11,15 @@ final class SleepLiveActivityCoordinator {
     private let defaults = UserDefaults.standard
     private var sound: [String: Bool] = [:]
     private var queued: Task<Void, Never>?
+    // Keep handles while this process lives, including system-ended cards that
+    // Activity.activities may no longer enumerate but iOS still retains.
+    private var retained: [String: Activity<SleepActivityAttributes>] = [:]
+    private var contextBabies = Set<String>()
+    private var managed: [Activity<SleepActivityAttributes>] {
+        for activity in Activity<SleepActivityAttributes>.activities { retained[activity.id] = activity }
+        retained = retained.filter { $0.value.activityState != .dismissed }
+        return Array(retained.values)
+    }
     private var enabled: Bool { defaults.object(forKey: "SleepyLiveActivity.enabled.v1") as? Bool ?? true }
     func setEnabled(_ value: Bool) async {
         defaults.set(value, forKey: "SleepyLiveActivity.enabled.v1")
@@ -18,6 +27,30 @@ final class SleepLiveActivityCoordinator {
     }
     var ownerID: UUID? {
         defaults.string(forKey: "SleepyLiveActivity.owner.v1").flatMap(UUID.init(uuidString:))
+    }
+    func setContext(ownerId: String, babyIds: Set<String>) async {
+        if ownerID != UUID(uuidString: ownerId) { await endAll() }
+        contextBabies = babyIds
+        defaults.set(ownerId, forKey: "SleepyLiveActivity.owner.v1")
+        for activity in managed where !babyIds.contains(activity.attributes.babyId) {
+            await finish(activity)
+            var ledger = attempted; ledger.removeValue(forKey: activity.attributes.sleepId); attempted = ledger
+        }
+        await recoverForeground()
+    }
+    func reconcileBaby(ownerId: String, babyId: String, activeSleepId: String?) async {
+        guard ownerID == UUID(uuidString: ownerId) else { return }
+        for activity in managed where activity.attributes.babyId == babyId && activity.attributes.sleepId != activeSleepId {
+            await finish(activity)
+        }
+        // An authoritative empty snapshot for the sole selected baby completes
+        // suppression cleanup, including a legitimate later Undo/resume of it.
+        if activeSleepId == nil && contextBabies == Set([babyId]) { attempted = [:] }
+    }
+    func recoverForeground() async {
+        for activity in managed where activity.activityState == .ended || activity.attributes.presentationEndsAt <= Date() {
+            await finish(activity)
+        }
     }
     // Serialize bridge reconciliation and native sound transitions across await
     // points, so an older update cannot overtake Stop/account cleanup.
@@ -64,7 +97,7 @@ final class SleepLiveActivityCoordinator {
         defaults.set(ownerId, forKey: "SleepyLiveActivity.owner.v1")
         let ids = Set(sleeps.map(\.sleepId))
         var ledger = attempted.filter { ids.contains($0.key) }
-        let activities = Activity<SleepActivityAttributes>.activities
+        let activities = managed
         // Recover suppression even if this app version didn't write a ledger.
         for activity in activities where ids.contains(activity.attributes.sleepId) {
             ledger[activity.attributes.sleepId] = ledger[activity.attributes.sleepId] ?? activity.attributes.presentationEndsAt.addingTimeInterval(-SleepActivityPolicy.maximumLifetime).timeIntervalSince1970
@@ -104,9 +137,10 @@ final class SleepLiveActivityCoordinator {
         let attributes = SleepActivityAttributes(sleepId: sleep.sleepId, babyId: sleep.babyId, babyName: sleep.babyName,
                                                 startedAt: sleep.startedAt, presentationEndsAt: expires)
         do {
-            _ = try Activity.request(attributes: attributes,
+            let activity = try Activity.request(attributes: attributes,
                 content: ActivityContent(state: SleepActivityAttributes.ContentState(soundMonitoringActive: sound[sleep.sleepId] ?? false,
                     estimatedWakeTime: sleep.estimatedWakeTime, classification: sleep.classification), staleDate: expires), pushType: nil)
+            retained[activity.id] = activity
             var ledger = attempted; ledger[sleep.sleepId] = Date().timeIntervalSince1970; attempted = ledger
             log.info("Live Activity started")
         } catch { log.info("Live Activity request unavailable; sleep data unchanged") }
@@ -123,7 +157,7 @@ final class SleepLiveActivityCoordinator {
         await update(sleepId: sleepId, active: running)
     }
     func update(sleepId: String, active: Bool, sleep: Sleep? = nil) async {
-        for activity in Activity<SleepActivityAttributes>.activities where activity.attributes.sleepId == sleepId {
+        for activity in managed where activity.attributes.sleepId == sleepId {
             guard activity.activityState == .active || activity.activityState == .stale else { continue }
             guard activity.attributes.presentationEndsAt > Date() else { await finish(activity); continue }
             var state = activity.content.state
@@ -131,6 +165,7 @@ final class SleepLiveActivityCoordinator {
             if let sleep {
                 state.estimatedWakeTime = sleep.estimatedWakeTime
                 state.classification = sleep.classification
+                state.wakeFailure = nil // A fresh authoritative active snapshot recovered presentation.
             }
             if activity.content.state != state { await activity.update(ActivityContent(state: state, staleDate: activity.attributes.presentationEndsAt)) }
         }
@@ -163,21 +198,22 @@ final class SleepLiveActivityCoordinator {
         var ledger = attempted
         ledger[sleepId] = Date().timeIntervalSince1970
         attempted = ledger
-        for activity in Activity<SleepActivityAttributes>.activities where activity.attributes.sleepId == sleepId {
+        for activity in managed where activity.attributes.sleepId == sleepId {
             await finish(activity)
         }
     }
     func end(sleepId: String) async {
-        for activity in Activity<SleepActivityAttributes>.activities where activity.attributes.sleepId == sleepId { await finish(activity) }
-        var ledger = attempted; ledger.removeValue(forKey: sleepId); attempted = ledger
+        await finishConfirmedWake(sleepId: sleepId)
     }
     func endAll() async {
-        for activity in Activity<SleepActivityAttributes>.activities { await finish(activity) }
+        for activity in managed { await finish(activity) }
         attempted = [:]; defaults.removeObject(forKey: "SleepyLiveActivity.owner.v1")
+        contextBabies = []
         // Capture ownership is managed by SoundMeter, not ActivityKit.
     }
     private func finish(_ activity: Activity<SleepActivityAttributes>) async {
         await activity.end(ActivityContent(state: .init(soundMonitoringActive: false), staleDate: Date()), dismissalPolicy: .immediate)
+        retained.removeValue(forKey: activity.id)
     }
 }
 
@@ -191,6 +227,8 @@ public class SleepyLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "endSleep", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "reconcile", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endAll", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setContext", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "reconcileBaby", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setAuthSession", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "clearAuthSession", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "updatePresentation", returnType: CAPPluginReturnPromise),
@@ -198,6 +236,24 @@ public class SleepyLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getAppInfo", returnType: CAPPluginReturnPromise)
     ]
     private var pending: Task<Void, Never>?
+    public override func load() {
+        NotificationCenter.default.addObserver(self, selector: #selector(foregrounded), name: UIApplication.didBecomeActiveNotification, object: nil)
+        Task { @MainActor [weak self] in
+            SleepWakeCredentials.requestRefresh = { [weak self] owner, force in
+                self?.notifyListeners("wakeSessionRefreshRequested", data: ["ownerId": owner.uuidString.lowercased(), "forceRefresh": force])
+            }
+            if UIApplication.shared.applicationState == .active { self?.foregrounded() }
+        }
+    }
+    deinit { NotificationCenter.default.removeObserver(self) }
+    @objc private func foregrounded() {
+        Task { @MainActor [weak self] in
+            if #available(iOS 16.2, *) {
+                await SleepLiveActivityCoordinator.shared.enqueue { await SleepLiveActivityCoordinator.shared.recoverForeground() }
+            }
+            self?.notifyListeners("foreground", data: [:], retainUntilConsumed: true)
+        }
+    }
     private func perform(_ call: CAPPluginCall, operation: @escaping @MainActor () async -> Void) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { call.resolve(); return }
@@ -248,6 +304,24 @@ public class SleepyLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
     }
     @objc public func endAll(_ call: CAPPluginCall) {
         perform(call) { if #available(iOS 16.2, *) { await SleepLiveActivityCoordinator.shared.endAll() } }
+    }
+    @objc public func setContext(_ call: CAPPluginCall) {
+        perform(call) {
+            if #available(iOS 16.2, *), let owner = call.getString("ownerId"), UUID(uuidString: owner) != nil,
+               let ids = call.getArray("babyIds", String.self), ids.allSatisfy({ UUID(uuidString: $0) != nil }) {
+                await SleepLiveActivityCoordinator.shared.setContext(ownerId: owner, babyIds: Set(ids))
+            }
+        }
+    }
+    @objc public func reconcileBaby(_ call: CAPPluginCall) {
+        perform(call) {
+            if #available(iOS 16.2, *), let owner = call.getString("ownerId"), UUID(uuidString: owner) != nil,
+               let baby = call.getString("babyId"), UUID(uuidString: baby) != nil {
+                let active = call.getString("activeSleepId")
+                guard active == nil || UUID(uuidString: active!) != nil else { return }
+                await SleepLiveActivityCoordinator.shared.reconcileBaby(ownerId: owner, babyId: baby, activeSleepId: active)
+            }
+        }
     }
     @objc public func setEnabled(_ call: CAPPluginCall) {
         guard let enabled = call.getBool("enabled") else { call.reject("Missing enabled preference"); return }
