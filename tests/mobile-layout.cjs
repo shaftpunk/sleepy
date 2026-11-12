@@ -48,7 +48,7 @@ function mock(url) {
   if (url === '/src/services/sleepService.ts') return records + failure + `
     if(p.has('home-fixture')&&!p.has('empty')){sleeps.splice(0,sleeps.length,...Array.from({length:24},(_,i)=>({...sleeps[0],id:'history-'+i,baby_id:'baby',starttime:iso(now-(63+i*120)*60000),endtime:iso(now-(18+i*120)*60000),durationminutes:45,sleep_type:'sleep',rate:'4.8',deleted_at:null})));}
     export const getActiveSleep=async()=>window.__homeActive!==undefined?window.__homeActive:p.has('active')?{...sleeps[0],id:'active',starttime:p.has('home-fixture')?iso(now-42*60000):sleeps[0].starttime,endtime:null}:null,
-    getLastCompletedSleep=async()=>window.__homeLast||sleeps[0]||null,getRecentSleeps=async()=>sleeps.slice(0,8),getAllSleeps=async()=>sleeps,getSleepsFromDate=async()=>sleeps,getSleepsOverlappingPeriod=async()=>sleeps;
+    getLastCompletedSleep=async()=>window.__homeLast||(p.has('hold-room')?{...sleeps[0],endtime:iso(now-2*3600000)}:sleeps[0])||null,getRecentSleeps=async()=>sleeps.slice(0,8),getAllSleeps=async()=>sleeps,getSleepsFromDate=async()=>sleeps,getSleepsOverlappingPeriod=async()=>sleeps;
     export async function startSleep(babyId,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'start',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));return window.__homeActive={...sleeps[0],id:'started',baby_id:babyId,starttime:iso(Date.now()-minutes*60000),endtime:null};}
     export async function stopSleep(id,start,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'stop',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));window.__homeActive=null;return window.__homeLast={...sleeps[0],id,starttime:start,endtime:iso(Date.now()-minutes*60000)};}
     export {blocked as resumeSleep,blocked as updateSleep,blocked as deleteSleep,blocked as splitSleep,blocked as createManualSleep};`;
@@ -66,7 +66,7 @@ function mock(url) {
   if (url.endsWith('/soundEventService.ts')) return params + `export async function getSoundEventsForSleep(id){await new Promise(r=>setTimeout(r,80));if(p.has('error'))throw Error('Synthetic read error');if(p.has('empty'))return [];const end=Date.now()-2*3600000;return Array.from({length:6},(_,i)=>({id:'event-'+i,sleep_id:id,baby_id:'baby',started_at:new Date(end-(i+1)*3600000).toISOString(),ended_at:new Date(end-(i+1)*3600000+64000).toISOString(),avg_level:.04,max_level:i%2?.3:.06}));};export const createSoundEvent=async()=>{};`;
   if (url.endsWith('/familyMessageService.ts')) return failure + `export {blocked as sendFamilyMessage};`;
   if (url.endsWith('/NativeSoundLifecycle.tsx') || url.endsWith('/NativePushNavigation.tsx')) return `export default function(){return null}`;
-  if (url.includes('@capacitor_core')) return `export const Capacitor={isNativePlatform:()=>true,getPlatform:()=>'ios',isPluginAvailable:()=>true};export const registerPlugin=()=>({selection:async()=>{window.__haptics=(window.__haptics||0)+1},setEnabled:async()=>{if(window.__sleepyBridgeFailure)throw Error('Synthetic native bridge failure')},reconcile:async()=>{},endAll:async()=>{},getAppInfo:async()=>({version:'1.0',build:'14'})});`;
+  if (url.includes('@capacitor_core')) return `export const Capacitor={isNativePlatform:()=>true,getPlatform:()=>'ios',isPluginAvailable:()=>true};export const registerPlugin=()=>({selection:async()=>{window.__haptics=(window.__haptics||0)+1},addListener:async()=>({remove:async()=>{}}),setContext:async()=>{},reconcileBaby:async()=>{},setEnabled:async()=>{if(window.__sleepyBridgeFailure)throw Error('Synthetic native bridge failure')},reconcile:async()=>{},endAll:async()=>{},getAppInfo:async()=>({version:'1.0',build:'14'})});`;
 }
 
 async function main() {
@@ -76,8 +76,9 @@ async function main() {
     for (let n = 0; n < 100; n++) { try { if ((await fetch(base)).ok) break; } catch { /* starting */ } await new Promise(r => setTimeout(r, 100)); }
     browser = await chromium.launch({ headless: true, ...(process.env.SLEEPY_CHROMIUM_PATH ? { executablePath: process.env.SLEEPY_CHROMIUM_PATH } : {}) });
     const page = await browser.newPage();
+    if(process.argv.includes('--home-only')&&process.argv.includes('--quick'))await page.clock.install();
     const errors = [], failures = [], screens = [];
-    page.on('pageerror', e => { errors.push(e.message); if(process.argv.includes('--entitlements-only'))console.error(e.message); });
+    page.on('pageerror', e => { errors.push(e.message); if(process.argv.includes('--entitlements-only')||process.argv.includes('--home-only'))console.error(e.message); });
     await page.route('**/*', route => {
       const u = new URL(route.request().url());
       if (u.origin !== base) return route.abort();
@@ -205,11 +206,21 @@ async function main() {
           assert.ok((await action.textContent()).includes('10'),JSON.stringify({context,ending,text:await action.textContent(),bounds:await action.boundingBox(),point:r}));await page.mouse.up();await page.waitForTimeout(180);
           assert.deepEqual(await page.evaluate(()=>window.__sleepActions),[{kind:ending?'stop':'start',minutes:10}]);
           assert.equal(await page.evaluate(()=>window.__haptics),2,'activation and first increment each produce one haptic');
+          assert.equal(await action.evaluate(e=>e.classList.contains('is-pressed')),false,'release clears pressed feedback');
           await ready(ending?'active':'');await action.evaluate(e=>e.scrollIntoView({block:'center'}));r=await action.boundingBox();
-          await page.mouse.move(r.x+r.width/2,r.y+r.height/2);await page.mouse.down();await page.waitForTimeout(700);await page.mouse.move(r.x+r.width/2+20,r.y+r.height/2);await page.mouse.up();
+          await page.mouse.move(r.x+r.width/2,r.y+r.height/2);await page.mouse.down();
+          assert.equal(await action.evaluate(e=>e.classList.contains('is-pressed')),true,'pointer-down gives immediate feedback');
+          assert.notEqual(await action.evaluate(e=>getComputedStyle(e).filter),'none','pressed styling is visible without a layout change');
+          assert.equal(await page.evaluate(()=>window.__haptics||0),0,'no press-down haptic');
+          await page.mouse.move(r.x+r.width/2+14,r.y+r.height/2);await page.waitForTimeout(500);
+          assert.ok((await action.textContent()).includes('5'));await page.mouse.up();await page.waitForTimeout(180);
+          assert.deepEqual(await page.evaluate(()=>window.__sleepActions),[{kind:ending?'stop':'start',minutes:5}],'ordinary drift should still commit once');
+          await ready(ending?'active':'');await action.evaluate(e=>e.scrollIntoView({block:'center'}));r=await action.boundingBox();
+          await page.mouse.move(r.x+r.width/2,r.y+r.height/2);await page.mouse.down();await page.waitForTimeout(700);await page.mouse.move(r.x+r.width/2+32,r.y+r.height/2);await page.mouse.up();
           assert.equal(await page.evaluate(()=>(window.__sleepActions||[]).length),0);
+          assert.equal(await action.evaluate(e=>e.classList.contains('is-pressed')),false);
           if(process.argv.includes('--quick')){
-            for(const reason of ['capture-failure','outside-release','lost-capture','blur','unmount']){
+            for(const reason of ['capture-failure','outside-release','lost-capture','pointercancel','scroll','pause','hidden','blur','unmount']){
               await ready(ending?'active':'');await action.evaluate(e=>e.scrollIntoView({block:'center'}));
               if(reason==='capture-failure'){
                 await action.evaluate(e=>{e.setPointerCapture=()=>{throw Error('Synthetic capture failure')};});await action.click();
@@ -217,13 +228,61 @@ async function main() {
                 await action.evaluate(e=>e.addEventListener('pointerdown',ev=>{window.__heldPointer=ev.pointerId;},{once:true}));
                 const box=await action.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.waitForTimeout(700);
                 if(reason==='outside-release')await action.dispatchEvent('pointerup',{pointerId:await page.evaluate(()=>window.__heldPointer),clientX:box.x-20,clientY:box.y});
-                if(reason==='lost-capture')await action.evaluate(e=>e.releasePointerCapture(window.__heldPointer));
+                if(reason==='lost-capture'){
+                  await action.evaluate(e=>e.releasePointerCapture(window.__heldPointer));
+                  // Capture release is pending until the next pointer event.
+                  await page.mouse.move(box.x+box.width/2+1,box.y+box.height/2);
+                }
+                if(reason==='pointercancel')await action.dispatchEvent('pointercancel',{pointerId:await page.evaluate(()=>window.__heldPointer)});
+                if(reason==='scroll')await page.evaluate(()=>window.scrollBy(0,window.scrollY>0?-20:20));
+                if(reason==='pause')await page.evaluate(()=>document.dispatchEvent(new Event('pause')));
+                if(reason==='hidden')await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'))});
                 if(reason==='blur')await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
-                if(reason==='unmount')await page.locator('.bottom-nav a[href="/history"]').evaluate(e=>e.click());
+                if(reason==='unmount'){
+                  await page.locator('.bottom-nav a[href="/history"]').evaluate(e=>e.click());
+                  // A lazy route can retain Home while its chunk loads. Test
+                  // actual unmount rather than assuming it occurs within 30ms.
+                  await action.waitFor({state:'detached'});
+                }
                 await page.waitForTimeout(30);await page.mouse.up();
               }
               assert.equal(await page.evaluate(()=>(window.__sleepActions||[]).length),0,reason+' must not write sleep');
+              if(reason!=='unmount'){
+                await page.waitForFunction(()=>!document.querySelector('.sleep-action')?.classList.contains('is-pressed'));
+                assert.equal(await action.evaluate(e=>e.classList.contains('is-pressed')),false,reason+' clears pressed feedback');
+              }
+              else assert.equal(await action.count(),0,'unmount removes pressed UI');
             }
+            for(const duration of [50,150,300,400]){
+              await ready(ending?'active':'');await action.evaluate(e=>e.scrollIntoView({block:'center'}));
+              await page.clock.pauseAt(await page.evaluate(()=>Date.now()+1000));
+              const box=await action.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();
+              assert.equal(await action.evaluate(e=>e.classList.contains('is-pressed')),true);
+              await page.clock.runFor(duration);assert.equal(await page.evaluate(()=>window.__haptics||0),0);
+              await page.mouse.up();await page.clock.runFor(200);
+              assert.deepEqual(await page.evaluate(()=>window.__sleepActions),[{kind:ending?'stop':'start',minutes:0}],duration+' ms remains a normal tap');
+              assert.equal(await action.evaluate(e=>e.classList.contains('is-pressed')),false);
+              if(duration===400){
+                // The same mounted component has now switched Awake/Sleeping.
+                // Its new sleep/previous-end boundary leaves no valid five minutes.
+                const next=await action.boundingBox();await page.mouse.move(next.x+next.width/2,next.y+next.height/2);await page.mouse.down();
+                assert.equal(await action.evaluate(e=>e.classList.contains('is-pressed')),true);
+                await page.clock.runFor(450);assert.equal(await action.evaluate(e=>e.classList.contains('is-pressed')),false);
+                await page.mouse.up();await page.clock.runFor(200);assert.equal(await page.evaluate(()=>window.__sleepActions.length),1);
+                assert.equal(await page.evaluate(()=>window.__haptics||0),0);
+              }
+              await page.clock.resume();
+            }
+            await ready(ending?'active':'hold-room');await action.evaluate(e=>e.scrollIntoView({block:'center'}));
+            await page.clock.pauseAt(await page.evaluate(()=>Date.now()+1000));
+            const box=await action.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();
+            await page.clock.runFor(449);assert.equal(await page.evaluate(()=>window.__haptics||0),0);
+            await page.clock.runFor(1);assert.ok((await action.textContent()).includes('5'));assert.equal(await page.evaluate(()=>window.__haptics),1);
+            for(const minutes of [10,15,20]){await page.clock.runFor(600);assert.ok((await action.textContent()).includes(String(minutes)),JSON.stringify({context,ending,minutes,text:await action.textContent()}));}
+            await page.mouse.up();await page.clock.runFor(200);
+            assert.deepEqual(await page.evaluate(()=>window.__sleepActions),[{kind:ending?'stop':'start',minutes:20}]);
+            assert.equal(await page.evaluate(()=>window.__haptics),4);assert.equal(await action.evaluate(e=>e.classList.contains('is-pressed')),false);
+            await page.clock.resume();
             await ready(ending?'active':'');
           }
           await change.click();await page.getByRole('dialog').getByRole('button',{name:lang==='en'?'5 minutes ago':'5 minutter siden',exact:true}).click();await page.waitForTimeout(180);

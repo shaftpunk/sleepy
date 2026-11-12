@@ -24,22 +24,26 @@ function gesture(maximum = 60) {
   return { hold, offsets, advance, tasks, haptics: () => haptics };
 }
 test('normal tap is now, with no hold or haptics before the deliberate threshold', () => {
-  const f = gesture(); f.hold.begin(); f.advance(599);
-  assert.equal(f.haptics(), 0); assert.equal(f.hold.release().kind, 'tap');
-  f.advance(5000); assert.equal(f.tasks.size, 0); assert.equal(f.haptics(), 0);
+  for(const elapsed of [50,150,300,400,449]){
+    const f = gesture(); f.hold.begin(); f.advance(elapsed);
+    assert.equal(f.haptics(), 0); assert.equal(f.hold.release().kind, 'tap');
+    f.advance(5000); assert.equal(f.tasks.size, 0); assert.equal(f.haptics(), 0);
+  }
 });
-test('shared Start/Wake hold activates at 600ms, advances 5 minutes per step, caps and releases once', () => {
-  const f = gesture(); f.hold.begin(); f.advance(600); assert.equal(f.offsets.at(-1), 5);
+test('shared Start/Wake hold activates at 450ms, increments at 1050/1650/2250ms, caps and releases once', () => {
+  assert.equal(time.HOLD_DELAY_MS,450);assert.equal(time.HOLD_STEP_MS,600);
+  const f = gesture(); f.hold.begin(); f.advance(449);assert.equal(f.haptics(),0);f.advance(1); assert.equal(f.offsets.at(-1), 5);
   assert.equal(f.haptics(), 1, 'activation immediately selects five and emits one haptic');
-  f.advance(649); assert.equal(f.offsets.at(-1), 5); assert.equal(f.haptics(), 1);
+  f.advance(599); assert.equal(f.offsets.at(-1), 5); assert.equal(f.haptics(), 1);
   f.advance(1); assert.equal(f.offsets.at(-1), 10); assert.equal(f.haptics(), 2);
-  f.advance(650); assert.equal(f.offsets.at(-1), 15); assert.equal(f.haptics(), 3);
-  f.advance(650 * 30); assert.equal(f.offsets.at(-1), 60); assert.equal(f.haptics(), 12);
+  f.advance(600); assert.equal(f.offsets.at(-1), 15); assert.equal(f.haptics(), 3);
+  f.advance(600);assert.equal(f.offsets.at(-1),20);assert.equal(f.haptics(),4);
+  f.advance(600 * 30); assert.equal(f.offsets.at(-1), 60); assert.equal(f.haptics(), 12);
   const result = f.hold.release(); assert.equal(result.kind, 'hold'); assert.equal(result.minutes, 60);
   assert.equal(f.hold.release().kind, 'cancel'); assert.equal(f.tasks.size, 0);
 });
 test('movement, pointer cancellation, blur and unmount cancellation cannot commit; no timers leak', () => {
-  for (const elapsed of [100, 600, 1500]) {
+  for (const elapsed of [100, 450, 1500]) {
     const f = gesture(); f.hold.begin(); f.advance(elapsed); f.hold.cancel();
     f.advance(10000); assert.equal(f.hold.release().kind, 'cancel'); assert.equal(f.tasks.size, 0);
     f.hold.begin(); f.hold.dispose(); f.advance(10000); assert.equal(f.tasks.size, 0);
@@ -49,7 +53,32 @@ test('Wake hold cannot cross sleep start; insufficient backdate space cancels in
   assert.equal(time.maximumBackdate(600000, 0, true), 9);
   assert.equal(time.maximumBackdate(600000, 0, false), 10);
   const f = gesture(9); f.hold.begin(); f.advance(5000); assert.equal(f.hold.release().minutes, 5);
-  const short = gesture(4); short.hold.begin(); short.advance(600); assert.equal(short.hold.release().kind, 'cancel');
+  const short = gesture(4); short.hold.begin(); short.advance(450); assert.equal(short.hold.release().kind, 'cancel');
+});
+
+test('thumb drift is measured within 20 CSS pixels of pointer-down, without accumulating jitter or permitting departure',()=>{
+  const {withinSleepHoldTarget}=load('src/lib/holdSleepAction.ts',{'./sleepActionTime':time});
+  const origin={x:100,y:100},bounds={left:0,right:200,top:50,bottom:150};
+  assert.equal(time.HOLD_MOVE_TOLERANCE_PX,20);
+  for(const point of [{x:112,y:110},{x:119,y:100},{x:95,y:100},{x:110,y:105},{x:100,y:100}])assert.equal(withinSleepHoldTarget(origin,point,bounds),true);
+  assert.equal(withinSleepHoldTarget(origin,{x:120,y:100},bounds),true);
+  assert.equal(withinSleepHoldTarget(origin,{x:120.1,y:100},bounds),false);
+  assert.equal(withinSleepHoldTarget({x:195,y:100},{x:201,y:100},bounds),false,'leaving the button cancels even below the distance limit');
+});
+
+test('five-minute boundaries and 60-minute maximum remain unchanged; invalid holds clear feedback without a haptic',()=>{
+  assert.equal(time.HOLD_MAX_MINUTES,60);
+  const now=Date.now();assert.equal(time.maximumBackdate(now,now-300000,false),5);assert.equal(time.maximumBackdate(now,now-300000,true),4);
+  assert.equal(time.maximumBackdate(now,null,false),60);assert.equal(time.maximumBackdate(now,now-7200000,true),60);
+  const {createSleepHold}=load('src/lib/holdSleepAction.ts',{'./sleepActionTime':time});
+  let callback,selection,cleared=0,haptics=0;
+  const hold=createSleepHold({maximum:()=>4,select:n=>selection=n,haptic:()=>haptics++,onCancel:()=>cleared++,schedule:fn=>{callback=fn;return 1},clear:()=>{}});
+  hold.begin();callback();assert.equal(hold.release().kind,'cancel');assert.equal(selection,0);assert.equal(cleared,1);assert.equal(haptics,0);
+});
+
+test('each press uses its current Start/Wake boundary instead of the initial mount boundary',()=>{
+  const f=gesture(60);f.hold.begin(()=>4);f.advance(450);assert.equal(f.hold.release().kind,'cancel');assert.equal(f.haptics(),0);
+  f.hold.begin(()=>10);f.advance(1050);assert.equal(f.hold.release().minutes,10);assert.equal(f.haptics(),2);
 });
 test('explicit local datetime selection uses whole-minute commands and enforces future/start/overlap bounds', () => {
   const now = Date.parse('2026-11-11T13:30:40Z');

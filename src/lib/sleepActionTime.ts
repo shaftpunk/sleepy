@@ -1,6 +1,7 @@
 // UI bounds only. The existing startSleep/stopSleep services remain authoritative.
-export const HOLD_DELAY_MS = 600;
-export const HOLD_STEP_MS = 650;
+export const HOLD_DELAY_MS = 450;
+export const HOLD_STEP_MS = 600;
+export const HOLD_MOVE_TOLERANCE_PX = 20;
 export const HOLD_MAX_MINUTES = 60;
 export function maximumBackdate(now: number, after: number | null, ending: boolean): number {
   if (after === null) return HOLD_MAX_MINUTES;
