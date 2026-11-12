@@ -8,6 +8,7 @@ import KpiCard from "../../components/analysis/KpiCard";
 import AgeSleepGuideCard from "../../components/analysis/AgeSleepGuideCard";
 import PersonalSleepProfileCard from "../../components/analysis/PersonalSleepProfileCard";
 import NextSleepPredictionCard from "../../components/analysis/NextSleepPredictionCard";
+import SleepProbabilityCard from "../../components/analysis/SleepProbabilityCard";
 import type { ActiveSleep, SleepSession } from "../../analytics/types";
 
 type Props = {
@@ -36,6 +37,8 @@ export default function OverviewTab({ sessions, active, birthDate, now }: Props)
       <PersonalSleepProfileCard sessions={sessions} guideline={guideline} now={now} />
 
       <NextSleepPredictionCard sessions={sessions} active={active} now={now} ageDays={ageDays} />
+
+      <SleepProbabilityCard sessions={sessions} active={active} now={now} />
 
       <section className="analysis-card">
         <div className="analysis-card-heading">

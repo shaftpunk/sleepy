@@ -14,15 +14,18 @@ export type PurchaseEvidence = {
   status: "unavailable" | "loading" | "none" | "active" | "error";
   entitlement: "plus" | null; expiration: string | null; productIdentifier: string | null;
   willRenew: boolean | null; refreshedAt: string | null; issue: PurchaseIssue | null;
+  environment: "sandbox" | "production" | null;
 };
 export const EMPTY_PURCHASE_EVIDENCE: PurchaseEvidence = Object.freeze({ status: "unavailable", entitlement: null,
-  expiration: null, productIdentifier: null, willRenew: null, refreshedAt: null, issue: null });
+  expiration: null, productIdentifier: null, willRenew: null, refreshedAt: null, issue: null, environment: null });
+export type RevenueCatDiagnostics = { available: boolean; configured: boolean; appUserIdPrefix: string | null; evidence: PurchaseEvidence };
 export class PurchaseFailure extends Error {
   readonly issue: PurchaseIssue;
   constructor(issue: PurchaseIssue) { super(`Purchase operation unavailable: ${issue}`); this.issue = issue; }
 }
 export type ServerReconciliation = { state: "pending" | "verified" | "verifiedMultiple" | "sandboxVerified" | "assignmentRequired" | "free";
-  householdId: string | null; subscriptionState?:"production"|"sandbox"|"none"|"unknown" };
+  householdId: string | null; subscriptionState?:"production"|"sandbox"|"none"|"unknown";
+  entitlement?: { householdId: string; tier: "free" | "plus"; isPlus: boolean; verificationState: "verified"; validUntil: string | null } | null };
 export type PurchaseResult = { status: "purchased" | "restored" | "alreadySubscribed" | "cancelled" | "pending" |
   "completedUnknown" | "error" | "unavailable"; evidence: PurchaseEvidence; issue: PurchaseIssue | null;
   reconciliation?: ServerReconciliation };
@@ -43,7 +46,8 @@ export function customerEvidence(info: CustomerInfo, now = Date.now()): Purchase
   const valid = plus && (plus.expirationDate === null || Date.parse(plus.expirationDate) > now);
   return { status: valid ? "active" : "none", entitlement: valid ? "plus" : null,
     expiration: valid ? plus.expirationDate : null, productIdentifier: valid ? plus.productIdentifier : null,
-    willRenew: valid ? plus.willRenew : null, refreshedAt: new Date(now).toISOString(), issue: null };
+    willRenew: valid ? plus.willRenew : null, refreshedAt: new Date(now).toISOString(), issue: null,
+    environment: valid && typeof plus.isSandbox === "boolean" ? plus.isSandbox ? "sandbox" : "production" : null };
 }
 export function offeringPackage(offerings: PurchasesOfferings, plan: PurchasePlan): PurchasesPackage {
   const offering = offerings?.current;

@@ -46,6 +46,7 @@ function mock(url) {
   if (url === '/src/auth/AuthProvider.tsx') return `${params}export const useAuth=()=>({user:{id:'user',email:'parent.with.a.long.synthetic.email@example.invalid',user_metadata:{full_name:'Alexandra Strande Engevik'}},session:{user:{id:'user'}},loading:p.has('loading'),signOut:async()=>{}});`;
   if (url === '/src/lib/supabase.ts') return `export const supabase={auth:{onAuthStateChange:f=>{window.recovery=()=>f('PASSWORD_RECOVERY');return {data:{subscription:{unsubscribe(){}}}}},getUser:async()=>({data:{user:{id:'user'}}})}};`;
   if (url === '/src/services/sleepService.ts') return records + failure + `
+    if(p.has('probability-fixture')){const at=(days,h,m=0)=>{const d=new Date();d.setDate(d.getDate()-days);d.setHours(h,m,0,0);return d.getTime()};const row=(start,end)=>({id:String(start),baby_id:'baby',starttime:iso(start),endtime:iso(end),durationminutes:(end-start)/60000,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,i)=>{const d=i+1;return [row(at(d+1,23,30),at(d,7)),row(at(d,d<=9?9:11,30),at(d,d<=9?10:12,30)),row(at(d,20),at(d,21))]}).flat());}
     if(p.has('home-fixture')&&!p.has('empty')){sleeps.splice(0,sleeps.length,...Array.from({length:24},(_,i)=>({...sleeps[0],id:'history-'+i,baby_id:'baby',starttime:iso(now-(63+i*120)*60000),endtime:iso(now-(18+i*120)*60000),durationminutes:45,sleep_type:'sleep',rate:'4.8',deleted_at:null})));}
     export const getActiveSleep=async()=>window.__homeActive!==undefined?window.__homeActive:p.has('active')?{...sleeps[0],id:'active',starttime:p.has('home-fixture')?iso(now-42*60000):sleeps[0].starttime,endtime:null}:null,
     getLastCompletedSleep=async()=>window.__homeLast||(p.has('hold-room')?{...sleeps[0],endtime:iso(now-2*3600000)}:sleeps[0])||null,getRecentSleeps=async()=>sleeps.slice(0,8),getAllSleeps=async()=>sleeps,getSleepsFromDate=async()=>sleeps,getSleepsOverlappingPeriod=async()=>sleeps;
@@ -353,6 +354,20 @@ async function main() {
         console.log(context+' settings checked');continue;
       }
       if(process.argv.includes('--analysis-only')){
+        await visit('/analysis','probability-fixture');await page.waitForSelector('.sleep-probability-estimate');
+        const probability=page.locator('.sleep-probability-card'),clock=probability.locator('input[type="time"]');
+        assert.equal(await clock.inputValue(),'10:00');
+        assert.match(await probability.locator('.sleep-probability-count').innerText(),/9.*12/);
+        assert.match(await probability.locator('.sleep-probability-estimate').innerText(),/79/);
+        await clock.fill('11:45');await clock.press('Tab');
+        assert.match(await probability.locator('.sleep-probability-count').innerText(),/3.*12/);
+        assert.match(await probability.locator('.sleep-probability-estimate').innerText(),/21/);
+        await check('analysis-probability',true);
+        await probability.locator('summary').click();await check('analysis-probability-method',true);
+        await visit('/analysis','empty');await page.waitForSelector('.sleep-probability-card');
+        assert.equal(await page.locator('.sleep-probability-estimate').count(),0);
+        assert.match(await page.locator('.sleep-probability-count').innerText(),/0.*0/);
+        await check('analysis-probability-empty',true);
         await visit('/analysis');await page.waitForSelector('.analysis-tab-content');
         for(let i=0;i<5;i++){await page.locator('.analysis-tab').nth(i).click();await check('analysis-'+i,true);}
         console.log(context+' analysis checked');continue;

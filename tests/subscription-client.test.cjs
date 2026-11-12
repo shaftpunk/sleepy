@@ -21,6 +21,8 @@ test('safe authoritative response refreshes only scoped listeners; evidence does
   const f=fixture(),events=[];f.service.subscribeEntitlementReconciliation(e=>events.push(e));const r=await f.service.reconcileSubscription(I,false,'transaction-hint');
   assert.equal(r.state,'verified');assert.equal(events[0].userId,A);assert.equal(events[0].householdId,H);assert.equal(Object.hasOwn(r,'isPlus'),false);
   assert.equal(f.calls[0].body.transactionId,'transaction-hint');
+  assert.equal(r.entitlement.tier,'plus');assert.equal(r.entitlement.isPlus,true);assert.equal(r.entitlement.verificationState,'verified');
+  assert.deepEqual(Object.keys(r.entitlement).sort(),['householdId','isPlus','tier','validUntil','verificationState'].sort());
 });
 test('anonymous, switched account, malformed entitlement, ownership failure and network failure are safe',async()=>{
   const f=fixture();f.env.user=null;await assert.rejects(f.service.reconcileSubscription(),e=>e.issue==='authentication');assert.equal(f.calls.length,0);

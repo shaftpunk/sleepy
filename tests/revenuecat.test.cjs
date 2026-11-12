@@ -35,6 +35,37 @@ function fixture(options={}){
 const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {promise,resolve};};
 const tick=()=>new Promise(r=>setImmediate(r));
 
+test('diagnostics verify current UUID before exposing only a shortened identity and environment',async()=>{
+  const f=fixture({info:info(true)});f.env.info.entitlements.active.plus.isSandbox=true;await f.ready();
+  const d=await f.client.getRevenueCatDiagnostics(A);assert.equal(d.configured,true);assert.equal(d.appUserIdPrefix,'11111111…');assert.equal(d.evidence.environment,'sandbox');
+  assert.ok(!JSON.stringify(d).includes(A));await assert.rejects(f.client.getRevenueCatDiagnostics(B));
+  f.env.identity=B;await assert.rejects(f.client.getRevenueCatDiagnostics(A));
+  const web=fixture({native:false});await web.ready();assert.equal((await web.client.getRevenueCatDiagnostics(A)).available,false);
+});
+test('both plans execute prepare -> Apple -> reconcile; restore reconciles without intent',async()=>{
+  for(const plan of ['monthly','annual']){const order=[];const f=fixture({preparePurchase:async(c,p)=>{assert.equal(p,plan);assert.equal(c.householdId,H);order.push('prepare');return H;},
+    reconcilePurchase:async(intent,restore,transaction)=>{order.push('reconcile');assert.equal(intent,H);assert.equal(restore,false);assert.equal(transaction,'private-tx');return {state:'sandboxVerified',householdId:H};}});
+    await f.ready();f.sdk.purchasePackage=async()=>{order.push('Apple');f.env.info=info(true);return {customerInfo:f.env.info,transaction:{transactionIdentifier:'private-tx'}};};
+    const result=await f.client.purchaseRevenueCatPackage(plan,context);assert.deepEqual(order,['prepare','Apple','reconcile']);assert.equal(result.reconciliation.state,'sandboxVerified');assert.ok(!JSON.stringify(result).includes('private-tx'));
+  }
+  const f=fixture({reconcilePurchase:async(intent,restore,transaction)=>{assert.equal(intent,undefined);assert.equal(transaction,undefined);assert.equal(restore,true);return {state:'assignmentRequired',householdId:null};}});
+  await f.ready();assert.equal((await f.client.restoreRevenueCatPurchases()).reconciliation.state,'assignmentRequired');
+});
+test('activation retry reuses private same-context proof without another Apple purchase and clears on logout',async()=>{
+  const calls=[];let offline=true;const f=fixture({preparePurchase:async()=>H,reconcilePurchase:async(...args)=>{calls.push(args);if(offline)throw Error('offline');return {state:'sandboxVerified',householdId:H};}});
+  await f.ready();f.sdk.purchasePackage=async()=>{f.calls.push(['purchase']);f.env.info=info(true);return {customerInfo:f.env.info,transaction:{transactionIdentifier:'tx'}};};
+  assert.equal((await f.client.purchaseRevenueCatPackage('monthly',context)).reconciliation.state,'pending');
+  offline=false;await f.client.reconcileRevenueCatState();assert.deepEqual(calls[1],[H,false,'tx']);assert.equal(f.calls.filter(c=>c[0]==='purchase').length,1);
+  await f.client.reconcileRevenueCatState();assert.deepEqual(calls[2],[undefined,false,undefined]);
+  await f.client.resetRevenueCatSession();await assert.rejects(f.client.reconcileRevenueCatState());
+});
+test('activation retry never sends prior household proof after context changes',async()=>{
+  const calls=[];const f=fixture({preparePurchase:async()=>H,reconcilePurchase:async(...args)=>{calls.push(args);throw Error('offline');}});
+  await f.ready();f.sdk.purchasePackage=async()=>({customerInfo:info(true),transaction:{transactionIdentifier:'tx'}});
+  await f.client.purchaseRevenueCatPackage('monthly',context);f.client.setPurchaseContext({...context,householdId:B});
+  await assert.rejects(f.client.reconcileRevenueCatState());assert.deepEqual(calls[1],[undefined,false,undefined]);
+});
+
 test('explicit store cancellation expires only its purchase attempt; pending approval does not cancel it',async()=>{
   for(const code of ['1','20']){
     const cancelled=[];const f=fixture({preparePurchase:async()=>H,cancelPurchase:async id=>cancelled.push(id),purchaseError:{code}});

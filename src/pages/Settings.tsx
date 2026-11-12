@@ -12,6 +12,7 @@ import { isValidBirthDateInput } from "../analytics/localDate";
 import { updateBabyBirthDate } from "../services/householdService";
 import LiveActivitySettings from "../components/LiveActivitySettings";
 import AppVersion from "../components/AppVersion";
+import SleepyPlusTestPanel from "../components/SleepyPlusTestPanel";
 import "./Settings.css";
 
 export default function Settings() {
@@ -344,6 +345,7 @@ export default function Settings() {
         </div>
 
       </section>
+      <SleepyPlusTestPanel />
       <section className="settings-card appearance-card">
         <div className="appearance-row">
           <div className="setting-copy">

@@ -11,7 +11,7 @@ import {subscribeEntitlementReconciliation} from "../services/subscriptionReconc
 
 type Snapshot = { context: HouseholdContext; generation: number; resolution: EntitlementResolution | null };
 type Value = ReturnType<typeof entitlementAccess> & { householdId: string | null; loading: boolean;
-  verificationState: "verified" | "unknown"; enforcementEnabled: boolean; purchaseEvidence: PurchaseEvidence };
+  verificationState: "verified" | "unknown"; validUntil: string | null; enforcementEnabled: boolean; purchaseEvidence: PurchaseEvidence };
 const Context = createContext<Value | undefined>(undefined);
 export function EntitlementProvider({ children }: { children: ReactNode }) {
   const purchaseEvidence = usePurchaseEvidence();
@@ -52,6 +52,7 @@ export function EntitlementProvider({ children }: { children: ReactNode }) {
   const scoped = !contextLoading && snapshot && isSessionGenerationCurrent(snapshot.generation) && sameHouseholdContext(context, snapshot.context) ? snapshot : null;
   return <Context.Provider value={{ ...entitlementAccess(scoped?.resolution ?? null), householdId,
     loading: contextLoading || Boolean(context && !scoped), verificationState: scoped?.resolution ? "verified" : "unknown",
+    validUntil: scoped?.resolution?.validUntil ?? null,
     enforcementEnabled: ENTITLEMENT_ENFORCEMENT_ENABLED, purchaseEvidence }}>{children}</Context.Provider>;
 }
 // eslint-disable-next-line react-refresh/only-export-components

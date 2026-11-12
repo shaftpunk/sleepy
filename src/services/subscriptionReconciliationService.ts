@@ -32,11 +32,14 @@ export async function reconcileSubscription(intentId?:string,restore=false,trans
   const {data,userId}=await invoke({action:restore?"restore":"reconcile",...(intentId?{intentId}:{}),...(transactionId?{transactionId}:{})});
   if(!["verified","verifiedMultiple","sandboxVerified","assignmentRequired","free"].includes(data.state)||
     !["production","sandbox","none"].includes(data.subscriptionState))throw new PurchaseFailure("unknown");
+  let entitlement: ServerReconciliation["entitlement"] = null;
   if(data.householdId!==null){
     if(typeof data.householdId!=="string")throw new PurchaseFailure("unknown");
-    parseEntitlementResolution(data.entitlement,data.householdId);
+    const parsed = parseEntitlementResolution(data.entitlement,data.householdId);
+    entitlement = { householdId: parsed.householdId, tier: parsed.tier, isPlus: parsed.isPlus,
+      verificationState: parsed.verificationState, validUntil: parsed.validUntil };
     listeners.forEach(listener=>listener({userId,householdId:data.householdId}));
   }else if(data.state==="verified"||data.state==="sandboxVerified")throw new PurchaseFailure("unknown");
   else listeners.forEach(listener=>listener({userId,householdId:null})); // Re-resolve the provider's own explicit context, never choose a household here.
-  return {state:data.state,householdId:data.householdId,subscriptionState:data.subscriptionState};
+  return {state:data.state,householdId:data.householdId,subscriptionState:data.subscriptionState,entitlement};
 }

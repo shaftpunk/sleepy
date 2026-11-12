@@ -1,6 +1,6 @@
 import { PURCHASES_ERROR_CODE, LOG_LEVEL, type PurchasesPlugin, type PurchasesCallbackId } from "@revenuecat/purchases-capacitor";
 import { customerEvidence, EMPTY_PURCHASE_EVIDENCE, offeringPackage, PurchaseFailure,
-  type PurchaseContext, type PurchaseEvidence, type PurchaseIssue, type PurchasePlan, type PurchaseResult, type ServerReconciliation } from "./revenueCatModel";
+  type PurchaseContext, type PurchaseEvidence, type PurchaseIssue, type PurchasePlan, type PurchaseResult, type ServerReconciliation, type RevenueCatDiagnostics } from "./revenueCatModel";
 
 type Runtime = { sdk: PurchasesPlugin; supported: () => boolean; apiKey: () => string | undefined;
   generation: () => number; authenticatedUser: () => Promise<string | null>;
@@ -16,6 +16,9 @@ export function createRevenueCatClient(runtime: Runtime) {
   let context: PurchaseContext | null = null, listener: PurchasesCallbackId | null = null;
   let state = EMPTY_PURCHASE_EVIDENCE, pending: Promise<unknown> = Promise.resolve(), moneyBusy = false;
   let listenerRefresh = false;
+  // Short-lived retry proof stays private to this authenticated SDK session.
+  // Never expose intent/transaction IDs in diagnostic UI or fabricate funding.
+  let retryProof: { userId: string; generation: number; context: PurchaseContext; intentId: string; transactionId: string; until: number } | null = null;
   const subscribers = new Set<() => void>();
   const emit = (next: PurchaseEvidence) => { state = Object.freeze(next); subscribers.forEach(fn => fn()); };
   const snapshot = () => generation === runtime.generation() && userId ? state : EMPTY_PURCHASE_EVIDENCE;
@@ -56,6 +59,7 @@ export function createRevenueCatClient(runtime: Runtime) {
     const next = customerEvidence(customerInfo); emit(next); return next;
   }
   function resetRevenueCatSession(): Promise<void> {
+    retryProof = null;
     epoch++; userId = null; context = null; generation = -1; emit(EMPTY_PURCHASE_EVIDENCE);
     return serial(detach);
     // Do not call SDK logOut(): it creates an anonymous ID. The native identified
@@ -63,6 +67,7 @@ export function createRevenueCatClient(runtime: Runtime) {
   }
   async function initializeRevenueCat(id: string): Promise<PurchaseEvidence> {
     if (!uuid.test(id)) { await resetRevenueCatSession(); throw new PurchaseFailure("authentication"); }
+    if (retryProof && (retryProof.userId !== id || retryProof.generation !== runtime.generation())) retryProof = null;
     const version = ++epoch; userId = id; generation = runtime.generation();
     context = context?.userId === id ? context : null;
     emit({ ...EMPTY_PURCHASE_EVIDENCE, status: "loading" });
@@ -127,12 +132,40 @@ export function createRevenueCatClient(runtime: Runtime) {
       offeringPackage(offering, "monthly"); offeringPackage(offering, "annual"); return offering.current!;
     } catch (error) { throw new PurchaseFailure(failed(error, version)); } });
   }
+  function getRevenueCatDiagnostics(expectedUserId: string): Promise<RevenueCatDiagnostics> {
+    const version = epoch;
+    return serial(async () => {
+      if (!runtime.supported()) return { available: false, configured: false, appUserIdPrefix: null, evidence: EMPTY_PURCHASE_EVIDENCE };
+      assertCurrent(version);
+      if (userId !== expectedUserId || await runtime.authenticatedUser() !== expectedUserId) throw new PurchaseFailure("authentication");
+      const configured = (await sdk.isConfigured()).isConfigured;
+      assertCurrent(version);
+      if (!configured) return { available: true, configured: false, appUserIdPrefix: null, evidence: snapshot() };
+      await verifyIdentity(version);
+      return { available: true, configured: true, appUserIdPrefix: expectedUserId.slice(0, 8) + "…", evidence: snapshot() };
+    });
+  }
+  function reconcileRevenueCatState(): Promise<ServerReconciliation> {
+    const version = epoch;
+    return serial(async () => {
+      await ready(version);
+      if (!runtime.reconcilePurchase) throw new PurchaseFailure("unavailable");
+      const proof = retryProof;
+      const matches = proof && proof.userId === userId && proof.generation === runtime.generation() && proof.until > Date.now() &&
+        context?.userId === proof.context.userId && context?.babyId === proof.context.babyId && context?.householdId === proof.context.householdId;
+      const result = await runtime.reconcilePurchase(matches ? proof.intentId : undefined, false, matches ? proof.transactionId : undefined);
+      assertCurrent(version);
+      if (["verified", "sandboxVerified"].includes(result.state) && result.householdId === retryProof?.context.householdId) retryProof = null;
+      return result;
+    });
+  }
   function moneyOperation(kind: "purchase" | "restore", requested?: PurchaseContext, plan?: PurchasePlan): Promise<PurchaseResult> {
     const version = epoch;
     let reconciliation:ServerReconciliation|undefined;
     async function sync(intentId?:string,transactionId?:string){
       if(!runtime.reconcilePurchase)return;
-      try{assertCurrent(version);const value=await runtime.reconcilePurchase(intentId,kind==="restore",transactionId);assertCurrent(version);reconciliation=value;}
+      try{assertCurrent(version);const value=await runtime.reconcilePurchase(intentId,kind==="restore",transactionId);assertCurrent(version);reconciliation=value;
+        if (["verified", "sandboxVerified"].includes(value.state) && value.householdId === retryProof?.context.householdId) retryProof = null;}
       catch{reconciliation={state:"pending",householdId:null};}
     }
     const result = (status: PurchaseResult["status"], failure: PurchaseIssue | null = null): PurchaseResult => ({ status,
@@ -168,6 +201,8 @@ export function createRevenueCatClient(runtime: Runtime) {
           if(captured!==context)throw new PurchaseFailure("context");
           const payment=await sdk.purchasePackage({ aPackage: pack });
           transactionId=payment.transaction?.transactionIdentifier;
+          if (current(version) && intentId && transactionId) retryProof = { userId: requested!.userId, generation: runtime.generation(),
+            context: { ...requested! }, intentId, transactionId, until: Date.now() + 2 * 60 * 60 * 1000 };
         } else { assertCurrent(version); await sdk.restorePurchases(); }
         completed = true;
         // Server verification must still run if the final SDK refresh fails.
@@ -195,6 +230,7 @@ export function createRevenueCatClient(runtime: Runtime) {
     });
   }
   return { initializeRevenueCat, resetRevenueCatSession, refreshRevenueCatState, getRevenueCatCustomerInfo: refreshRevenueCatState,
+    getRevenueCatDiagnostics, reconcileRevenueCatState,
     getRevenueCatOffering, setPurchaseContext, snapshot, subscribe: (fn: () => void) => { subscribers.add(fn); return () => { subscribers.delete(fn); }; },
     purchaseRevenueCatPackage: (plan: PurchasePlan, purchaseContext: PurchaseContext) => moneyOperation("purchase", purchaseContext, plan),
     restoreRevenueCatPurchases: () => moneyOperation("restore") };

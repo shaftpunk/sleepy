@@ -191,3 +191,12 @@
 @media (max-width: 340px) {
   .settings-page .settings-control-row { grid-template-columns: minmax(0, 1fr); }
 }
+.plus-test-panel { min-width: 0; }
+.plus-test-panel h3 { margin: 0.5rem 0 0; font-size: 0.95rem; }
+.plus-test-panel dl { margin: 0; font-size: 0.85rem; }
+.plus-test-panel dl > div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.25rem 0; }
+.plus-test-panel dt { flex-shrink: 0; }
+.plus-test-panel dd { margin: 0; text-align: right; overflow-wrap: anywhere; min-width: 0; }
+.plus-test-actions { display: grid; gap: 0.5rem; }
+.plus-test-actions button { width: 100%; min-height: 48px; white-space: normal; }
+.plus-test-notice { font-weight: 600; }

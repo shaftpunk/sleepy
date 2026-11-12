@@ -392,3 +392,11 @@
 [data-theme="light"] .guidance-disclaimer {
   color: #776d82;
 }
+.sleep-probability-card .analysis-card-heading { flex-wrap: wrap; gap: 12px; }
+.sleep-probability-time { display: grid; gap: 6px; max-width: 100%; }
+.sleep-probability-time input { min-height: 48px; max-width: 100%; box-sizing: border-box; padding: 8px 12px; border-radius: 12px; border: 1px solid currentColor; color: inherit; background: transparent; font: inherit; color-scheme: dark; }
+[data-theme="light"] .sleep-probability-time input { color-scheme: light; }
+.sleep-probability-time input:focus-visible, .sleep-probability-card summary:focus-visible { outline: 2px solid #8f74df; outline-offset: 3px; }
+.sleep-probability-count { font-weight: 600; }
+.sleep-probability-estimate { font-size: clamp(1.5rem, 6vw, 2rem); font-weight: 700; margin: 8px 0; }
+.sleep-probability-card summary { min-height: 44px; cursor: pointer; padding-top: 10px; }

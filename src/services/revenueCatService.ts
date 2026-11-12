@@ -5,6 +5,7 @@ import { registerBeforeSignOut, sessionGeneration } from "../auth/sessionLifecyc
 import { createRevenueCatClient } from "../purchases/revenueCatClient";
 import { getHouseholdCandidates } from "./householdContextService";
 import {prepareSubscriptionPurchase,reconcileSubscription,cancelSubscriptionPurchase} from "./subscriptionReconciliationService";
+export const revenueCatAvailable = () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" && Capacitor.isPluginAvailable("Purchases");
 
 const client = createRevenueCatClient({ sdk: Purchases,
   supported: () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios",
@@ -27,5 +28,6 @@ registerBeforeSignOut(async () => {
   void client.resetRevenueCatSession().catch(() => {});
 });
 export const { initializeRevenueCat, resetRevenueCatSession, refreshRevenueCatState,
+  getRevenueCatDiagnostics, reconcileRevenueCatState,
   getRevenueCatCustomerInfo, getRevenueCatOffering, purchaseRevenueCatPackage, restoreRevenueCatPurchases,
   setPurchaseContext, snapshot: revenueCatSnapshot, subscribe: subscribeRevenueCat } = client;
