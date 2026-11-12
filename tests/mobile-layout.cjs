@@ -362,11 +362,24 @@ async function main() {
         await clock.fill('11:45');await clock.press('Tab');
         assert.match(await probability.locator('.sleep-probability-count').innerText(),/3.*12/);
         assert.match(await probability.locator('.sleep-probability-estimate').innerText(),/21/);
+        const tracks=probability.locator('.sleep-rhythm-track');assert.equal(await tracks.count(),7);
+        assert.ok(await probability.locator('.sleep-rhythm-recorded').count()>0);
+        assert.ok(await probability.locator('.sleep-rhythm-pattern').count()>0);
+        const track=tracks.last(),box=await track.boundingBox();
+        await track.click({position:{x:box.width/2,y:box.height/2}});assert.equal(await clock.inputValue(),'12:00');
+        await track.press('ArrowLeft');assert.equal(await clock.inputValue(),'11:45');
+        await track.press('Home');assert.equal(await clock.inputValue(),'00:00');
+        await track.press('End');assert.equal(await clock.inputValue(),'23:45');
+        await clock.fill('06:00');await clock.press('Tab');
+        assert.ok((await probability.locator('.sleep-rhythm-selected').evaluateAll(nodes=>nodes.map(node=>node.style.left))).every(left=>left==='25%'));
+        await clock.fill('11:45');await clock.press('Tab');
         await check('analysis-probability',true);
         await probability.locator('summary').click();await check('analysis-probability-method',true);
         await visit('/analysis','empty');await page.waitForSelector('.sleep-probability-card');
         assert.equal(await page.locator('.sleep-probability-estimate').count(),0);
         assert.match(await page.locator('.sleep-probability-count').innerText(),/0.*0/);
+        assert.equal(await page.locator('.sleep-rhythm-track').count(),7);
+        assert.equal(await page.locator('.sleep-rhythm-pattern').count(),0);
         await check('analysis-probability-empty',true);
         await visit('/analysis');await page.waitForSelector('.analysis-tab-content');
         for(let i=0;i<5;i++){await page.locator('.analysis-tab').nth(i).click();await check('analysis-'+i,true);}

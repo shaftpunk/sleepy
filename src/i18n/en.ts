@@ -611,6 +611,18 @@ const en = {
     splitTimeOutsideSession: "Split time must be inside the sleep session.",
   },
 
+  sleepTimeline: {
+    title: "Recorded sleep · last 7 days",
+    interaction: "Tap a row to select a time. Use arrow keys to move 15 minutes, or use the time selector.",
+    row: "{{day}}: {{count}} recorded sleep sessions",
+    recorded: "Recorded sleep",
+    pattern: "Estimated pattern",
+    emptyExplanation: "Empty periods mean no sleep was recorded. They do not necessarily mean the child was awake.",
+    patternExplanation: "The background pattern highlights times when sleep is often recorded. Recent days have more influence. Stronger shading means a higher estimate, not greater certainty.",
+    noRecordedSleep: "No sleep recorded",
+    noPattern: "No background is shown where estimates are unavailable or below 40%.",
+    dst: "Clock-change day: dashed areas mark missing or repeated local times. The axis shows clock time, not elapsed duration.",
+  },
   sleepProbability: {
     title: "Likely asleep",
     localTime: "Local clock time",

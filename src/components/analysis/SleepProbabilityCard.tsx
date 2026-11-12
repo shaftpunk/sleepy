@@ -2,6 +2,7 @@ import { useId, useMemo, useState } from "react";
 import { calculateSleepProbability } from "../../analytics/sleepProbability";
 import type { ActiveSleep, SleepSession } from "../../analytics/types";
 import { useTranslation } from "../../i18n";
+import SleepRhythmTimeline from "./SleepRhythmTimeline";
 
 export default function SleepProbabilityCard({ sessions, active, now }: {
   sessions: SleepSession[]; active: ActiveSleep | null; now: number;
@@ -19,6 +20,7 @@ export default function SleepProbabilityCard({ sessions, active, now }: {
           onChange={event => { if (/^([01]\d|2[0-3]):[0-5]\d$/.test(event.target.value)) setSelectedTime(event.target.value); }} />
       </div>
     </div>
+    <SleepRhythmTimeline sessions={sessions} active={active} now={now} selectedTime={selectedTime} onSelectTime={setSelectedTime} />
     <div role="status" aria-live="polite" aria-atomic="true">
       <p>{t("sleepProbability.atTime", { time: selectedTime })}</p>
       <p className="sleep-probability-count">{t("sleepProbability.recorded", { sleeping: result.sleepingDays, usable: result.usableDays })}</p>

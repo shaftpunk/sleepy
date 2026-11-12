@@ -400,3 +400,30 @@
 .sleep-probability-count { font-weight: 600; }
 .sleep-probability-estimate { font-size: clamp(1.5rem, 6vw, 2rem); font-weight: 700; margin: 8px 0; }
 .sleep-probability-card summary { min-height: 44px; cursor: pointer; padding-top: 10px; }
+.sleep-rhythm { --rhythm-solid: #b39cf0; --rhythm-pattern: #b39cf0; --rhythm-guide: rgba(200, 180, 230, .17); min-width: 0; }
+.sleep-rhythm h3 { margin: 16px 0 6px; font-size: 1rem; }
+.sleep-rhythm p { font-size: .8rem; line-height: 1.45; }
+.sleep-rhythm-row, .sleep-rhythm-axis { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 8px; align-items: center; }
+.sleep-rhythm-axis { margin: 14px 0 4px; }
+.sleep-rhythm-axis > div { position: relative; height: 20px; }
+.sleep-rhythm-axis > div > span { position: absolute; transform: translateX(-50%); font-size: .7rem; }
+.sleep-rhythm-axis > div > span:first-child { transform: none; }
+.sleep-rhythm-axis > div > span:last-child { transform: translateX(-100%); }
+.sleep-rhythm-day { font-size: .75rem; overflow-wrap: anywhere; }
+.sleep-rhythm-track { position: relative; display: block; width: 100%; height: 46px; min-height: 46px; padding: 0; border: 0; border-radius: 4px; overflow: hidden; color: inherit; background: repeating-linear-gradient(to right, var(--rhythm-guide) 0 1px, transparent 1px 25%); cursor: crosshair; touch-action: pan-y; }
+.sleep-rhythm-track:focus-visible { outline: 2px solid var(--rhythm-solid); outline-offset: 2px; }
+.sleep-rhythm-track > span { position: absolute; pointer-events: none; }
+.sleep-rhythm-pattern { top: 3px; bottom: 3px; background: repeating-linear-gradient(135deg, var(--rhythm-pattern) 0 1px, transparent 1px 4px); }
+.sleep-rhythm-pattern.weak { opacity: .12; }
+.sleep-rhythm-pattern.moderate { opacity: .23; }
+.sleep-rhythm-pattern.strong { opacity: .36; }
+.sleep-rhythm-recorded { top: 15px; height: 16px; min-width: 1px; border-radius: 2px; background: var(--rhythm-solid); }
+.sleep-rhythm-clock-change { top: 0; bottom: 0; border-inline: 1px dashed currentColor; background: rgba(128, 128, 128, .12); }
+.sleep-rhythm-selected { top: 0; bottom: 0; width: 2px; background: currentColor; transform: translateX(-1px); }
+.sleep-rhythm-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; font-size: .75rem; }
+.sleep-rhythm-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.sleep-rhythm-legend i { width: 20px; height: 10px; display: inline-block; border-radius: 2px; }
+.sleep-rhythm-recorded-key { background: var(--rhythm-solid); }
+.sleep-rhythm-pattern-key { background: repeating-linear-gradient(135deg, var(--rhythm-pattern) 0 1px, transparent 1px 4px); opacity: .6; }
+.sleep-rhythm-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+[data-theme="light"] .sleep-rhythm { --rhythm-solid: #8f74df; --rhythm-pattern: #8f74df; --rhythm-guide: rgba(73, 48, 104, .17); }

@@ -610,6 +610,18 @@ const no = {
     splitTimeOutsideSession: "Delingstidspunktet må være inni søvnøkten.",
   },
 
+  sleepTimeline: {
+    title: "Registrert søvn · siste 7 dager",
+    interaction: "Trykk på en rad for å velge tidspunkt. Bruk piltastene for å flytte 15 minutter, eller bruk tidsvelgeren.",
+    row: "{{day}}: {{count}} registrerte søvnperioder",
+    recorded: "Registrert søvn",
+    pattern: "Anslått mønster",
+    emptyExplanation: "Tomrom betyr at søvn ikke er registrert. Det betyr ikke nødvendigvis at barnet var våkent.",
+    patternExplanation: "Mønsteret i bakgrunnen viser tidspunkter der søvn ofte er registrert. Nyere dager teller mer. Sterkere skravering betyr et høyere anslag, ikke større sikkerhet.",
+    noRecordedSleep: "Ingen søvn registrert",
+    noPattern: "Ingen bakgrunn vises der anslag mangler eller er under 40 %.",
+    dst: "Dag med klokkeomstilling: stiplede områder viser manglende eller gjentatte lokale klokkeslett. Aksen viser klokkeslett, ikke forløpt tid.",
+  },
   sleepProbability: {
     title: "Sannsynlig søvn",
     localTime: "Lokalt klokkeslett",
