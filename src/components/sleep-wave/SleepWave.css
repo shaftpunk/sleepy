@@ -1,13 +1,14 @@
 .sleep-wave {
-  --wave-ink: #fff0ec;
-  --wave-muted: #e1cddc;
-  --wave-edge: #d6b0d1;
-  --wave-record-top: #b18ac2;
-  --wave-record-bottom: #654b74;
-  --wave-active: #e6c4c2;
-  --wave-forecast: #edcffa;
-  --wave-rule: #dbc1dc30;
-  --wave-border: #edcdda38;
+  --wave-ink: #f9f0ed;
+  --wave-muted: #ecd5db;
+  --wave-edge: #c39bab;
+  --wave-record-top: #ac8498;
+  --wave-record-bottom: #795569;
+  --wave-active: #e4c1cd;
+  --wave-forecast: #cdb5dd;
+  --wave-now: #f9f0ed;
+  --wave-rule: #e4c1cd30;
+  --wave-border: #f9f0ed36;
   position: relative;
   isolation: isolate;
   min-width: 0;
@@ -16,35 +17,35 @@
   border-radius: 30px;
   color: var(--wave-ink);
   background:
-    radial-gradient(ellipse at 49% 32%, #a97c8b40, transparent 48%),
-    radial-gradient(ellipse at 98% 62%, #a985bf36, transparent 58%),
-    radial-gradient(ellipse at 0 0, #a27e9954, transparent 58%),
-    linear-gradient(145deg, #4e374e, #302333 62%, #463348);
-  box-shadow: inset 0 1px 0 #ffe7ef18, 0 14px 35px #170f241f;
+    radial-gradient(ellipse at 50% 30%, #e4c1cd26, transparent 54%),
+    radial-gradient(ellipse at 52% 65%, #ac84982b, transparent 52%),
+    radial-gradient(ellipse at 0 4%, #ac849845, transparent 62%),
+    linear-gradient(145deg, #493044, #4c3143 44%, #382330);
+  box-shadow: inset 0 1px 0 #f9f0ed26, 0 14px 35px #4930442b;
 }
 [data-theme="light"] .sleep-wave {
-  --wave-ink: #402338;
-  --wave-muted: #67465e;
-  --wave-edge: #8b5f91;
-  --wave-record-top: #9665a5;
-  --wave-record-bottom: #c6a7c9;
-  --wave-active: #84577e;
-  --wave-forecast: #ac74cb;
-  --wave-rule: #69426624;
-  --wave-border: #ffffffa8;
+  --wave-ink: #493044;
+  --wave-muted: #694658;
+  --wave-edge: #795569;
+  --wave-record-top: #795569;
+  --wave-record-bottom: #ac8498;
+  --wave-active: #e4c1cd;
+  --wave-forecast: #ad88bd;
+  --wave-rule: #79556924;
+  --wave-border: #f9f0edb8;
   background:
-    radial-gradient(ellipse at 48% 32%, #fff7e9e0, transparent 52%),
-    radial-gradient(ellipse at 100% 62%, #c5aad77d, transparent 58%),
-    radial-gradient(ellipse at 0 0, #f9edec99, transparent 55%),
-    linear-gradient(140deg, #e2cbd9, #f0dedb 59%, #e9dce5);
-  box-shadow: inset 0 1px 0 #fff9, 0 12px 30px #59405714;
+    radial-gradient(ellipse at 50% 30%, #f9f0edee, transparent 54%),
+    radial-gradient(ellipse at 52% 65%, #e4c1cd66, transparent 52%),
+    radial-gradient(ellipse at 0 4%, #ac84982b, transparent 62%),
+    linear-gradient(140deg, #ead2d8, #f5e4df 59%, #ead0d9);
+  box-shadow: inset 0 1px 0 #f9f0edcc, 0 12px 30px #7955691f;
 }
 .sleep-wave .sleep-wave-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 0; }
 .sleep-wave-header > div { min-width: 0; flex: 1 1 160px; }
 .sleep-wave h2, .sleep-wave h3, .sleep-wave p { margin: 0; }
 .sleep-wave h2 { font-family: ui-serif, Georgia, "Times New Roman", serif; font-style: italic; font-weight: 400; font-size: clamp(1.85rem, 7.5vw, 2.5rem); line-height: 1.08; letter-spacing: -.045em; overflow-wrap: anywhere; }
 .sleep-wave-header p { margin-top: 6px; font-size: .75rem; line-height: 1.5; color: var(--wave-muted); overflow-wrap: anywhere; }
-.sleep-wave-today { flex-shrink: 0; margin-top: 2px; padding: 6px 12px; border: 1px solid var(--wave-border); border-radius: 30px; font-size: .75rem; background: #ffffff0d; }
+.sleep-wave-today { flex-shrink: 0; margin-top: 2px; padding: 6px 12px; border: 1px solid var(--wave-border); border-radius: 30px; font-size: .75rem; background: #f9f0ed0d; }
 .sleep-wave-forecast { display: grid; align-content: center; gap: 6px; min-height: 150px; padding: 24px 0 14px; text-align: center; }
 .sleep-wave h3 { font-family: ui-serif, Georgia, "Times New Roman", serif; font-size: 1.25rem; line-height: 1.35; font-weight: 400; }
 .sleep-wave .sleep-wave-time { color: var(--wave-ink); font-family: ui-serif, Georgia, "Times New Roman", serif; font-weight: 400; font-size: clamp(2.25rem, 9.5vw, 3.3rem); line-height: 1.15; font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.055em; overflow-wrap: anywhere; }
@@ -54,10 +55,11 @@
 .sleep-wave-chart svg { display: block; width: 100%; height: 145px; overflow: visible; }
 .sleep-wave-baseline { stroke: var(--wave-rule); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .sleep-wave-recorded { stroke: var(--wave-edge); stroke-width: 1; stroke-linejoin: round; }
-.sleep-wave-now-label { position: absolute; top: 0; transform: translateX(-50%); padding: 3px 7px; border-radius: 7px; background: var(--wave-ink); color: #402338; font-size: .65rem; line-height: 1.4; white-space: nowrap; }
-[data-theme="light"] .sleep-wave-now-label { color: #fff7f3; }
-.sleep-wave-now-marker line { stroke: var(--wave-ink); stroke-width: 1; vector-effect: non-scaling-stroke; opacity: .8; }
-.sleep-wave-now-marker circle { fill: var(--wave-ink); }
+.sleep-wave-now-label { position: absolute; top: 0; transform: translateX(-50%); padding: 3px 7px; border-radius: 7px; background: var(--wave-ink); color: #493044; font-size: .65rem; line-height: 1.4; white-space: nowrap; }
+[data-theme="light"] .sleep-wave-now-label { color: #f9f0ed; }
+.sleep-wave-now-marker { filter: drop-shadow(0 0 1px #493044b3); }
+.sleep-wave-now-marker line { stroke: var(--wave-now); stroke-width: 1; vector-effect: non-scaling-stroke; opacity: .8; }
+.sleep-wave-now-marker circle { fill: var(--wave-now); }
 .sleep-wave-now-marker .sleep-wave-now-halo { opacity: .12; }
 .sleep-wave-forecast-edge { fill: none; stroke: var(--wave-edge); stroke-width: 1; stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
 .sleep-wave-onset { fill: var(--wave-ink); stroke: var(--wave-edge); stroke-width: 1; }
