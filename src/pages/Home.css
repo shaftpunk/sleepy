@@ -86,8 +86,8 @@
 .home-page .home-live-state {
   position: relative;
   display: grid;
-  gap: 10px;
-  padding: 16px 12px 12px;
+  gap: 6px;
+  padding: 10px 12px 4px;
   border: 0;
   background: transparent;
   box-shadow: none;
@@ -100,7 +100,7 @@
   overflow-wrap: anywhere;
 }
 .home-page .home-live-state .sleep-subtitle { margin: 0; color: var(--ui-muted); font-size: .9rem; line-height: 1.5; }
-.home-sleep-insight { display: grid; align-content: center; min-height: 80px; padding: 8px 0; }
+.home-sleep-insight { display: grid; align-content: center; padding: 4px 0; }
 .home-live-state .active-sleep-estimate { display: grid; gap: 5px; width: 100%; max-width: 320px; margin: 0 auto; }
 .home-live-state .active-sleep-estimate progress { height: 8px; margin: 0 0 4px; appearance: none; border: 0; border-radius: 4px; overflow: hidden; background: rgba(149, 117, 225, .24); }
 .home-live-state progress::-webkit-progress-bar { background: rgba(149, 117, 225, .24); }
@@ -139,3 +139,6 @@
 @media (prefers-reduced-motion: no-preference) {
   .home-live-state .sleep-action { transition: background-color .2s ease; }
 }
+
+/* Bring the tracking section and forecast together without changing actions. */
+.home-page .home-live-state + .sleep-wave { margin-top: -10px; }

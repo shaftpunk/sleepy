@@ -12,7 +12,7 @@
   position: relative;
   isolation: isolate;
   min-width: 0;
-  padding: clamp(18px, 5vw, 28px);
+  padding: clamp(14px, 4vw, 20px) clamp(18px, 5vw, 28px);
   border: 1px solid var(--wave-border);
   border-radius: 30px;
   color: var(--wave-ink);
@@ -44,9 +44,9 @@
 .sleep-wave-header > div { min-width: 0; flex: 1 1 160px; }
 .sleep-wave h2, .sleep-wave h3, .sleep-wave p { margin: 0; }
 .sleep-wave h2 { font-family: ui-serif, Georgia, "Times New Roman", serif; font-style: italic; font-weight: 400; font-size: clamp(1.85rem, 7.5vw, 2.5rem); line-height: 1.08; letter-spacing: -.045em; overflow-wrap: anywhere; }
-.sleep-wave-header p { margin-top: 6px; font-size: .75rem; line-height: 1.5; color: var(--wave-muted); overflow-wrap: anywhere; }
+.sleep-wave-header p { margin-top: 4px; font-size: .75rem; line-height: 1.5; color: var(--wave-muted); overflow-wrap: anywhere; }
 .sleep-wave-today { flex-shrink: 0; margin-top: 2px; padding: 6px 12px; border: 1px solid var(--wave-border); border-radius: 30px; font-size: .75rem; background: #f9f0ed0d; }
-.sleep-wave-forecast { display: grid; align-content: center; gap: 6px; min-height: 150px; padding: 24px 0 14px; text-align: center; }
+.sleep-wave-forecast { display: grid; align-content: center; gap: 6px; padding: 18px 0 12px; text-align: center; }
 .sleep-wave h3 { font-family: ui-serif, Georgia, "Times New Roman", serif; font-size: 1.25rem; line-height: 1.35; font-weight: 400; }
 .sleep-wave .sleep-wave-time { color: var(--wave-ink); font-family: ui-serif, Georgia, "Times New Roman", serif; font-weight: 400; font-size: clamp(2.25rem, 9.5vw, 3.3rem); line-height: 1.15; font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.055em; overflow-wrap: anywhere; }
 .sleep-wave .sleep-wave-caption { color: var(--wave-muted); font-family: ui-serif, Georgia, "Times New Roman", serif; font-style: italic; font-size: 1rem; line-height: 1.5; }
@@ -63,21 +63,21 @@
 .sleep-wave-now-marker .sleep-wave-now-halo { opacity: .12; }
 .sleep-wave-forecast-edge { fill: none; stroke: var(--wave-edge); stroke-width: 1; stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
 .sleep-wave-onset { fill: var(--wave-ink); stroke: var(--wave-edge); stroke-width: 1; }
-.sleep-wave-axis { position: relative; height: max(52px, 4.5em); color: var(--wave-muted); font-size: .65rem; font-variant-numeric: tabular-nums; }
+.sleep-wave-axis { position: relative; height: max(26px, 1.6em); color: var(--wave-muted); font-size: .65rem; font-variant-numeric: tabular-nums; }
 .sleep-wave-axis > span { position: absolute; top: 0; text-align: center; transform: translateX(-50%); white-space: nowrap; line-height: 1.5; }
 .sleep-wave-axis .is-first { transform: none; }
 .sleep-wave-axis .is-last { transform: translateX(-100%); }
 .sleep-wave-axis small { display: block; font-size: .85em; }
-.sleep-wave-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; color: var(--wave-muted); font-size: .65rem; line-height: 1.5; padding: 0 0 18px; }
+.sleep-wave-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; color: var(--wave-muted); font-size: .65rem; line-height: 1.5; padding: 0 0 8px; }
 .sleep-wave-legend > span { display: inline-flex; align-items: center; gap: 6px; }
 .sleep-wave-legend i { width: 9px; height: 9px; border-radius: 50%; background: var(--wave-record-top); }
 .sleep-wave-legend .is-forecast { background: transparent; border: 1px dashed var(--wave-edge); border-radius: 2px; }
 .sleep-wave-legend .is-active { background: repeating-linear-gradient(45deg, var(--wave-active) 0 2px, transparent 2px 4px); }
-.sleep-wave-events { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 4.5rem), 1fr)); gap: 12px; margin: 0; padding: 16px 0 0; border-top: 1px solid var(--wave-rule); }
+.sleep-wave-events { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 4.5rem), 1fr)); gap: 12px; margin: 0; padding: 10px 0 0; border-top: 1px solid var(--wave-rule); }
 .sleep-wave-events > div { min-width: 0; }
-.sleep-wave-events dt { margin: 0 0 6px; color: var(--wave-muted); font-size: .65rem; line-height: 1.5; overflow-wrap: anywhere; }
+.sleep-wave-events dt { margin: 0 0 4px; color: var(--wave-muted); font-size: .65rem; line-height: 1.5; overflow-wrap: anywhere; }
 .sleep-wave-events dd { margin: 0; font-size: .78rem; line-height: 1.6; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.sleep-wave .sleep-wave-note { margin-top: 16px; color: var(--wave-muted); font-size: .65rem; line-height: 1.6; }
+.sleep-wave .sleep-wave-note { margin-top: 8px; color: var(--wave-muted); font-size: .65rem; line-height: 1.6; }
 .sleep-wave-accessible-history { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (prefers-reduced-motion: no-preference) {
   .sleep-wave-now-marker { transition: transform .3s ease; }
@@ -86,3 +86,8 @@
   .sleep-wave { border-radius: 26px; }
   .sleep-wave-legend { gap: 8px 12px; }
 }
+
+/* Short status copy needs no forecast-sized reservation. Calendar/DST labels
+   retain room for their extra lines and grow with the text size. */
+.sleep-wave:not([data-wave-state="ready"]) .sleep-wave-forecast { padding: 12px 0 8px; }
+.sleep-wave-axis:has(small) { height: max(48px, 4.5em); }
