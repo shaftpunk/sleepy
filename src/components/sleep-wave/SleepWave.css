@@ -1,4 +1,6 @@
 .sleep-wave {
+  --font-editorial: ui-serif, Georgia, "Times New Roman", serif;
+  --font-wave-ui: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --wave-ink: #f9f0ed;
   --wave-muted: #ecd5db;
   --wave-edge: #c39bab;
@@ -51,13 +53,13 @@
 .sleep-wave .sleep-wave-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 0; }
 .sleep-wave-header > div { min-width: 0; flex: 1 1 160px; }
 .sleep-wave h2, .sleep-wave h3, .sleep-wave p { margin: 0; }
-.sleep-wave h2 { font-family: ui-serif, Georgia, "Times New Roman", serif; font-style: italic; font-weight: 400; font-size: clamp(1.85rem, 7.5vw, 2.5rem); line-height: 1.08; letter-spacing: -.045em; overflow-wrap: anywhere; }
+.sleep-wave h2 { font-family: var(--font-editorial); font-style: italic; font-weight: 400; font-size: clamp(1.85rem, 7.5vw, 2.5rem); line-height: 1.08; letter-spacing: -.045em; overflow-wrap: anywhere; }
 .sleep-wave-header p { margin-top: 4px; font-size: .75rem; line-height: 1.5; color: var(--wave-muted); overflow-wrap: anywhere; }
 .sleep-wave-today { flex-shrink: 0; margin-top: 2px; padding: 6px 12px; border: 1px solid var(--wave-border); border-radius: 30px; font-size: .75rem; background: #f9f0ed0d; }
 .sleep-wave-forecast { display: grid; align-content: center; gap: 6px; padding: 18px 0 12px; text-align: center; }
-.sleep-wave h3 { font-family: ui-serif, Georgia, "Times New Roman", serif; font-size: 1.25rem; line-height: 1.35; font-weight: 400; }
-.sleep-wave .sleep-wave-time { color: var(--wave-ink); font-family: ui-serif, Georgia, "Times New Roman", serif; font-weight: 400; font-size: clamp(2.25rem, 9.5vw, 3.3rem); line-height: 1.15; font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.055em; overflow-wrap: anywhere; }
-.sleep-wave .sleep-wave-caption { color: var(--wave-muted); font-family: ui-serif, Georgia, "Times New Roman", serif; font-style: italic; font-size: 1rem; line-height: 1.5; }
+.sleep-wave h3 { font-family: var(--font-editorial); font-size: 1.25rem; line-height: 1.35; font-weight: 400; }
+.sleep-wave .sleep-wave-time { color: var(--wave-ink); font-family: var(--font-wave-ui); font-weight: 400; font-size: clamp(2.25rem, 9.5vw, 3.3rem); line-height: 1.15; font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.055em; overflow-wrap: anywhere; }
+.sleep-wave .sleep-wave-caption { color: var(--wave-muted); font-family: var(--font-wave-ui); font-style: normal; font-size: 1rem; line-height: 1.5; }
 .sleep-wave .sleep-wave-state-copy { max-width: 29ch; margin: 3px auto 0; font-size: .85rem; line-height: 1.6; color: var(--wave-muted); }
 .sleep-wave-chart { position: relative; padding-top: 23px; }
 .sleep-wave-chart svg { display: block; width: 100%; height: 145px; overflow: visible; }
@@ -101,6 +103,11 @@
 .sleep-wave-axis:has(small) { height: max(48px, 4.5em); }
 
 /* Paint-only accents: preserve the approved layout and chart coordinates. */
-.sleep-wave .sleep-wave-time, .sleep-wave[data-wave-state="sleeping"] h3 { color: var(--wave-key); text-shadow: 0 0 12px var(--wave-glow); }
+.sleep-wave .sleep-wave-time, .sleep-wave[data-wave-state="sleeping"] h3 { color: var(--wave-key); text-shadow: none; }
 .sleep-wave [data-wave-active] { filter: drop-shadow(0 0 2px var(--wave-glow)); }
 .sleep-wave-now-label { box-shadow: 0 0 8px var(--wave-glow); }
+
+.sleep-wave h2 { letter-spacing: -.035em; }
+.sleep-wave-events dd { color: var(--wave-key); }
+.sleep-wave-now-marker line { opacity: .65; }
+.sleep-wave-now-marker .sleep-wave-now-halo { opacity: .09; }

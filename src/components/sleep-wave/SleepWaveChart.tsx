@@ -22,7 +22,8 @@ export default function SleepWaveChart({ model }: { model: SleepWaveModel }) {
       <defs>
         <linearGradient id={`${id}-recorded`} x1="0" y1="0" x2="0.25" y2="1">
           <stop offset="0" stopColor="var(--wave-contour)" />
-          <stop offset=".22" stopColor="var(--wave-record-top)" />
+          <stop offset=".14" stopColor="var(--wave-record-top)" />
+          <stop offset=".48" stopColor="var(--wave-forecast)" stopOpacity=".7" />
           <stop offset="1" stopColor="var(--wave-record-bottom)" />
         </linearGradient>
         <linearGradient id={`${id}-forecast`} x1="0" y1="0" x2="1" y2="0">

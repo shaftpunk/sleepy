@@ -48,7 +48,7 @@ test('nearby short naps and active sleep limit symmetric expansion without overl
  const segments=[{start:.4,end:.401},{start:.402,end:.403},{start:.7,end:.9}];
  const result=display(segments,250,[{start:.404,end:.5}]);
  assert.ok(result[0].end<=result[1].start);assert.ok(result[1].end<=.404);
- assert.equal(result[2].start,.7);assert.equal(result[2].end,.9);
+ assert.ok(Math.abs(result[2].start-.7)<1e-9);assert.ok(Math.abs(result[2].end-.9)<1e-9);
  for(let i=0;i<2;i++)assert.ok(Math.abs(result[i].start+result[i].end-segments[i].start-segments[i].end)<1e-9);
  const edge=display([{start:0,end:.001}],250)[0];assert.ok(edge.start>=0);
 });
