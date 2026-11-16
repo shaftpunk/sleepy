@@ -1,4 +1,84 @@
-/* Shared awake/asleep geometry; the landscape and theme still belong to App. */
+/* Home-only premium surfaces. :has keeps the shell and navigation palette tied
+   to the mounted route, including after the lazy stylesheet has loaded.
+   Optional illustrated/pixel skins retain their own visual identity. */
+:where(html:not([data-visual-theme="alive"]):not([data-visual-theme="retro"])) [data-theme]:has(> .app-shell > .home-page) {
+  --ui-text: #f9f0ed;
+  --ui-muted: #d9c0cf;
+  --ui-border: #d9b4c730;
+  --ui-control: #d9b4c714;
+  --ui-surface: #382738;
+  --ui-focus: #e4c1cd;
+  --home-edge: #f9f0ed24;
+  --home-shadow: #190e2026;
+  --home-nav: #302130f5;
+  color: var(--ui-text);
+  background:
+    radial-gradient(ellipse 95% 650px at 15% 160px, #79556940, transparent 75%),
+    radial-gradient(ellipse 90% 750px at 90% 500px, #c5acdd12, transparent 75%),
+    linear-gradient(180deg, #342238, #2c202e 850px, #241b28);
+
+  &[data-theme="light"] {
+    --ui-text: #38273c;
+    --ui-muted: #694e63;
+    --ui-border: #79556930;
+    --ui-control: #7955690d;
+    --ui-surface: #faf1ed;
+    --ui-focus: #76556d;
+    --home-edge: #fffaf5c9;
+    --home-shadow: #79556914;
+    --home-nav: #f5e8e7f5;
+    background:
+      radial-gradient(ellipse 95% 650px at 15% 160px, #d9b4c74d, transparent 75%),
+      radial-gradient(ellipse 90% 750px at 90% 500px, #c5acdd40, transparent 75%),
+      linear-gradient(180deg, #faf1ed, #f5e8e7 850px, #eee3ed);
+  }
+
+  .home-header h1 {
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+    font-weight: 400;
+    letter-spacing: -.035em;
+  }
+  .home-page .sleep-timer { font-weight: 500; }
+  .home-page :is(.eyebrow, .card-label, .muted, .today-stats span, .sleep-list-item p, .sleep-strip-summary, .sleep-strip-times, .history-content span, .history-content p) {
+    color: var(--ui-muted);
+  }
+  .home-page :is(.feed-card, .family-message-card, .empty-card, .sleep-list-item, .sleep-strip, .history-item) {
+    color: var(--ui-text);
+    border-color: var(--home-edge);
+    background: linear-gradient(145deg, var(--ui-control), transparent), var(--ui-surface);
+    box-shadow: inset 0 1px 0 var(--home-edge), 0 8px 24px var(--home-shadow);
+  }
+  .home-page :is(.status-pill, .secondary-button) {
+    color: var(--ui-text);
+    border-color: var(--ui-border);
+    background: var(--ui-control);
+    box-shadow: inset 0 1px 0 var(--home-edge);
+  }
+  .home-page .primary-button.sleep-action {
+    color: #f9f0ed;
+    background: linear-gradient(145deg, #795569, #493044);
+    box-shadow: inset 0 1px 0 #f9f0ed30, 0 8px 22px var(--home-shadow);
+    font-weight: 600;
+  }
+  .home-page .primary-button.sleep-action.is-sleeping {
+    color: #493044;
+    background: linear-gradient(145deg, #e4c1cd, #cdb5dd);
+  }
+  .home-page .primary-button.sleep-action:focus-visible { outline-color: var(--ui-focus); }
+  .home-page .text-button { color: var(--ui-text); }
+  .home-live-state progress::-webkit-progress-bar { background: var(--ui-control); }
+  .home-live-state progress::-webkit-progress-value { background: var(--ui-focus); }
+  .home-live-state progress::-moz-progress-bar { background: var(--ui-focus); }
+  .bottom-nav {
+    background: var(--home-nav);
+    border-color: var(--home-edge);
+    box-shadow: 0 -4px 24px var(--home-shadow);
+  }
+  .bottom-nav a { color: var(--ui-muted); }
+  .bottom-nav a.active { color: var(--ui-text); background: var(--ui-control); }
+}
+
+/* Shared awake/asleep geometry. */
 .home-page .home-header { flex-direction: row; align-items: center; }
 .home-page .home-header > div:first-child { flex: 1; }
 .home-page .home-header h1 { font-size: clamp(1.3rem, 6vw, 1.8rem); }
