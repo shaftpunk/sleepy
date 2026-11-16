@@ -1,13 +1,22 @@
-import { useId } from "react";
-import { recordedWavePath, type SleepWaveModel } from "../../analytics/sleepWaveModel";
+import { useEffect, useId, useRef, useState } from "react";
+import { recordedDisplaySegments, recordedWavePath, type SleepWaveModel } from "../../analytics/sleepWaveModel";
 import { LOCALES, useTranslation } from "../../i18n";
 import { formatClock } from "../../lib/format";
 
 export default function SleepWaveChart({ model }: { model: SleepWaveModel }) {
   const id = useId().replace(/:/g, "");
   const { t, lang } = useTranslation();
-  const recorded = model.recorded.map(recordedWavePath).join(" ");
-  return <div className="sleep-wave-chart" aria-hidden="true">
+  const chartRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const element = chartRef.current;
+    if (!element) return;
+    const observer = new ResizeObserver(entries => setWidth(entries[0].contentRect.width));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const recorded = recordedDisplaySegments(model.recorded, width, model.active ? [model.active] : []).map(recordedWavePath).join(" ");
+  return <div ref={chartRef} className="sleep-wave-chart" aria-hidden="true">
     <div className="sleep-wave-now-label" style={{ left: `${model.now * 100}%` }}>{t("sleepWave.now")}</div>
     <svg viewBox="0 0 640 174" preserveAspectRatio="none" focusable="false">
       <defs>

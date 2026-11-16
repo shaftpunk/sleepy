@@ -78,3 +78,17 @@ export function buildSleepWaveModel({ sessions, active, prediction, now }: {
     forecasts: windows.map(w => ({ ...segment(w), likely: position(Math.max(w.startMs, Math.min(w.endMs, w.likelyMs ?? (w.startMs + w.endMs) / 2))) })),
     now: position(now), ticks, lastCompleted };
 }
+
+/** Display-only expansion; neighbors and domain edges take priority over minimum width. */
+export function recordedDisplaySegments(segments: WaveSegment[], chartWidth: number, neighbors: WaveSegment[] = []): WaveSegment[] {
+  if (!(chartWidth > 0)) return segments;
+  const all = [...segments, ...neighbors];
+  return segments.map(segment => {
+    const center = (segment.start + segment.end) / 2;
+    let radius = Math.max((segment.end - segment.start) / 2, 6 / chartWidth);
+    const left = Math.max(0, ...all.filter(s => s !== segment && s.end <= segment.start).map(s => (s.end + segment.start) / 2));
+    const right = Math.min(1, ...all.filter(s => s !== segment && s.start >= segment.end).map(s => (segment.end + s.start) / 2));
+    radius = Math.max((segment.end - segment.start) / 2, Math.min(radius, center - left, right - center));
+    return { ...segment, start: center - radius, end: center + radius };
+  });
+}

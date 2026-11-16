@@ -33,3 +33,22 @@ test('forecast across repeated DST hour displays both offsets and exact onset wi
  const input={sessions:[],active:null,now:n,prediction:{status:'ready',earliestStart:start,latestStart:end,likelyStart:start+10*minute,sampleSize:10}};
  const m=build(input);assert.equal(m.forecasts[0].endMs-m.forecasts[0].startMs,20*minute);const html=render('en',input);assert.ok(html.includes('GMT+2')&&html.includes('GMT+1'));
 });
+const {recordedDisplaySegments:display}=load('src/analytics/sleepWaveModel.ts');
+test('short recorded displays use 12 CSS pixels, preserve centers and timestamps across mobile widths',()=>{
+ for(const width of [242,280,295,310,350]){
+  const original={start:.4,end:.401,startMs:at(9),endMs:at(9,1)};
+  const result=display([original],width)[0];
+  assert.ok(Math.abs((result.end-result.start)*width-12)<1e-9);
+  assert.equal((result.start+result.end)/2,(original.start+original.end)/2);
+  assert.equal(result.startMs,original.startMs);assert.equal(result.endMs,original.endMs);
+  assert.equal(original.start,.4);
+ }
+});
+test('nearby short naps and active sleep limit symmetric expansion without overlap',()=>{
+ const segments=[{start:.4,end:.401},{start:.402,end:.403},{start:.7,end:.9}];
+ const result=display(segments,250,[{start:.404,end:.5}]);
+ assert.ok(result[0].end<=result[1].start);assert.ok(result[1].end<=.404);
+ assert.equal(result[2].start,.7);assert.equal(result[2].end,.9);
+ for(let i=0;i<2;i++)assert.ok(Math.abs(result[i].start+result[i].end-segments[i].start-segments[i].end)<1e-9);
+ const edge=display([{start:0,end:.001}],250)[0];assert.ok(edge.start>=0);
+});
