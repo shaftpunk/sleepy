@@ -12,16 +12,19 @@ export default function SleepWaveChart({ model }: { model: SleepWaveModel }) {
     <svg viewBox="0 0 640 174" preserveAspectRatio="none" focusable="false">
       <defs>
         <linearGradient id={`${id}-recorded`} x1="0" y1="0" x2="0.25" y2="1">
-          <stop offset="0" stopColor="var(--wave-record-top)" />
+          <stop offset="0" stopColor="var(--wave-contour)" />
+          <stop offset=".22" stopColor="var(--wave-record-top)" />
           <stop offset="1" stopColor="var(--wave-record-bottom)" />
         </linearGradient>
         <linearGradient id={`${id}-forecast`} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0" stopColor="var(--wave-forecast)" stopOpacity=".13" />
-          <stop offset=".5" stopColor="var(--wave-forecast)" stopOpacity=".5" />
+          <stop offset=".4" stopColor="var(--wave-forecast)" stopOpacity=".42" />
+          <stop offset=".5" stopColor="var(--wave-light)" stopOpacity=".46" />
+          <stop offset=".6" stopColor="var(--wave-forecast)" stopOpacity=".42" />
           <stop offset="1" stopColor="var(--wave-forecast)" stopOpacity=".13" />
         </linearGradient>
         <linearGradient id={`${id}-active`} x1="0" y1="0" x2="0" y2="1">
-          <stop stopColor="var(--wave-active)" /><stop offset="1" stopColor="var(--wave-record-bottom)" />
+          <stop stopColor="var(--wave-light)" /><stop offset=".25" stopColor="var(--wave-active)" /><stop offset="1" stopColor="var(--wave-record-bottom)" />
         </linearGradient>
         <pattern id={`${id}-stripes`} width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
           <line x1="0" x2="0" y2="10" stroke="var(--wave-ink)" strokeOpacity=".24" strokeWidth="2" />

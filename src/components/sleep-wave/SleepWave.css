@@ -6,7 +6,11 @@
   --wave-record-bottom: #795569;
   --wave-active: #e4c1cd;
   --wave-forecast: #cdb5dd;
-  --wave-now: #f9f0ed;
+  --wave-now: #f6e2c8;
+  --wave-light: #f6e2c8;
+  --wave-key: #faeee0;
+  --wave-glow: #e7c4b025;
+  --wave-contour: #e7c4b0;
   --wave-rule: #e4c1cd30;
   --wave-border: #f9f0ed36;
   position: relative;
@@ -17,11 +21,11 @@
   border-radius: 30px;
   color: var(--wave-ink);
   background:
-    radial-gradient(ellipse at 50% 30%, #e4c1cd26, transparent 54%),
-    radial-gradient(ellipse at 52% 65%, #ac84982b, transparent 52%),
+    radial-gradient(ellipse at 50% 30%, #f6e2c81c, transparent 54%),
+    radial-gradient(ellipse at 52% 65%, #d8a7c326, transparent 52%),
     radial-gradient(ellipse at 0 4%, #ac849845, transparent 62%),
     linear-gradient(145deg, #493044, #4c3143 44%, #382330);
-  box-shadow: inset 0 1px 0 #f9f0ed26, 0 14px 35px #4930442b;
+  box-shadow: inset 0 1px 0 #f6e2c83b, 0 14px 35px #4930442b;
 }
 [data-theme="light"] .sleep-wave {
   --wave-ink: #493044;
@@ -33,8 +37,12 @@
   --wave-forecast: #ad88bd;
   --wave-rule: #79556924;
   --wave-border: #f9f0edb8;
+  --wave-light: #e7c4b0;
+  --wave-key: #493044;
+  --wave-glow: #f6e2c830;
+  --wave-contour: #9a748d;
   background:
-    radial-gradient(ellipse at 50% 30%, #f9f0edee, transparent 54%),
+    radial-gradient(ellipse at 50% 30%, #faf3eeee, transparent 54%),
     radial-gradient(ellipse at 52% 65%, #e4c1cd66, transparent 52%),
     radial-gradient(ellipse at 0 4%, #ac84982b, transparent 62%),
     linear-gradient(140deg, #ead2d8, #f5e4df 59%, #ead0d9);
@@ -54,10 +62,10 @@
 .sleep-wave-chart { position: relative; padding-top: 23px; }
 .sleep-wave-chart svg { display: block; width: 100%; height: 145px; overflow: visible; }
 .sleep-wave-baseline { stroke: var(--wave-rule); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.sleep-wave-recorded { stroke: var(--wave-edge); stroke-width: 1; stroke-linejoin: round; }
+.sleep-wave-recorded { stroke: var(--wave-contour); stroke-width: 1; stroke-linejoin: round; }
 .sleep-wave-now-label { position: absolute; top: 0; transform: translateX(-50%); padding: 3px 7px; border-radius: 7px; background: var(--wave-ink); color: #493044; font-size: .65rem; line-height: 1.4; white-space: nowrap; }
 [data-theme="light"] .sleep-wave-now-label { color: #f9f0ed; }
-.sleep-wave-now-marker { filter: drop-shadow(0 0 1px #493044b3); }
+.sleep-wave-now-marker { filter: drop-shadow(0 0 1px #493044b3) drop-shadow(0 0 3px var(--wave-glow)); }
 .sleep-wave-now-marker line { stroke: var(--wave-now); stroke-width: 1; vector-effect: non-scaling-stroke; opacity: .8; }
 .sleep-wave-now-marker circle { fill: var(--wave-now); }
 .sleep-wave-now-marker .sleep-wave-now-halo { opacity: .12; }
@@ -91,3 +99,8 @@
    retain room for their extra lines and grow with the text size. */
 .sleep-wave:not([data-wave-state="ready"]) .sleep-wave-forecast { padding: 12px 0 8px; }
 .sleep-wave-axis:has(small) { height: max(48px, 4.5em); }
+
+/* Paint-only accents: preserve the approved layout and chart coordinates. */
+.sleep-wave .sleep-wave-time, .sleep-wave[data-wave-state="sleeping"] h3 { color: var(--wave-key); text-shadow: 0 0 12px var(--wave-glow); }
+.sleep-wave [data-wave-active] { filter: drop-shadow(0 0 2px var(--wave-glow)); }
+.sleep-wave-now-label { box-shadow: 0 0 8px var(--wave-glow); }
