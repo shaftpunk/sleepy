@@ -1,5 +1,6 @@
 import { PurchaseFailure, type PurchaseContext, type PurchaseResult, type RevenueCatDiagnostics,
   type ServerReconciliation } from "./revenueCatModel";
+import { purchaseDiagnostic, type PurchaseDiagnostic } from "./revenueCatDiagnostics";
 
 type Action = "monthly" | "annual" | "restore" | "refresh";
 type Services = {
@@ -13,6 +14,7 @@ export type PurchaseTestState = {
   busy: boolean; diagnostics: RevenueCatDiagnostics | null; diagnosticError: boolean; result: PurchaseResult | null;
   reconciliation: ServerReconciliation | null; serverError: boolean;
   issue: PurchaseFailure["issue"] | null; paymentPending: boolean;
+  operationErrors?: PurchaseDiagnostic[];
 };
 // UI orchestration only. The existing purchase service owns prepare -> Apple -> reconcile.
 export function createPurchaseTestController(userId: string, context: PurchaseContext | null,
@@ -42,7 +44,8 @@ export function createPurchaseTestController(userId: string, context: PurchaseCo
           const reconciliation = await services.reconcile();
           publish({ reconciliation, serverError: false,
             paymentPending: state.paymentPending && !["verified", "sandboxVerified"].includes(reconciliation.state) });
-        } catch { publish({ serverError: true, issue: "network" }); }
+        } catch (error) { publish({ serverError: true, issue: "network",
+          operationErrors: [...(state.operationErrors ?? []).slice(-3), purchaseDiagnostic("reconciliation", error)] }); }
       } else {
         if (action !== "restore" && (!context || context.userId !== userId)) throw new PurchaseFailure("context");
         const result = action === "restore" ? await services.restore() : await services.purchase(action, context!);

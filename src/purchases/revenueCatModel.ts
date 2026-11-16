@@ -1,4 +1,5 @@
 import type { CustomerInfo, PurchasesOfferings, PurchasesPackage } from "@revenuecat/purchases-capacitor";
+import type { OfferingDiscovery, PurchaseDiagnostic } from "./revenueCatDiagnostics";
 
 export const REVENUECAT = {
   entitlement: "plus", offering: "default",
@@ -18,7 +19,10 @@ export type PurchaseEvidence = {
 };
 export const EMPTY_PURCHASE_EVIDENCE: PurchaseEvidence = Object.freeze({ status: "unavailable", entitlement: null,
   expiration: null, productIdentifier: null, willRenew: null, refreshedAt: null, issue: null, environment: null });
-export type RevenueCatDiagnostics = { available: boolean; configured: boolean; appUserIdPrefix: string | null; evidence: PurchaseEvidence };
+export type RevenueCatDiagnostics = { available: boolean; configured: boolean; appUserIdPrefix: string | null; evidence: PurchaseEvidence;
+  apiKeyStatus?: "missing" | "invalid" | "ios_public_key";
+  discovery?: OfferingDiscovery;
+  operations?: PurchaseDiagnostic[] };
 export class PurchaseFailure extends Error {
   readonly issue: PurchaseIssue;
   constructor(issue: PurchaseIssue) { super(`Purchase operation unavailable: ${issue}`); this.issue = issue; }

@@ -65,6 +65,10 @@ export function SleepyPlusTestView({ userId, householdId, state, resolved, onAct
     : state.issue ? t(`purchases.${state.issue}`)
     : state.result ? t(purchaseMessageKey({ ...state.result, reconciliation: server ?? undefined })) : null;
   const row = (label: string, value: string) => <div><dt>{label}</dt><dd>{value}</dd></div>;
+  const discovery = sdk?.discovery;
+  const operations = [...(sdk?.operations ?? []), ...(state.operationErrors ?? [])];
+  const fact = (value: boolean | null | undefined) => value == null ? t("plusTesting.notChecked")
+    : t(value ? "plusTesting.yes" : "plusTesting.no");
   return <section className="settings-card settings-card--stack plus-test-panel" aria-labelledby="plus-test-title">
     <h2 className="setting-title" id="plus-test-title">{t("plusTesting.title")}</h2>
     <p className="setting-description">{t("plusTesting.temporary")}</p>
@@ -79,6 +83,30 @@ export function SleepyPlusTestView({ userId, householdId, state, resolved, onAct
       {row(t("plusTesting.product"), safeProduct)}
       {row(t("plusTesting.environment"), sdk?.evidence.environment ?? "—")}
     </dl>
+    <details className="plus-test-diagnostics" open>
+      <summary>{t("plusTesting.diagnostics")}</summary>
+      <dl>
+        {row(t("plusTesting.apiKey"), t(sdk?.apiKeyStatus === "ios_public_key" ? "plusTesting.publicKeyPresent"
+          : sdk?.apiKeyStatus === "invalid" ? "plusTesting.invalidKey" : sdk?.apiKeyStatus === "missing" ? "plusTesting.missingKey" : "plusTesting.notChecked"))}
+        {row(t("plusTesting.currentOffering"), fact(discovery?.currentOfferingExists))}
+        {row("default", fact(discovery?.expectedOfferingMatches))}
+        {row("$rc_monthly", fact(discovery?.monthlyPackageFound))}
+        {row("$rc_annual", fact(discovery?.annualPackageFound))}
+        {row(t("plusTesting.monthlyMapping"), fact(discovery?.monthlyMappingValid))}
+        {row(t("plusTesting.annualMapping"), fact(discovery?.annualMappingValid))}
+        {row(t("plusTesting.storeKitIssue"), operations.length ? fact(operations.some(op => op.storeKitIssue)) : fact(null))}
+        {row(t("plusTesting.configurationIssue"), operations.length ? fact(operations.some(op => op.configurationIssue)) : fact(null))}
+      </dl>
+      <ol>
+        {operations.map((op, i) => <li key={i}>
+          <strong>{op.operation}: {t(op.outcome === "success" ? "plusTesting.succeeded" : op.outcome === "cancelled" ? "purchases.cancelled" : "plusTesting.error")}</strong>
+          {op.outcome !== "success" && <>
+            <p>{t("plusTesting.errorCode")}: {op.code ?? "—"}</p>
+            <p>{t("plusTesting.errorMessage")}: {op.message ?? "—"}</p>
+          </>}
+        </li>)}
+      </ol>
+    </details>
     <h3>{t("plusTesting.server")}</h3>
     <dl>
       {row("state", state.serverError ? "unknown" : server?.state ?? authoritative?.verificationState ?? "unknown")}

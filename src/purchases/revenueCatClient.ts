@@ -1,5 +1,6 @@
+import { EMPTY_OFFERING_DISCOVERY, purchaseDiagnostic, type OfferingDiscovery, type PurchaseDiagnostic, type PurchaseOperation } from "./revenueCatDiagnostics";
 import { PURCHASES_ERROR_CODE, LOG_LEVEL, type PurchasesPlugin, type PurchasesCallbackId } from "@revenuecat/purchases-capacitor";
-import { customerEvidence, EMPTY_PURCHASE_EVIDENCE, offeringPackage, PurchaseFailure,
+import { customerEvidence, EMPTY_PURCHASE_EVIDENCE, offeringPackage, PurchaseFailure, REVENUECAT,
   type PurchaseContext, type PurchaseEvidence, type PurchaseIssue, type PurchasePlan, type PurchaseResult, type ServerReconciliation, type RevenueCatDiagnostics } from "./revenueCatModel";
 
 type Runtime = { sdk: PurchasesPlugin; supported: () => boolean; apiKey: () => string | undefined;
@@ -16,6 +17,35 @@ export function createRevenueCatClient(runtime: Runtime) {
   let context: PurchaseContext | null = null, listener: PurchasesCallbackId | null = null;
   let state = EMPTY_PURCHASE_EVIDENCE, pending: Promise<unknown> = Promise.resolve(), moneyBusy = false;
   let listenerRefresh = false;
+  let operations: PurchaseDiagnostic[] = [];
+  let discovery: OfferingDiscovery = { ...EMPTY_OFFERING_DISCOVERY };
+  function record(operation: PurchaseOperation, version: number, error?: unknown) {
+    if (current(version)) operations = [...operations.slice(-15), purchaseDiagnostic(operation, error)];
+  }
+  async function step<T>(operation: PurchaseOperation, version: number, work: () => Promise<T>): Promise<T> {
+    try { const value = await work(); record(operation, version); return value; }
+    catch (error) { record(operation, version, error); throw error; }
+  }
+  async function readOfferings(version: number) {
+    try {
+      const offerings = await step("offerings", version, () => sdk.getOfferings());
+      assertCurrent(version);
+      const packages = offerings.current?.availablePackages ?? [];
+      const valid = (plan: PurchasePlan) => { try { offeringPackage(offerings, plan); return true; } catch { return false; } };
+      discovery = { status: "available", currentOfferingExists: Boolean(offerings.current),
+        expectedOfferingMatches: offerings.current?.identifier === REVENUECAT.offering,
+        monthlyPackageFound: packages.some(p => p.identifier === REVENUECAT.packages.monthly),
+        annualPackageFound: packages.some(p => p.identifier === REVENUECAT.packages.annual),
+        monthlyMappingValid: valid("monthly"), annualMappingValid: valid("annual") };
+      return offerings;
+    } catch (error) {
+      if (current(version)) discovery = { ...EMPTY_OFFERING_DISCOVERY, status: "error" };
+      throw error;
+    }
+  }
+  async function lookup<T>(version: number, work: () => T): Promise<T> {
+    return step("package lookup", version, async () => work());
+  }
   // Short-lived retry proof stays private to this authenticated SDK session.
   // Never expose intent/transaction IDs in diagnostic UI or fabricate funding.
   let retryProof: { userId: string; generation: number; context: PurchaseContext; intentId: string; transactionId: string; until: number } | null = null;
@@ -53,13 +83,16 @@ export function createRevenueCatClient(runtime: Runtime) {
     return failure;
   }
   async function fetchInfo(version: number): Promise<PurchaseEvidence> {
-    await verifyIdentity(version);
-    const { customerInfo } = await sdk.getCustomerInfo();
-    await verifyIdentity(version);
-    const next = customerEvidence(customerInfo); emit(next); return next;
+    return step("customerInfo", version, async () => {
+      await verifyIdentity(version);
+      const { customerInfo } = await sdk.getCustomerInfo();
+      await verifyIdentity(version);
+      const next = customerEvidence(customerInfo); emit(next); return next;
+    });
   }
   function resetRevenueCatSession(): Promise<void> {
     retryProof = null;
+    operations = []; discovery = { ...EMPTY_OFFERING_DISCOVERY };
     epoch++; userId = null; context = null; generation = -1; emit(EMPTY_PURCHASE_EVIDENCE);
     return serial(detach);
     // Do not call SDK logOut(): it creates an anonymous ID. The native identified
@@ -68,6 +101,7 @@ export function createRevenueCatClient(runtime: Runtime) {
   async function initializeRevenueCat(id: string): Promise<PurchaseEvidence> {
     if (!uuid.test(id)) { await resetRevenueCatSession(); throw new PurchaseFailure("authentication"); }
     if (retryProof && (retryProof.userId !== id || retryProof.generation !== runtime.generation())) retryProof = null;
+    if (userId !== id || generation !== runtime.generation()) { operations = []; discovery = { ...EMPTY_OFFERING_DISCOVERY }; }
     const version = ++epoch; userId = id; generation = runtime.generation();
     context = context?.userId === id ? context : null;
     emit({ ...EMPTY_PURCHASE_EVIDENCE, status: "loading" });
@@ -77,17 +111,20 @@ export function createRevenueCatClient(runtime: Runtime) {
         if (!runtime.supported()) { emit(EMPTY_PURCHASE_EVIDENCE); return state; }
         // Never accept test_, sk_, or a server credential as an iOS API key.
         if (!/^appl_[A-Za-z0-9]+$/.test(runtime.apiKey() ?? "")) {
+          record("configure", version, new PurchaseFailure("notConfigured"));
           emit({ ...EMPTY_PURCHASE_EVIDENCE, issue: "notConfigured" }); return state;
         }
         if (await runtime.authenticatedUser() !== id) throw new PurchaseFailure("authentication");
         assertCurrent(version);
-        if (!(await sdk.isConfigured()).isConfigured) {
-          assertCurrent(version); await sdk.setLogLevel({ level: LOG_LEVEL.ERROR });
-          assertCurrent(version); await sdk.configure({ apiKey: runtime.apiKey()!, appUserID: id });
-        } else if ((await sdk.getAppUserID()).appUserID !== id || (await sdk.isAnonymous()).isAnonymous) {
-          assertCurrent(version); await sdk.logIn({ appUserID: id });
-        }
-        await verifyIdentity(version);
+        await step("configure", version, async () => {
+          if (!(await sdk.isConfigured()).isConfigured) {
+            assertCurrent(version); await sdk.setLogLevel({ level: LOG_LEVEL.ERROR });
+            assertCurrent(version); await sdk.configure({ apiKey: runtime.apiKey()!, appUserID: id });
+          } else if ((await sdk.getAppUserID()).appUserID !== id || (await sdk.isAnonymous()).isAnonymous) {
+            assertCurrent(version); await sdk.logIn({ appUserID: id });
+          }
+          await verifyIdentity(version);
+        });
         listener = await sdk.addCustomerInfoUpdateListener(() => {
           if (!current(version) || listenerRefresh) return;
           // Callback payload has no trustworthy current-account scope. Read fresh
@@ -127,22 +164,34 @@ export function createRevenueCatClient(runtime: Runtime) {
   }
   async function getRevenueCatOffering() {
     const version = epoch;
-    return serial(async () => { try { await ready(version); const offering = await sdk.getOfferings(); assertCurrent(version);
+    return serial(async () => { try { await ready(version); const offering = await readOfferings(version); assertCurrent(version);
       // Validate both launch packages before exposing this offering to future UI.
-      offeringPackage(offering, "monthly"); offeringPackage(offering, "annual"); return offering.current!;
+      await lookup(version, () => { offeringPackage(offering, "monthly"); offeringPackage(offering, "annual"); }); return offering.current!;
     } catch (error) { throw new PurchaseFailure(failed(error, version)); } });
+  }
+  function diagnosticSnapshot() {
+    const key = runtime.apiKey();
+    return { apiKeyStatus: !key ? "missing" as const : /^appl_[A-Za-z0-9]+$/.test(key) ? "ios_public_key" as const : "invalid" as const,
+      discovery: { ...discovery }, operations: operations.map(operation => ({ ...operation })) };
   }
   function getRevenueCatDiagnostics(expectedUserId: string): Promise<RevenueCatDiagnostics> {
     const version = epoch;
     return serial(async () => {
-      if (!runtime.supported()) return { available: false, configured: false, appUserIdPrefix: null, evidence: EMPTY_PURCHASE_EVIDENCE };
+      if (!runtime.supported()) return { ...diagnosticSnapshot(), available: false, configured: false, appUserIdPrefix: null, evidence: EMPTY_PURCHASE_EVIDENCE };
       assertCurrent(version);
       if (userId !== expectedUserId || await runtime.authenticatedUser() !== expectedUserId) throw new PurchaseFailure("authentication");
       const configured = (await sdk.isConfigured()).isConfigured;
       assertCurrent(version);
-      if (!configured) return { available: true, configured: false, appUserIdPrefix: null, evidence: snapshot() };
+      if (!configured) return { ...diagnosticSnapshot(), available: true, configured: false, appUserIdPrefix: null, evidence: snapshot() };
       await verifyIdentity(version);
-      return { available: true, configured: true, appUserIdPrefix: expectedUserId.slice(0, 8) + "…", evidence: snapshot() };
+      // Read-only probe used exclusively by the native test panel. Keep failures
+      // separate from CustomerInfo evidence and from server entitlement authority.
+      try {
+        const offerings = await readOfferings(version);
+        await lookup(version, () => { offeringPackage(offerings, "monthly"); offeringPackage(offerings, "annual"); });
+      } catch { /* The safe operation log contains the failure. */ }
+      assertCurrent(version);
+      return { ...diagnosticSnapshot(), available: true, configured: true, appUserIdPrefix: expectedUserId.slice(0, 8) + "…", evidence: snapshot() };
     });
   }
   function reconcileRevenueCatState(): Promise<ServerReconciliation> {
@@ -153,7 +202,7 @@ export function createRevenueCatClient(runtime: Runtime) {
       const proof = retryProof;
       const matches = proof && proof.userId === userId && proof.generation === runtime.generation() && proof.until > Date.now() &&
         context?.userId === proof.context.userId && context?.babyId === proof.context.babyId && context?.householdId === proof.context.householdId;
-      const result = await runtime.reconcilePurchase(matches ? proof.intentId : undefined, false, matches ? proof.transactionId : undefined);
+      const result = await step("reconciliation", version, () => runtime.reconcilePurchase!(matches ? proof.intentId : undefined, false, matches ? proof.transactionId : undefined));
       assertCurrent(version);
       if (["verified", "sandboxVerified"].includes(result.state) && result.householdId === retryProof?.context.householdId) retryProof = null;
       return result;
@@ -164,7 +213,7 @@ export function createRevenueCatClient(runtime: Runtime) {
     let reconciliation:ServerReconciliation|undefined;
     async function sync(intentId?:string,transactionId?:string){
       if(!runtime.reconcilePurchase)return;
-      try{assertCurrent(version);const value=await runtime.reconcilePurchase(intentId,kind==="restore",transactionId);assertCurrent(version);reconciliation=value;
+      try{assertCurrent(version);const value=await step("reconciliation",version,()=>runtime.reconcilePurchase!(intentId,kind==="restore",transactionId));assertCurrent(version);reconciliation=value;
         if (["verified", "sandboxVerified"].includes(value.state) && value.householdId === retryProof?.context.householdId) retryProof = null;}
       catch{reconciliation={state:"pending",householdId:null};}
     }
@@ -189,21 +238,21 @@ export function createRevenueCatClient(runtime: Runtime) {
           if (captured !== context) throw new PurchaseFailure("context");
           await fetchInfo(version);
           if (state.status === "active") {await sync();return result("alreadySubscribed");}
-          const offerings = await sdk.getOfferings();
+          const offerings = await readOfferings(version);
           await ready(version); assertContext(requested);
           if (runtime.validatePurchaseContext && !await runtime.validatePurchaseContext(requested!)) throw new PurchaseFailure("context");
           assertCurrent(version);
           assertContext(requested);
           if (captured !== context) throw new PurchaseFailure("context");
-          const pack = offeringPackage(offerings, plan!);
-          if(runtime.preparePurchase)intentId=await runtime.preparePurchase(requested!,plan!);
+          const pack = await lookup(version, () => offeringPackage(offerings, plan!));
+          if(runtime.preparePurchase)intentId=await step("reconciliation",version,()=>runtime.preparePurchase!(requested!,plan!));
           assertCurrent(version);assertContext(requested);
           if(captured!==context)throw new PurchaseFailure("context");
-          const payment=await sdk.purchasePackage({ aPackage: pack });
+          const payment=await step("purchase",version,()=>sdk.purchasePackage({ aPackage: pack }));
           transactionId=payment.transaction?.transactionIdentifier;
           if (current(version) && intentId && transactionId) retryProof = { userId: requested!.userId, generation: runtime.generation(),
             context: { ...requested! }, intentId, transactionId, until: Date.now() + 2 * 60 * 60 * 1000 };
-        } else { assertCurrent(version); await sdk.restorePurchases(); }
+        } else { assertCurrent(version); await step("restore",version,()=>sdk.restorePurchases()); }
         completed = true;
         // Server verification must still run if the final SDK refresh fails.
         let refreshFailed=false;

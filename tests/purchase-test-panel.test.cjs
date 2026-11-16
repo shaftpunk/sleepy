@@ -72,3 +72,20 @@ test('pending accepted purchase has safe localized message; cancellation is calm
     state:{busy:false,diagnostics,reconciliation:server,result:{status:'purchased',evidence,issue:null,reconciliation:{state:'pending',householdId:null}},serverError:false,issue:null,paymentPending:false}}));
   assert.ok(html.includes(t('purchases.sandboxVerified')));assert.ok(!html.includes(t('plusTesting.activationPending')));
 });
+
+test('EN/NO panel exposes safe operation errors and offering discovery separately from Free authority',()=>{
+  const {purchaseDiagnostic}=load('src/purchases/revenueCatDiagnostics.ts');
+  for(const lang of ['en','no']){const t=translate(lang),html=renderToStaticMarkup(React.createElement(view().SleepyPlusTestView,{userId:A,householdId:H,
+    state:{busy:false,diagnostics:{...diagnostics,apiKeyStatus:'ios_public_key',evidence:{...evidence,status:'error',productIdentifier:null,environment:null},
+      discovery:{status:'error',currentOfferingExists:true,expectedOfferingMatches:true,monthlyPackageFound:true,annualPackageFound:false,monthlyMappingValid:true,annualMappingValid:false},
+      operations:[purchaseDiagnostic('customerInfo',{code:'10',message:'The network connection was lost.'}),purchaseDiagnostic('offerings',{code:'23',message:'There is an issue with your configuration.'})]},
+      reconciliation:null,result:null,serverError:false,issue:'network',paymentPending:false},
+    resolved:{tier:'free',isPlus:false},onAction:()=>{},translate:t}));
+    for(const text of [t('plusTesting.diagnostics'),'customerInfo','offerings','23','10','$rc_monthly','$rc_annual',t('plusTesting.errorMessage'),t('purchases.network')])assert.ok(html.includes(text));
+    assert.match(html,/tier<\/dt><dd>free/);assert.ok(!html.includes(A));assert.ok(!html.includes(H));
+  }
+});
+test('reconciliation errors stay friendly but retain their own safe diagnostic operation',async()=>{
+  const f=fixture({reconcile:async()=>{throw Error('Service unavailable.')}});await f.controller.run('refresh');
+  const state=f.controller.snapshot();assert.equal(state.issue,'network');assert.equal(state.operationErrors[0].operation,'reconciliation');assert.equal(state.operationErrors[0].message,'Service unavailable.');
+});

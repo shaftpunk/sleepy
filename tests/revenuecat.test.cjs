@@ -207,3 +207,65 @@ test('restore never sends current household or new intent to reconciliation',asy
   let call;const f=fixture({reconcilePurchase:async(id,restore)=>{call={id,restore};return {state:'assignmentRequired',householdId:null};}});
   await f.ready();const r=await f.client.restoreRevenueCatPurchases();assert.deepEqual(call,{id:undefined,restore:true});assert.equal(r.status,'restored');assert.equal(r.reconciliation.state,'assignmentRequired');
 });
+
+test('panel probe reports successful offering and both Apple packages without changing evidence',async()=>{
+  const f=fixture();await f.ready();const before=f.client.snapshot();const d=await f.client.getRevenueCatDiagnostics(A);
+  assert.equal(d.apiKeyStatus,'ios_public_key');assert.equal(d.discovery.currentOfferingExists,true);
+  for(const key of ['expectedOfferingMatches','monthlyPackageFound','annualPackageFound','monthlyMappingValid','annualMappingValid'])assert.equal(d.discovery[key],true);
+  assert.equal(f.client.snapshot(),before);assert.ok(d.operations.some(o=>o.operation==='configure'&&o.outcome==='success'));
+  assert.ok(d.operations.some(o=>o.operation==='customerInfo'&&o.outcome==='success'));
+  assert.ok(!JSON.stringify(d).includes(f.env.key));
+});
+test('unavailable offerings and missing packages are distinguished from CustomerInfo',async()=>{
+  for(const mode of ['unavailable','missing']){const f=fixture();await f.ready();
+    f.env.offerings=mode==='unavailable'?{current:null}:offering();if(mode==='missing')f.env.offerings.current.availablePackages.pop();
+    const d=await f.client.getRevenueCatDiagnostics(A);assert.equal(d.evidence.status,'none');
+    assert.equal(d.discovery.currentOfferingExists,mode!=='unavailable');assert.equal(d.discovery.annualPackageFound,false);
+    assert.equal(d.discovery.monthlyPackageFound,mode==='missing');
+    assert.ok(d.operations.some(o=>o.operation==='package lookup'&&o.outcome==='error'));
+    assert.equal(f.calls.filter(c=>c[0]==='purchase').length,0);
+  }
+});
+test('CustomerInfo network error remains visible when the offerings probe succeeds',async()=>{
+  const f=fixture({fetchError:{code:'10',message:'The network connection was lost.'}});await f.ready();
+  const d=await f.client.getRevenueCatDiagnostics(A),failure=d.operations.find(o=>o.operation==='customerInfo'&&o.outcome==='error');
+  assert.equal(failure.code,'10');assert.equal(failure.message,'The network connection was lost.');assert.equal(d.evidence.issue,'network');
+  assert.equal(d.discovery.monthlyPackageFound,true);
+});
+test('configure errors and missing public keys have safe diagnostics',async()=>{
+  const f=fixture();f.sdk.configure=async()=>{throw {code:'11',message:'Invalid credentials.'}};await f.ready();
+  const d=await f.client.getRevenueCatDiagnostics(A);assert.equal(d.configured,false);assert.equal(d.operations.at(-1).operation,'configure');assert.equal(d.operations.at(-1).code,'11');assert.equal(d.operations.at(-1).configurationIssue,true);
+  const g=fixture({key:''});await g.ready();const missing=await g.client.getRevenueCatDiagnostics(A);assert.equal(missing.apiKeyStatus,'missing');assert.equal(missing.operations.at(-1).operation,'configure');
+});
+test('offerings network, configuration and StoreKit errors preserve exact operation and code',async()=>{
+  for(const [code,message,storeKit,configuration] of [['10','Could not connect.',false,false],['23','There is an issue with your configuration.',false,true],['2','There was a problem with the App Store.',true,false]]){
+    const f=fixture();await f.ready();f.sdk.getOfferings=async()=>{throw {code,message,userInfo:{receipt:'PRIVATE_RECEIPT'}}};
+    const d=await f.client.getRevenueCatDiagnostics(A),failure=d.operations.at(-1);
+    assert.equal(failure.operation,'offerings');assert.equal(failure.code,code);assert.equal(failure.message,message);assert.equal(failure.storeKitIssue,storeKit);assert.equal(failure.configurationIssue,configuration);
+    assert.equal(d.discovery.status,'error');assert.equal(d.discovery.monthlyPackageFound,null);assert.equal(d.evidence.status,'none');assert.ok(!JSON.stringify(d).includes('PRIVATE_RECEIPT'));
+  }
+});
+test('underlying StoreKit configuration message is available without copying SDK userInfo',async()=>{
+  const f=fixture();await f.ready();f.sdk.getOfferings=async()=>{throw {code:'23',message:'There is an issue with your configuration.',underlyingErrorMessage:'None of the products could be fetched from App Store Connect.',userInfo:{authorization:'PRIVATE_HEADER'}}};
+  const d=await f.client.getRevenueCatDiagnostics(A);assert.equal(d.operations.at(-1).storeKitIssue,true);assert.match(d.operations.at(-1).message,/App Store Connect/);assert.ok(!JSON.stringify(d).includes('PRIVATE_HEADER'));
+});
+test('cancelled purchase is logged calmly and never becomes a network error',async()=>{
+  const f=fixture({purchaseError:{code:'1',message:'Purchase was cancelled.'}});await f.ready();const r=await f.client.purchaseRevenueCatPackage('monthly',context);
+  assert.equal(r.status,'cancelled');const d=await f.client.getRevenueCatDiagnostics(A),event=d.operations.find(o=>o.operation==='purchase');assert.equal(event.outcome,'cancelled');assert.equal(event.code,'1');assert.equal(d.evidence.issue,null);
+});
+test('restore and reconciliation diagnostics preserve architecture and operation boundaries',async()=>{
+  const f=fixture({restoreError:{code:'2',message:'App Store unavailable.'}});await f.ready();await f.client.restoreRevenueCatPurchases();let d=await f.client.getRevenueCatDiagnostics(A);assert.ok(d.operations.some(o=>o.operation==='restore'&&o.code==='2'));
+  const g=fixture({reconcilePurchase:async()=>{throw Error('Service unavailable.')}});await g.ready();await assert.rejects(g.client.reconcileRevenueCatState());d=await g.client.getRevenueCatDiagnostics(A);assert.ok(d.operations.some(o=>o.operation==='reconciliation'&&o.outcome==='error'));
+});
+test('safe diagnostic messages redact identifiers and omit payloads, keys, JWTs and headers',()=>{
+  const {purchaseDiagnostic}=load('src/purchases/revenueCatDiagnostics.ts');
+  for(const message of ['receipt PRIVATE_RECEIPT','transaction PRIVATE_TRANSACTION','Authorization: Bearer PRIVATE_JWT','apiKey: appl_SECRET','appUserID: '+A,'payload {"access_token":"PRIVATE_JWT"}']){
+    const text=JSON.stringify(purchaseDiagnostic('customerInfo',{code:'10',message,userInfo:{secret:'PRIVATE_NESTED'}}));assert.doesNotMatch(text,/PRIVATE_|appl_SECRET/);assert.ok(!text.includes(A));
+  }
+  const text=JSON.stringify(purchaseDiagnostic('offerings',{code:'23',message:'Failure '+A+' appl_SECRET_KEY eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.signature https://example.invalid?token=PRIVATE_URL user@example.invalid'}));
+  assert.doesNotMatch(text,/PRIVATE_URL|SECRET_KEY|eyJhbGci|user@example/);assert.ok(!text.includes(A));
+});
+test('diagnostic history is bounded and discarded on logout and account switch',async()=>{
+  const f=fixture();await f.ready();for(let i=0;i<12;i++)await f.client.getRevenueCatDiagnostics(A);assert.ok((await f.client.getRevenueCatDiagnostics(A)).operations.length<=16);
+  await f.client.resetRevenueCatSession();f.env.user=B;await f.client.initializeRevenueCat(B);const d=await f.client.getRevenueCatDiagnostics(B);assert.equal(d.operations.filter(o=>o.operation==='configure').length,1);assert.ok(!JSON.stringify(d).includes(A));
+});
