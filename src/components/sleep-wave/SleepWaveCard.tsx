@@ -4,9 +4,15 @@ import { buildSleepWaveModel } from "../../analytics/sleepWaveModel";
 import { sameDay } from "../../analytics/time";
 import type { ActiveSleep, SleepSession } from "../../analytics/types";
 import { LOCALES, useTranslation } from "../../i18n";
-import { formatClock } from "../../lib/format";
+import { formatClock, formatDuration } from "../../lib/format";
 import SleepWaveChart from "./SleepWaveChart";
 import "./SleepWave.css";
+
+// Decorative icons drawn with CSS masks, so the card keeps a single SVG (the
+// chart). State is always also given in text.
+function TileIcon({ kind }: { kind: "last" | "next" | "status" | "sun" }) {
+  return <span className={`sleep-wave-icon is-${kind}`} aria-hidden="true" />;
+}
 
 type Props = { sessions: SleepSession[]; active: ActiveSleep | null; prediction: NextSleepPrediction; now: number; babyName?: string };
 export default function SleepWaveCard({ sessions, active, prediction, now, babyName }: Props) {
@@ -31,6 +37,10 @@ export default function SleepWaveCard({ sessions, active, prediction, now, babyN
   };
   const last = model.lastCompleted;
   const sleeping = model.status === "sleeping";
+  // Shown only when the existing forecast supplies it; never estimated here.
+  const awakeRange = prediction.status === "ready" && prediction.typicalAwakeMinutes
+    && Number.isFinite(prediction.typicalAwakeMinutes.min) && Number.isFinite(prediction.typicalAwakeMinutes.max)
+    ? prediction.typicalAwakeMinutes : null;
   return <section className="sleep-wave" data-wave-state={model.status} aria-labelledby={titleId} aria-describedby={summaryId}>
     <header className="sleep-wave-header">
       <div><h2 id={titleId}>Sleep Wave</h2><p>{babyName ? t("sleepWave.rhythmFor", { name: babyName }) : t("sleepWave.rhythm")}</p></div>
@@ -49,17 +59,21 @@ export default function SleepWaveCard({ sessions, active, prediction, now, babyN
         <p className="sleep-wave-state-copy">{t("sleepWave.learningBody")}</p>
       </>}
     </div>
-    <SleepWaveChart model={model} />
+    <SleepWaveChart model={model} now={chartNow} formatRange={range} />
+    <dl className="sleep-wave-events" id={summaryId}>
+      <div data-tile="last"><TileIcon kind="last" /><dt>{t("sleepWave.lastSleep")}</dt><dd>{last ? range(last.startMs, last.endMs) : t("common.notRegistered")}</dd></div>
+      {window && <div data-tile="next"><TileIcon kind="next" /><dt>{t("sleepWave.nextOnset")}</dt><dd>{range(window.startMs, window.endMs)}</dd></div>}
+      <div data-tile="status"><TileIcon kind="status" /><dt>{t("sleepWave.status")}</dt><dd>{sleeping ? t("common.sleeping") : window ? t("common.awake") : t("common.notRegistered")}</dd></div>
+    </dl>
+    {window && awakeRange && <p className="sleep-wave-awake-range">
+      <TileIcon kind="sun" /><span>{t("sleepWave.typicalAwake")}</span>
+      <strong>{formatDuration(awakeRange.min, lang)}–{formatDuration(awakeRange.max, lang)}</strong>
+    </p>}
     <div className="sleep-wave-legend" aria-hidden="true">
       <span><i className="is-recorded" />{t("sleepWave.recorded")}</span>
       {sleeping && <span><i className="is-active" />{t("common.sleeping")}</span>}
       {window && <span><i className="is-forecast" />{t("sleepWave.onsetWindow")}</span>}
     </div>
-    <dl className="sleep-wave-events" id={summaryId}>
-      <div><dt>{t("sleepWave.lastSleep")}</dt><dd>{last ? range(last.startMs, last.endMs) : t("common.notRegistered")}</dd></div>
-      <div><dt>{t("sleepWave.status")}</dt><dd>{sleeping ? t("common.sleeping") : window ? t("common.awake") : t("common.notRegistered")}</dd></div>
-      {window && <div><dt>{t("sleepWave.nextOnset")}</dt><dd>{range(window.startMs, window.endMs)}</dd></div>}
-    </dl>
     <p className="sleep-wave-note">{window ? t("sleepWave.onsetNote") : t("sleepWave.recordNote")}</p>
     <div className="sleep-wave-accessible-history">
       <p>{t("sleepWave.recordedToday")}</p>

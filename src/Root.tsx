@@ -43,6 +43,23 @@ export default function Root() {
     document.documentElement.dataset.visualTheme = visualTheme;
   }, [visualTheme]);
 
+  // Colour scheme on <html> (a separate attribute, so existing [data-theme]
+  // rules don't start matching <html>) lets the premium canvas cover iOS
+  // overscroll. Premium also tints the browser/status chrome; Alive and Retro
+  // keep their previous behaviour (no theme-color).
+  useEffect(() => {
+    document.documentElement.dataset.appearance = theme;
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"][data-sleepy]');
+    if (visualTheme !== "default") { meta?.remove(); return; }
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "theme-color";
+      meta.dataset.sleepy = "";
+      document.head.appendChild(meta);
+    }
+    meta.content = theme === "light" ? "#fbf3ef" : "#342238";
+  }, [theme, visualTheme]);
+
   // Optional theme styles and assets are loaded only when selected, keeping
   // the original theme's initial bundle lean.
   useLoadRetroStyles(visualTheme === "retro");

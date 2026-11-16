@@ -1,6 +1,8 @@
+/* Bring the tracking section and forecast together without changing actions. */
+.home-page .home-live-state + .sleep-wave { margin-top: -10px; }
 .sleep-wave {
   --font-editorial: ui-serif, Georgia, "Times New Roman", serif;
-  --font-wave-ui: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-wave-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --wave-ink: #f9f0ed;
   --wave-muted: #ecd5db;
   --wave-edge: #c39bab;
@@ -8,6 +10,8 @@
   --wave-record-bottom: #795569;
   --wave-active: #e4c1cd;
   --wave-forecast: #cdb5dd;
+  --wave-band-core: #cdb5dd;
+  --wave-mist: #cdb5dd;
   --wave-now: #f6e2c8;
   --wave-light: #f6e2c8;
   --wave-key: #faeee0;
@@ -15,10 +19,13 @@
   --wave-contour: #e7c4b0;
   --wave-rule: #e4c1cd30;
   --wave-border: #f9f0ed36;
+  --wave-tile: #f9f0ed0d;
+  --wave-tile-next: #f6e2c81f;
   position: relative;
   isolation: isolate;
+  overflow: hidden;
   min-width: 0;
-  padding: clamp(14px, 4vw, 20px) clamp(18px, 5vw, 28px);
+  padding: clamp(14px, 4vw, 20px) clamp(16px, 4.6vw, 24px) clamp(12px, 3.5vw, 16px);
   border: 1px solid var(--wave-border);
   border-radius: 30px;
   color: var(--wave-ink);
@@ -29,20 +36,40 @@
     linear-gradient(145deg, #493044, #4c3143 44%, #382330);
   box-shadow: inset 0 1px 0 #f6e2c83b, 0 14px 35px #4930442b;
 }
+/* Atmospheric cloud light inside the card: decorative, static, paint-only. */
+.sleep-wave::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 46% 16% at 8% 24%, var(--wave-cloud, #f9f0ed14), transparent 70%),
+    radial-gradient(ellipse 38% 12% at 18% 30%, var(--wave-cloud, #f9f0ed10), transparent 70%),
+    radial-gradient(ellipse 55% 20% at 96% 42%, var(--wave-cloud, #f9f0ed10), transparent 72%),
+    radial-gradient(ellipse 70% 22% at 50% 40%, var(--wave-halo, #f6e2c812), transparent 70%);
+}
 [data-theme="light"] .sleep-wave {
   --wave-ink: #493044;
   --wave-muted: #694658;
-  --wave-edge: #795569;
+  --wave-edge: #9a748d;
   --wave-record-top: #795569;
   --wave-record-bottom: #ac8498;
   --wave-active: #e4c1cd;
   --wave-forecast: #ad88bd;
+  --wave-band-core: #c3a2d6;
+  --wave-mist: #c9add9;
   --wave-rule: #79556924;
   --wave-border: #f9f0edb8;
-  --wave-light: #e7c4b0;
+  --wave-light: #f0d4b4;
   --wave-key: #493044;
   --wave-glow: #f6e2c830;
   --wave-contour: #9a748d;
+  --wave-tile: #fffaf68c;
+  --wave-tile-next: #fff4e6d9;
+  --wave-cloud: #fffaf6a6;
+  --wave-halo: #fff6eacc;
+  --wave-band-edge: #b48fc4;
   background:
     radial-gradient(ellipse at 50% 30%, #faf3eeee, transparent 54%),
     radial-gradient(ellipse at 52% 65%, #e4c1cd66, transparent 52%),
@@ -50,64 +77,148 @@
     linear-gradient(140deg, #ead2d8, #f5e4df 59%, #ead0d9);
   box-shadow: inset 0 1px 0 #f9f0edcc, 0 12px 30px #7955691f;
 }
+
+/* Header and forecast typography: editorial serif for the title, forecast
+   heading and forecast time; sans with tabular figures elsewhere. */
 .sleep-wave .sleep-wave-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 0; }
 .sleep-wave-header > div { min-width: 0; flex: 1 1 160px; }
 .sleep-wave h2, .sleep-wave h3, .sleep-wave p { margin: 0; }
-.sleep-wave h2 { font-family: var(--font-editorial); font-style: italic; font-weight: 400; font-size: clamp(1.85rem, 7.5vw, 2.5rem); line-height: 1.08; letter-spacing: -.045em; overflow-wrap: anywhere; }
-.sleep-wave-header p { margin-top: 4px; font-size: .75rem; line-height: 1.5; color: var(--wave-muted); overflow-wrap: anywhere; }
-.sleep-wave-today { flex-shrink: 0; margin-top: 2px; padding: 6px 12px; border: 1px solid var(--wave-border); border-radius: 30px; font-size: .75rem; background: #f9f0ed0d; }
-.sleep-wave-forecast { display: grid; align-content: center; gap: 6px; padding: 18px 0 12px; text-align: center; }
-.sleep-wave h3 { font-family: var(--font-editorial); font-size: 1.25rem; line-height: 1.35; font-weight: 400; }
-.sleep-wave .sleep-wave-time { color: var(--wave-ink); font-family: var(--font-wave-ui); font-weight: 400; font-size: clamp(2.25rem, 9.5vw, 3.3rem); line-height: 1.15; font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.055em; overflow-wrap: anywhere; }
-.sleep-wave .sleep-wave-caption { color: var(--wave-muted); font-family: var(--font-wave-ui); font-style: normal; font-size: 1rem; line-height: 1.5; }
+.sleep-wave h2 { font-family: var(--font-editorial); font-style: italic; font-weight: 400; font-size: clamp(1.85rem, 7.5vw, 2.5rem); line-height: 1.08; letter-spacing: -.035em; overflow-wrap: anywhere; }
+.sleep-wave-header p { margin-top: 4px; font-family: var(--font-editorial); font-style: italic; font-size: .85rem; line-height: 1.45; color: var(--wave-muted); overflow-wrap: anywhere; }
+.sleep-wave-today { flex-shrink: 0; margin-top: 2px; padding: 6px 14px; border: 1px solid var(--wave-border); border-radius: 30px; font-size: .75rem; background: var(--wave-tile); box-shadow: inset 0 1px 0 var(--wave-border); }
+.sleep-wave-forecast { display: grid; align-content: center; gap: 2px; padding: 12px 0 2px; text-align: center; }
+.sleep-wave h3 { font-family: var(--font-editorial); font-size: 1.3rem; line-height: 1.35; font-weight: 400; }
+.sleep-wave .sleep-wave-time {
+  color: var(--wave-key);
+  font-family: var(--font-editorial);
+  font-weight: 500;
+  font-size: clamp(2.3rem, 10.5vw, 3.35rem);
+  line-height: 1.12;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: -.025em;
+  overflow-wrap: anywhere;
+  text-shadow: 0 0 22px var(--wave-glow);
+}
+.sleep-wave .sleep-wave-caption { color: var(--wave-muted); font-family: var(--font-editorial); font-style: italic; font-size: 1rem; line-height: 1.45; }
 .sleep-wave .sleep-wave-state-copy { max-width: 29ch; margin: 3px auto 0; font-size: .85rem; line-height: 1.6; color: var(--wave-muted); }
-.sleep-wave-chart { position: relative; padding-top: 23px; }
-.sleep-wave-chart svg { display: block; width: 100%; height: 145px; overflow: visible; }
+.sleep-wave[data-wave-state="sleeping"] h3 { color: var(--wave-key); }
+
+/* Chart: label row (padding set inline), SVG, axis. */
+.sleep-wave-chart { position: relative; margin-top: 2px; }
+.sleep-wave-chart svg { display: block; width: 100%; height: 116px; overflow: visible; }
 .sleep-wave-baseline { stroke: var(--wave-rule); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.sleep-wave-recorded { stroke: var(--wave-contour); stroke-width: 1; stroke-linejoin: round; }
-.sleep-wave-now-label { position: absolute; top: 0; transform: translateX(-50%); padding: 3px 7px; border-radius: 7px; background: var(--wave-ink); color: #493044; font-size: .65rem; line-height: 1.4; white-space: nowrap; }
-[data-theme="light"] .sleep-wave-now-label { color: #f9f0ed; }
+.sleep-wave-mist { opacity: .7; }
+.sleep-wave-mist.is-front { opacity: .45; }
+.sleep-wave-recorded { stroke: var(--wave-contour); stroke-width: 1; stroke-linejoin: round; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 3px var(--wave-glow)); }
+.sleep-wave [data-wave-active] { filter: drop-shadow(0 0 2px var(--wave-glow)); }
+.sleep-wave-band-glow { mix-blend-mode: normal; }
+.sleep-wave-band { filter: drop-shadow(0 0 4px var(--wave-glow)); }
+.sleep-wave-forecast-edge { fill: none; stroke: var(--wave-band-edge, var(--wave-light)); stroke-width: 1; stroke-opacity: .85; vector-effect: non-scaling-stroke; }
+.sleep-wave-onset { fill: none; stroke: var(--wave-light); stroke-width: 1.5; stroke-linecap: round; stroke-opacity: .95; vector-effect: non-scaling-stroke; }
+
+.sleep-wave-now-label {
+  position: absolute; top: 0; z-index: 1;
+  display: grid; justify-items: center; gap: 2px;
+  transform: translateX(-50%);
+  white-space: nowrap; pointer-events: none;
+}
+.sleep-wave-now-label span { padding: 2px 8px; border-radius: 8px; background: var(--wave-ink); color: #493044; font-size: .65rem; font-weight: 600; line-height: 1.4; box-shadow: 0 0 8px var(--wave-glow); }
+[data-theme="light"] .sleep-wave-now-label span { color: #f9f0ed; background: #795569; }
+.sleep-wave-now-label time { color: var(--wave-muted); font-size: .65rem; line-height: 1.3; font-variant-numeric: tabular-nums; }
 .sleep-wave-now-marker { filter: drop-shadow(0 0 1px #493044b3) drop-shadow(0 0 3px var(--wave-glow)); }
-.sleep-wave-now-marker line { stroke: var(--wave-now); stroke-width: 1; vector-effect: non-scaling-stroke; opacity: .8; }
+.sleep-wave-now-marker line { stroke: var(--wave-now); stroke-width: 1; vector-effect: non-scaling-stroke; opacity: .65; }
 .sleep-wave-now-marker circle { fill: var(--wave-now); }
-.sleep-wave-now-marker .sleep-wave-now-halo { opacity: .12; }
-.sleep-wave-forecast-edge { fill: none; stroke: var(--wave-edge); stroke-width: 1; stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
-.sleep-wave-onset { fill: var(--wave-ink); stroke: var(--wave-edge); stroke-width: 1; }
-.sleep-wave-axis { position: relative; height: max(26px, 1.6em); color: var(--wave-muted); font-size: .65rem; font-variant-numeric: tabular-nums; }
+.sleep-wave-now-marker .sleep-wave-now-halo { opacity: .09; }
+
+.sleep-wave-peak-label {
+  position: absolute; z-index: 1;
+  transform: translateX(-50%);
+  padding: 1px 4px; border-radius: 6px;
+  color: var(--wave-muted);
+  font-size: .68rem; font-weight: 500; line-height: 1.35;
+  font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none;
+}
+.sleep-wave-peak-label.is-recorded { color: var(--wave-key); font-weight: 600; }
+.sleep-wave-peak-label.is-forecast { color: var(--wave-key); font-weight: 600; text-shadow: 0 0 10px var(--wave-glow); }
+
+.sleep-wave-axis { position: relative; height: max(24px, 1.6em); margin-top: 4px; color: var(--wave-muted); font-size: .65rem; font-variant-numeric: tabular-nums; }
 .sleep-wave-axis > span { position: absolute; top: 0; text-align: center; transform: translateX(-50%); white-space: nowrap; line-height: 1.5; }
 .sleep-wave-axis .is-first { transform: none; }
 .sleep-wave-axis .is-last { transform: translateX(-100%); }
 .sleep-wave-axis small { display: block; font-size: .85em; }
-.sleep-wave-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; color: var(--wave-muted); font-size: .65rem; line-height: 1.5; padding: 0 0 8px; }
+.sleep-wave-axis:has(small) { height: max(48px, 4.5em); }
+
+/* Summary tiles: value above label, like the approved design. dt stays first
+   in the DOM for assistive technology. */
+.sleep-wave-events {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 5.6rem), 1fr));
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.sleep-wave-events > div {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  min-width: 0; padding: 10px 6px 9px;
+  border: 1px solid var(--wave-border); border-radius: 16px;
+  background: var(--wave-tile);
+  box-shadow: inset 0 1px 0 var(--wave-border);
+  text-align: center;
+}
+.sleep-wave-events > [data-tile="next"] {
+  background: var(--wave-tile-next);
+  border-color: var(--wave-light);
+  box-shadow: inset 0 1px 0 var(--wave-border), 0 0 18px var(--wave-glow);
+}
+.sleep-wave-events dt { order: 2; margin: 0; color: var(--wave-muted); font-family: var(--font-editorial); font-style: italic; font-size: .75rem; line-height: 1.4; overflow-wrap: anywhere; }
+.sleep-wave-events dd { order: 1; margin: 0; color: var(--wave-key); font-size: .82rem; line-height: 1.45; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.sleep-wave-icon {
+  order: 0; flex: 0 0 18px; width: 18px; height: 18px; margin-bottom: 3px;
+  background: var(--wave-edge);
+  -webkit-mask: var(--icon) center / contain no-repeat; mask: var(--icon) center / contain no-repeat;
+}
+.sleep-wave-icon.is-last {
+  background: var(--wave-record-top);
+  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cdefs%3E%3Cmask id='m'%3E%3Ccircle cx='10' cy='10' r='8.5' fill='white'/%3E%3Cpath d='m6.3 10.2 2.5 2.5 4.9-5.1' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/mask%3E%3C/defs%3E%3Crect width='20' height='20' mask='url(%23m)'/%3E%3C/svg%3E");
+}
+.sleep-wave-icon.is-next {
+  background: var(--wave-forecast);
+  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M12.8 2.6A7.6 7.6 0 1 0 17.4 14 6 6 0 0 1 12.8 2.6Z'/%3E%3C/svg%3E");
+}
+.sleep-wave-icon.is-status {
+  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.4'%3E%3Ccircle cx='10' cy='10' r='7.6' stroke-dasharray='2.4 2.6'/%3E%3Ccircle cx='10' cy='10' r='1.8' fill='black' stroke='none'/%3E%3C/svg%3E");
+}
+.sleep-wave-icon.is-sun {
+  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Ccircle cx='10' cy='10' r='3.4'/%3E%3Cpath d='M10 1.8v2.2M10 16v2.2M1.8 10H4M16 10h2.2M4.2 4.2l1.6 1.6M14.2 14.2l1.6 1.6M4.2 15.8l1.6-1.6M14.2 5.8l1.6-1.6'/%3E%3C/svg%3E");
+}
+
+.sleep-wave .sleep-wave-awake-range {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px;
+  margin-top: 8px; padding: 10px 14px;
+  border: 1px solid var(--wave-border); border-radius: 16px;
+  background: var(--wave-tile);
+  box-shadow: inset 0 1px 0 var(--wave-border);
+  font-size: .85rem; line-height: 1.45;
+}
+.sleep-wave-awake-range .sleep-wave-icon { margin: 0; }
+.sleep-wave-awake-range span:not(.sleep-wave-icon) { flex: 1 1 auto; color: var(--wave-ink); }
+.sleep-wave-awake-range strong { color: var(--wave-key); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.sleep-wave-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; margin-top: 10px; color: var(--wave-muted); font-size: .65rem; line-height: 1.5; }
 .sleep-wave-legend > span { display: inline-flex; align-items: center; gap: 6px; }
-.sleep-wave-legend i { width: 9px; height: 9px; border-radius: 50%; background: var(--wave-record-top); }
-.sleep-wave-legend .is-forecast { background: transparent; border: 1px dashed var(--wave-edge); border-radius: 2px; }
+.sleep-wave-legend i { width: 10px; height: 10px; border-radius: 50%; background: var(--wave-record-top); }
+.sleep-wave-legend .is-forecast { background: radial-gradient(circle, var(--wave-light), var(--wave-band-core)); box-shadow: 0 0 6px var(--wave-light); }
 .sleep-wave-legend .is-active { background: repeating-linear-gradient(45deg, var(--wave-active) 0 2px, transparent 2px 4px); }
-.sleep-wave-events { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 4.5rem), 1fr)); gap: 12px; margin: 0; padding: 10px 0 0; border-top: 1px solid var(--wave-rule); }
-.sleep-wave-events > div { min-width: 0; }
-.sleep-wave-events dt { margin: 0 0 4px; color: var(--wave-muted); font-size: .65rem; line-height: 1.5; overflow-wrap: anywhere; }
-.sleep-wave-events dd { margin: 0; font-size: .78rem; line-height: 1.6; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.sleep-wave .sleep-wave-note { margin-top: 8px; color: var(--wave-muted); font-size: .65rem; line-height: 1.6; }
+.sleep-wave .sleep-wave-note { margin-top: 6px; color: var(--wave-muted); font-size: .65rem; line-height: 1.55; text-align: center; }
 .sleep-wave-accessible-history { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Short status copy needs no forecast-sized reservation. */
+.sleep-wave:not([data-wave-state="ready"]) .sleep-wave-forecast { padding: 10px 0 0; }
+
 @media (prefers-reduced-motion: no-preference) {
   .sleep-wave-now-marker { transition: transform .3s ease; }
 }
 @media (max-width: 359px) {
   .sleep-wave { border-radius: 26px; }
-  .sleep-wave-legend { gap: 8px 12px; }
+  .sleep-wave-legend { gap: 6px 12px; }
 }
-
-/* Short status copy needs no forecast-sized reservation. Calendar/DST labels
-   retain room for their extra lines and grow with the text size. */
-.sleep-wave:not([data-wave-state="ready"]) .sleep-wave-forecast { padding: 12px 0 8px; }
-.sleep-wave-axis:has(small) { height: max(48px, 4.5em); }
-
-/* Paint-only accents: preserve the approved layout and chart coordinates. */
-.sleep-wave .sleep-wave-time, .sleep-wave[data-wave-state="sleeping"] h3 { color: var(--wave-key); text-shadow: none; }
-.sleep-wave [data-wave-active] { filter: drop-shadow(0 0 2px var(--wave-glow)); }
-.sleep-wave-now-label { box-shadow: 0 0 8px var(--wave-glow); }
-
-.sleep-wave h2 { letter-spacing: -.035em; }
-.sleep-wave-events dd { color: var(--wave-key); }
-.sleep-wave-now-marker line { opacity: .65; }
-.sleep-wave-now-marker .sleep-wave-now-halo { opacity: .09; }

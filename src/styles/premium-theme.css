@@ -1,0 +1,317 @@
+/* Sleepy Premium — Daylight Blush (light) and Midnight Plum (dark).
+   The app-wide design foundation for the default skin. Every rule is scoped to
+   :root[data-visual-theme="default"], so the Alive and Retro skins keep their
+   own visuals. Components consume the semantic roles below; raw palette values
+   appear only in this token block. Data visuals keep their meaning: only hue
+   temperature changes, never which state a colour represents. */
+
+/* 1. Tokens ---------------------------------------------------------------- */
+
+:root[data-visual-theme="default"] [data-theme] {
+  --font-display: ui-serif, Georgia, "Times New Roman", serif;
+  --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --radius-pill: 999px;
+  --shadow-soft: 0 10px 28px var(--shadow-tint);
+  --shadow-lift: 0 14px 36px var(--shadow-tint);
+}
+
+/* Midnight Plum */
+:root[data-visual-theme="default"] [data-theme="dark"] {
+  --canvas-top: #342238;
+  --canvas-mid: #2c202e;
+  --canvas-bottom: #241b28;
+  --canvas-glow: #f6e2c814;      /* champagne light, upper left */
+  --canvas-bloom: #7955694d;     /* plum bloom */
+  --canvas-haze: #c5acdd12;      /* lavender haze, right */
+
+  --text-primary: #f9f0ed;
+  --text-secondary: #d9c0cf;
+  --text-tertiary: #c4a8b9;
+
+  --surface-1: #3a283bb8;
+  --surface-2: #f9f0ed0f;
+  --surface-sheet: #2f2131;
+  --surface-edge: #f9f0ed1f;
+  --surface-highlight: #f9f0ed24;
+  --shadow-tint: #140a1838;
+  --control-bg: #d9b4c714;
+  --control-border: #d9b4c730;
+  --control-active: #e4c1cd2b;
+
+  --action-primary: linear-gradient(145deg, #8e6280, #6a4560);
+  --action-primary-solid: #7c5470;
+  --action-primary-text: #fcf5f1;
+  --action-soft: linear-gradient(145deg, #e8c9d2, #cfb7de);
+  --action-soft-text: #3a2438;
+
+  --accent-champagne: #f6e2c8;
+  --accent-rose-gold: #e7c4b0;
+  --accent-lavender: #cdb5dd;
+  --accent-plum: #ac8498;
+  --focus-ring: #f0d3dc;
+
+  --data-sleep: #c7a6d6;
+  --data-sleep-strong: #ddc3e8;
+  --data-track: #f9f0ed14;
+
+  --status-success-text: #b3dcc5;
+  --status-success-bg: #7fbea024;
+  --status-warning-text: #f2cd9c;
+  --status-warning-bg: #f0c89621;
+  --rating: #f2cd9c;
+  --status-danger-text: #f3b0b5;
+  --status-danger-bg: #e6787e24;
+  --status-info-text: #d9c6ea;
+  --status-info-bg: #cdb5dd21;
+
+  --nav-bg: #2e2030f2;
+  --backdrop: #170d1ab3;
+}
+
+/* Daylight Blush */
+:root[data-visual-theme="default"] [data-theme="light"] {
+  --canvas-top: #fbf3ef;
+  --canvas-mid: #f5e8e7;
+  --canvas-bottom: #eee3ed;
+  --canvas-glow: #fff8ef;
+  --canvas-bloom: #e6bfcf4d;
+  --canvas-haze: #c5acdd47;
+
+  --text-primary: #38273c;
+  --text-secondary: #694e63;
+  --text-tertiary: #765a6f;
+
+  --surface-1: #fffaf6a6;
+  --surface-2: #fffaf6c7;
+  --surface-sheet: #fbf3f0;
+  --surface-edge: #fffaf5d9;
+  --surface-highlight: #ffffffcc;
+  --shadow-tint: #7955691a;
+  --control-bg: #fffaf6b3;
+  --control-border: #7955692b;
+  --control-active: #79556924;
+
+  --action-primary: linear-gradient(145deg, #795569, #493044);
+  --action-primary-solid: #5f3f55;
+  --action-primary-text: #fcf5f1;
+  --action-soft: linear-gradient(145deg, #ecd0d9, #d9c6e6);
+  --action-soft-text: #3a2438;
+
+  --accent-champagne: #e9c9a4;
+  --accent-rose-gold: #d8ab93;
+  --accent-lavender: #ad88bd;
+  --accent-plum: #795569;
+  --focus-ring: #76556d;
+
+  --data-sleep: #94709f;
+  --data-sleep-strong: #6f4d7e;
+  --data-track: #7955691a;
+
+  --status-success-text: #2c6a4c;
+  --status-success-bg: #3f8c681f;
+  --status-warning-text: #85521d;
+  --status-warning-bg: #c4843e24;
+  --rating: #9a6526;
+  --status-danger-text: #973242;
+  --status-danger-bg: #b43c4b1a;
+  --status-info-text: #5b4470;
+  --status-info-bg: #ad88bd24;
+
+  --nav-bg: #f7ece9f2;
+  --backdrop: #3a243866;
+}
+
+/* Existing component-level variable groups resolve to the shared roles. */
+:root[data-visual-theme="default"] [data-theme] {
+  --ui-border: var(--control-border);
+  --ui-control: var(--control-bg);
+  --ui-surface: var(--surface-1);
+  --ui-text: var(--text-primary);
+  --ui-muted: var(--text-secondary);
+  --ui-focus: var(--focus-ring);
+}
+:root[data-visual-theme="default"] [data-theme] .settings-page {
+  --settings-surface: var(--surface-1);
+  --settings-border: var(--surface-edge);
+  --settings-control: var(--control-bg);
+  --settings-text: var(--text-primary);
+  --settings-muted: var(--text-secondary);
+}
+:root[data-visual-theme="default"] [data-theme] .sleep-clock--summary {
+  --clock-text: var(--text-primary);
+  --clock-muted: var(--text-secondary);
+  --clock-border: var(--control-border);
+}
+:root[data-visual-theme="default"] [data-theme] .sleep-sound-activity {
+  --sound-ink: var(--text-primary);
+  --sound-muted: var(--text-secondary);
+  --sound-border: var(--control-border);
+  --sound-surface: var(--surface-2);
+}
+
+/* 2. Canvas ---------------------------------------------------------------- */
+
+/* Behind the web content (iOS overscroll/bounce). Root mirrors the colour
+   scheme onto <html data-appearance>; without it, the dark canvas applies. */
+:root[data-visual-theme="default"],
+:root[data-visual-theme="default"] body {
+  background: #241b28;
+  color-scheme: dark;
+}
+:root[data-visual-theme="default"][data-appearance="light"],
+:root[data-visual-theme="default"][data-appearance="light"] body {
+  background: #eee3ed;
+  color-scheme: light;
+}
+
+:root[data-visual-theme="default"] [data-theme] {
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  background:
+    radial-gradient(ellipse 85% 420px at 22% 120px, var(--canvas-glow), transparent 72%),
+    radial-gradient(ellipse 95% 650px at 10% 260px, var(--canvas-bloom), transparent 75%),
+    radial-gradient(ellipse 90% 760px at 95% 560px, var(--canvas-haze), transparent 75%),
+    linear-gradient(180deg, var(--canvas-top), var(--canvas-mid) 850px, var(--canvas-bottom));
+  background-attachment: scroll;
+}
+
+/* 3. Typography ------------------------------------------------------------ */
+
+:root[data-visual-theme="default"] [data-theme] :is(h1, .modal-header h2, .section-heading h2, .feed-card h2, .family-message-card h2, .analysis-card h2) {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -.02em;
+}
+:root[data-visual-theme="default"] [data-theme] h1 { letter-spacing: -.03em; }
+:root[data-visual-theme="default"] [data-theme] :is(.eyebrow, .card-label) { color: var(--text-tertiary); }
+:root[data-visual-theme="default"] [data-theme] :is(.muted, .page-description, .sleep-label, .sleep-subtitle, .next-sleep-hint,
+  .today-stats span, .sleep-strip-summary, .sleep-strip-times, .history-content span, .history-content p,
+  .stat-card span, .stat-card small, .daily-row span, .bar-list-value, .twelve-stats span, .mini-stats span,
+  .seven-day-grid span, .timeline-times, .timeline-legend, .notification-settings p, .account-email, .form-field) {
+  color: var(--text-secondary);
+}
+:root[data-visual-theme="default"] [data-theme] :is(.bar-list-label, .daily-row strong, .stat-card strong) { color: var(--text-primary); }
+
+/* 4. Surfaces -------------------------------------------------------------- */
+
+:root[data-visual-theme="default"] [data-theme] :is(.feed-card, .family-message-card, .empty-card, .settings-card,
+  .sleep-list-item, .sleep-strip, .history-item, .stat-card, .analysis-card, .notification-settings__card, .auth-card,
+  .today-stats, .twelve-stats > div, .mini-stats > div, .seven-day-grid > div, .split-summary, .sleep-clock-totals > div,
+  .personal-vs-guideline > div, .age-guide-metric-row, .wake-window-row, .sleep-rhythm, .about-hero) {
+  color: var(--text-primary);
+  background: var(--surface-1);
+  border-color: var(--surface-edge);
+  box-shadow: inset 0 1px 0 var(--surface-highlight), var(--shadow-soft);
+}
+/* Nested tiles sit on a card already: lighter, no second drop shadow. */
+:root[data-visual-theme="default"] [data-theme] :is(.twelve-stats > div, .mini-stats > div, .seven-day-grid > div,
+  .sleep-clock-totals > div, .personal-vs-guideline > div, .age-guide-metric-row, .wake-window-row, .split-summary) {
+  background: var(--surface-2);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
+}
+:root[data-visual-theme="default"] [data-theme] :is(.feed-modal, .sleep-detail-modal) {
+  color: var(--text-primary);
+  background: var(--surface-sheet);
+  border-color: var(--surface-edge);
+  box-shadow: inset 0 1px 0 var(--surface-highlight), var(--shadow-lift);
+}
+:root[data-visual-theme="default"] [data-theme] :is(.modal-backdrop, .sleep-detail-backdrop) { background: var(--backdrop); }
+:root[data-visual-theme="default"] [data-theme] :is(.sleep-list-icon, .history-icon, .account-identity, .about-moon) {
+  color: var(--accent-plum);
+  background: var(--control-active);
+}
+
+/* 5. Controls -------------------------------------------------------------- */
+
+:root[data-visual-theme="default"] [data-theme] .primary-button {
+  color: var(--action-primary-text);
+  background: var(--action-primary);
+  box-shadow: inset 0 1px 0 #ffffff2b, 0 8px 22px var(--shadow-tint);
+}
+:root[data-visual-theme="default"] [data-theme] .primary-button.sleep-action.is-sleeping {
+  color: var(--action-soft-text);
+  background: var(--action-soft);
+}
+:root[data-visual-theme="default"] [data-theme] :is(.secondary-button, .status-pill, .history-action-button, .modal-close,
+  .feed-type-button, .side-button, .star-button, .amount-input, .datetime-input, .auth-tab, .history-delete) {
+  color: var(--text-primary);
+  background: var(--control-bg);
+  border-color: var(--control-border);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
+}
+:root[data-visual-theme="default"] [data-theme] :is(.feed-type-button.active, .side-button.active, .auth-tab--active) {
+  color: var(--text-primary);
+  background: var(--control-active);
+  border-color: var(--accent-plum);
+}
+/* Rating keeps its warm "selected star" meaning, in champagne. */
+:root[data-visual-theme="default"] [data-theme] .star-button.active {
+  color: var(--rating);
+  background: var(--status-warning-bg);
+  border-color: var(--rating);
+}
+:root[data-visual-theme="default"] [data-theme] .text-button { color: var(--text-primary); }
+:root[data-visual-theme="default"] [data-theme] .history-delete { color: var(--status-danger-text); }
+
+/* Segmented tabs (Settings, Analysis, onboarding). */
+:root[data-visual-theme="default"] [data-theme] :is(.settings-tab-bar, .analysis-tab-bar) {
+  background: var(--control-bg);
+  border-color: var(--surface-edge);
+}
+:root[data-visual-theme="default"] [data-theme] :is(.settings-tab, .analysis-tab) { color: var(--text-secondary); }
+:root[data-visual-theme="default"] [data-theme] :is(.settings-tab.active, .analysis-tab.active) {
+  color: var(--text-primary);
+  background: var(--surface-2);
+  box-shadow: inset 0 1px 0 var(--surface-highlight), 0 2px 10px var(--shadow-tint);
+}
+:root[data-visual-theme="default"] [data-theme] .notification-toggle input:checked + .notification-toggle__slider {
+  background: var(--action-primary-solid);
+}
+/* Longhands only: a background shorthand would reset the chevron's repeat. */
+:root[data-visual-theme="default"] [data-theme] select:not([multiple]) {
+  color: var(--text-primary);
+  background-color: var(--control-bg);
+  border-color: var(--control-border);
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23ac8498' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+:root[data-visual-theme="default"] [data-theme] select option { color: var(--text-primary); background: var(--surface-sheet); }
+:root[data-visual-theme="default"] [data-theme] .sleep-clock-picker select:focus-visible { outline-color: var(--focus-ring); }
+
+/* 6. Status and data ------------------------------------------------------- */
+
+:root[data-visual-theme="default"] [data-theme] .trend-chip.neutral { color: var(--text-secondary); background: var(--control-bg); }
+:root[data-visual-theme="default"] [data-theme] .trend-chip.positive { color: var(--status-success-text); background: var(--status-success-bg); }
+:root[data-visual-theme="default"] [data-theme] .trend-chip.warning { color: var(--status-warning-text); background: var(--status-warning-bg); }
+:root[data-visual-theme="default"] [data-theme] .notification-settings__warning { color: var(--status-warning-text); background: var(--status-warning-bg); }
+:root[data-visual-theme="default"] [data-theme] .auth-message--error { color: var(--status-danger-text); background: var(--status-danger-bg); }
+:root[data-visual-theme="default"] [data-theme] .auth-message--success { color: var(--status-success-text); background: var(--status-success-bg); }
+
+:root[data-visual-theme="default"] [data-theme] :is(.bar-list-track, .bar-track, .timeline-track) { background: var(--data-track); }
+:root[data-visual-theme="default"] [data-theme] :is(.bar-list-fill:not(.success, .info, .warning, .neutral), .bar-value, .timeline-sleep-block, .legend-sleep) {
+  background: var(--data-sleep);
+}
+:root[data-visual-theme="default"] [data-theme] .sleep-strip-cell { background: var(--data-track); }
+:root[data-visual-theme="default"] [data-theme] .sleep-strip-cell.sleep { background: var(--data-sleep); }
+:root[data-visual-theme="default"] [data-theme] :is(.sleep-clock-segment.sleep, .sleep-clock--summary .sleep-clock-segment.sleep) { fill: var(--data-sleep); }
+:root[data-visual-theme="default"] [data-theme] .sleep-clock-legend-dot.sleep { background: var(--data-sleep); }
+:root[data-visual-theme="default"] [data-theme] .sleep-clock-svg { filter: drop-shadow(0 12px 22px var(--shadow-tint)); }
+:root[data-visual-theme="default"] [data-theme] .sleep-clock-bezel { fill: var(--surface-2); }
+:root[data-visual-theme="default"] [data-theme] .sleep-clock-face { fill: var(--surface-2); stroke: var(--surface-edge); }
+:root[data-visual-theme="default"] [data-theme] .sleep-clock-segment:not(.sleep) { fill: var(--data-track); }
+:root[data-visual-theme="default"] [data-theme] .sleep-sound-activity .sound-activity-event > span { background: var(--data-sleep); }
+:root[data-visual-theme="default"] [data-theme] .sleep-sound-activity .sound-activity-event.low > span { background: var(--data-sleep); opacity: .72; border-color: var(--data-sleep-strong); }
+:root[data-visual-theme="default"] [data-theme] .sleep-sound-activity .sound-activity-event.high > span { background: var(--data-sleep-strong); border-top-color: var(--accent-champagne); }
+:root[data-visual-theme="default"] [data-theme] .active-sleep-estimate progress { accent-color: var(--accent-plum); }
+
+/* 7. Navigation ------------------------------------------------------------ */
+
+:root[data-visual-theme="default"] [data-theme] .bottom-nav {
+  background: var(--nav-bg);
+  border-top-color: var(--surface-edge);
+  box-shadow: 0 -4px 24px var(--shadow-tint);
+}
+:root[data-visual-theme="default"] [data-theme] .bottom-nav a { color: var(--text-secondary); }
+:root[data-visual-theme="default"] [data-theme] .bottom-nav a.active { color: var(--text-primary); background: var(--control-active); }

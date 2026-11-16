@@ -57,10 +57,12 @@ const savedBabyId =
 const savedLanguage =
   (localStorage.getItem("sleepy_language") as Language) || "no";
 
-// Alive is the primary Sleepy look for fresh installs and existing users with
-// no saved preference. Explicit Original Sleepy or Retro choices are preserved.
+// Sleepy Premium ("default") is the look for fresh installs and anyone who has
+// never picked a skin. The key is written only by setVisualTheme (an explicit
+// tap in Settings), so any stored value - Alive, Retro or default - is a real
+// choice and is preserved.
 const savedVisualTheme =
-  (localStorage.getItem("sleepy_visual_theme") as VisualTheme) || "alive";
+  (localStorage.getItem("sleepy_visual_theme") as VisualTheme) || "default";
 
 export const useAppStore = create<AppState>((set) => ({
   // --------------------------------------------------

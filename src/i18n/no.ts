@@ -11,6 +11,7 @@ const no = {
     onsetNote: "Det markerte feltet anslår når søvnen kan begynne, ikke hvor lenge den varer.",
     recordNote: "En rytme basert på registrert søvn. Ingen fast timeplan.",
     recordedToday: "Registrert søvn i dagens tidslinje", activeSince: "Sover nå, startet {{time}}",
+    typicalAwake: "Vanlig våkentid",
   },
   sleepStart: {
     minutesAgo: "{{minutes}} minutter siden",
@@ -123,6 +124,7 @@ const no = {
   },
 
   home: {
+    changeBaby: "{{name}} – bytt eller administrer baby",
     nextSleepTitle: "Neste søvn",
     nextSleepBetween: "Sovner trolig mellom",
     nextSleepAwake: "Våken i {{duration}}",
@@ -422,7 +424,7 @@ const no = {
     useDarkMode: "Bruk mørkt tema",
     visualThemeTitle: "Visuelt tema",
     visualThemeNote: "Velg hvordan Sleepy skal se ut.",
-    visualThemeDefault: "Original Sleepy",
+    visualThemeDefault: "Sleepy",
     visualThemeAlive: "Alive",
     visualThemeRetro: "Retro 1994",
     languageTitle: "Språk",

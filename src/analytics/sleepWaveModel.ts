@@ -20,14 +20,22 @@ export function wavePosition(instant: number, domain: WaveInterval): number {
   return (instant - domain.startMs) / (domain.endMs - domain.startMs);
 }
 
-// Height is a styling convention, capped and softened for narrow intervals;
-// it never represents probability, intensity or sleep stages. Exact left/right
-// boundaries encode duration. Nothing extends beyond the recorded timestamps.
+// Height is a styling convention: a readable floor so short naps are legible,
+// growing gently and capped; it never represents probability, intensity or
+// sleep stages. Exact left/right boundaries encode duration. Each flank is a
+// symmetric ease (bell-like for naps, a soft plateau for long sleeps), and
+// nothing extends beyond the recorded timestamps.
+export function recordedWaveCrest(segment: Pick<WaveSegment, "start" | "end">): number {
+  return 150 - Math.min(78, 30 + (segment.end - segment.start) * 640 * .4);
+}
 export function recordedWavePath(segment: Pick<WaveSegment, "start" | "end">): string {
-  const left = segment.start * 640, right = segment.end * 640;
-  const shoulder = Math.min((right - left) / 2, 42);
-  const crest = 150 - Math.min(62, (right - left) * .5);
-  return `M ${left} 150 C ${left + shoulder / 2} 150 ${left + shoulder / 2} ${crest} ${left + shoulder} ${crest} L ${right - shoulder} ${crest} C ${right - shoulder / 2} ${crest} ${right - shoulder / 2} 150 ${right} 150 Z`;
+  const left = segment.start * 640, right = segment.end * 640, width = right - left;
+  const shoulder = Math.min(width / 2, 46);
+  const crest = recordedWaveCrest(segment);
+  // Horizontal tangents at both ends of each flank: (x0,y0) -> (x1,y1).
+  const flank = (x0: number, y0: number, x1: number, y1: number) =>
+    `C ${x0 + (x1 - x0) * .55} ${y0} ${x0 + (x1 - x0) * .45} ${y1} ${x1} ${y1}`;
+  return `M ${left} 150 ${flank(left, 150, left + shoulder, crest)} L ${right - shoulder} ${crest} ${flank(right - shoulder, crest, right, 150)} Z`;
 }
 
 // Input is already normalized and scoped to the selected baby by the existing

@@ -6,6 +6,8 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { Link } from "react-router-dom";
+
 import { useAppStore } from "../stores/appStore";
 
 import {
@@ -67,11 +69,9 @@ export default function Home() {
         state.babies
     );
 
-  const isRetro =
-    useAppStore(
-      (state) =>
-        state.visualTheme
-    ) === "retro";
+  const visualTheme = useAppStore((state) => state.visualTheme);
+  const isRetro = visualTheme === "retro";
+  const isPremium = visualTheme === "default";
 
   const currentBaby =
     babies.find(
@@ -420,7 +420,19 @@ export default function Home() {
   return (
     <>
       <main className="home-page">
-        <header className="home-header">
+        {isPremium ? <header className="home-header home-header--premium">
+          <p className="home-brand">
+            <svg className="home-brand-moon" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+              <path d="M21.5 4.2A12.5 12.5 0 1 0 27.8 22 10 10 0 0 1 21.5 4.2Z" />
+            </svg>
+            {t("common.appName")}
+          </p>
+          <Link className="home-baby-pill" to="/settings" aria-label={t("home.changeBaby", { name: currentBaby?.name ?? t("common.appName") })}>
+            <span className="home-baby-initial" aria-hidden="true">{(currentBaby?.name ?? t("common.appName")).trim().charAt(0).toUpperCase()}</span>
+            <h1>{currentBaby?.name ?? t("common.appName")}</h1>
+            <svg className="home-baby-chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m4 6 4 4 4-4" /></svg>
+          </Link>
+        </header> : <header className="home-header">
           <div>
             <p className="eyebrow">
               {t("common.appName")}
@@ -438,7 +450,7 @@ export default function Home() {
                 ? t("common.sleeping")
                 : t("common.awake")}
           </div>
-        </header>
+        </header>}
 
         <section className="sleep-card home-live-state" aria-label={t(activeSleep ? "common.sleeping" : "common.awake")}>
           {isRetro && (

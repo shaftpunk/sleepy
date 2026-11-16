@@ -12,6 +12,7 @@ const en = {
     onsetNote: "The highlighted window estimates when sleep may begin, not how long it will last.",
     recordNote: "A rhythm built from recorded sleep. No fixed schedule.",
     recordedToday: "Recorded sleep in today's timeline", activeSince: "Currently sleeping, started {{time}}",
+    typicalAwake: "Typical awake time",
   },
   sleepStart: {
     minutesAgo: "{{minutes}} minutes ago",
@@ -124,6 +125,7 @@ const en = {
   },
 
   home: {
+    changeBaby: "{{name}} – switch or manage baby",
     nextSleepTitle: "Next Sleep",
     nextSleepBetween: "Likely asleep between",
     nextSleepAwake: "Awake for {{duration}}",
@@ -423,7 +425,7 @@ const en = {
     useDarkMode: "Use dark mode",
     visualThemeTitle: "Visual theme",
     visualThemeNote: "Choose how Sleepy looks.",
-    visualThemeDefault: "Original Sleepy",
+    visualThemeDefault: "Sleepy",
     visualThemeAlive: "Alive",
     visualThemeRetro: "Retro 1994",
     languageTitle: "Language",

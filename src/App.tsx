@@ -8,6 +8,7 @@ import {
 
 import "./App.css";
 import "./mobile.css";
+import "./styles/premium-theme.css";
 
 import { useAppStore } from "./stores/appStore";
 import { useTranslation } from "./i18n";

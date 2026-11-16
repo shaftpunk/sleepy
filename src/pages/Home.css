@@ -1,82 +1,65 @@
-/* Home-only premium surfaces. :has keeps the shell and navigation palette tied
-   to the mounted route, including after the lazy stylesheet has loaded.
-   Optional illustrated/pixel skins retain their own visual identity. */
-:where(html:not([data-visual-theme="alive"]):not([data-visual-theme="retro"])) [data-theme]:has(> .app-shell > .home-page) {
-  --ui-text: #f9f0ed;
-  --ui-muted: #d9c0cf;
-  --ui-border: #d9b4c730;
-  --ui-control: #d9b4c714;
-  --ui-surface: #382738;
-  --ui-focus: #e4c1cd;
-  --home-edge: #f9f0ed24;
-  --home-shadow: #190e2026;
-  --home-nav: #302130f5;
-  color: var(--ui-text);
-  background:
-    radial-gradient(ellipse 95% 650px at 15% 160px, #79556940, transparent 75%),
-    radial-gradient(ellipse 90% 750px at 90% 500px, #c5acdd12, transparent 75%),
-    linear-gradient(180deg, #342238, #2c202e 850px, #241b28);
+/* Premium (default skin) Home details. Canvas, navigation, cards and controls
+   come from the app-wide tokens in src/styles/premium-theme.css; Alive and
+   Retro keep their own visual identity. */
+:root[data-visual-theme="default"] [data-theme] .home-header h1 { letter-spacing: -.035em; }
+:root[data-visual-theme="default"] [data-theme] .home-page .sleep-timer { font-weight: 500; }
+:root[data-visual-theme="default"] [data-theme] .home-page .sleep-list-item p { color: var(--text-secondary); }
+:root[data-visual-theme="default"] [data-theme] .home-page .primary-button.sleep-action { font-weight: 600; }
+:root[data-visual-theme="default"] [data-theme] .home-page .primary-button.sleep-action:focus-visible { outline-color: var(--focus-ring); }
+:root[data-visual-theme="default"] [data-theme] .home-live-state progress::-webkit-progress-bar { background: var(--data-track); }
+:root[data-visual-theme="default"] [data-theme] .home-live-state progress::-webkit-progress-value { background: var(--accent-plum); }
+:root[data-visual-theme="default"] [data-theme] .home-live-state progress::-moz-progress-bar { background: var(--accent-plum); }
 
-  &[data-theme="light"] {
-    --ui-text: #38273c;
-    --ui-muted: #694e63;
-    --ui-border: #79556930;
-    --ui-control: #7955690d;
-    --ui-surface: #faf1ed;
-    --ui-focus: #76556d;
-    --home-edge: #fffaf5c9;
-    --home-shadow: #79556914;
-    --home-nav: #f5e8e7f5;
-    background:
-      radial-gradient(ellipse 95% 650px at 15% 160px, #d9b4c74d, transparent 75%),
-      radial-gradient(ellipse 90% 750px at 90% 500px, #c5acdd40, transparent 75%),
-      linear-gradient(180deg, #faf1ed, #f5e8e7 850px, #eee3ed);
-  }
-
-  .home-header h1 {
-    font-family: ui-serif, Georgia, "Times New Roman", serif;
-    font-weight: 400;
-    letter-spacing: -.035em;
-  }
-  .home-page .sleep-timer { font-weight: 500; }
-  .home-page :is(.eyebrow, .card-label, .muted, .today-stats span, .sleep-list-item p, .sleep-strip-summary, .sleep-strip-times, .history-content span, .history-content p) {
-    color: var(--ui-muted);
-  }
-  .home-page :is(.feed-card, .family-message-card, .empty-card, .sleep-list-item, .sleep-strip, .history-item) {
-    color: var(--ui-text);
-    border-color: var(--home-edge);
-    background: linear-gradient(145deg, var(--ui-control), transparent), var(--ui-surface);
-    box-shadow: inset 0 1px 0 var(--home-edge), 0 8px 24px var(--home-shadow);
-  }
-  .home-page :is(.status-pill, .secondary-button) {
-    color: var(--ui-text);
-    border-color: var(--ui-border);
-    background: var(--ui-control);
-    box-shadow: inset 0 1px 0 var(--home-edge);
-  }
-  .home-page .primary-button.sleep-action {
-    color: #f9f0ed;
-    background: linear-gradient(145deg, #795569, #493044);
-    box-shadow: inset 0 1px 0 #f9f0ed30, 0 8px 22px var(--home-shadow);
-    font-weight: 600;
-  }
-  .home-page .primary-button.sleep-action.is-sleeping {
-    color: #493044;
-    background: linear-gradient(145deg, #e4c1cd, #cdb5dd);
-  }
-  .home-page .primary-button.sleep-action:focus-visible { outline-color: var(--ui-focus); }
-  .home-page .text-button { color: var(--ui-text); }
-  .home-live-state progress::-webkit-progress-bar { background: var(--ui-control); }
-  .home-live-state progress::-webkit-progress-value { background: var(--ui-focus); }
-  .home-live-state progress::-moz-progress-bar { background: var(--ui-focus); }
-  .bottom-nav {
-    background: var(--home-nav);
-    border-color: var(--home-edge);
-    box-shadow: 0 -4px 24px var(--home-shadow);
-  }
-  .bottom-nav a { color: var(--ui-muted); }
-  .bottom-nav a.active { color: var(--ui-text); background: var(--ui-control); }
+/* Premium header: moon mark + serif wordmark, and the baby as a soft pill. */
+.home-header--premium { gap: 12px; }
+.home-brand {
+  display: inline-flex; align-items: center; gap: 6px; margin: 0;
+  color: var(--text-primary); font-family: var(--font-display);
+  font-size: clamp(1.75rem, 8.2vw, 2.25rem); line-height: 1.1; letter-spacing: -.03em;
 }
+.home-brand-moon { width: 1.05em; height: 1.05em; fill: var(--accent-rose-gold); filter: drop-shadow(0 0 8px var(--accent-champagne)); }
+.home-baby-pill {
+  display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 58%; min-height: 44px;
+  padding: 4px 12px 4px 4px; border: 1px solid var(--surface-edge); border-radius: var(--radius-pill);
+  color: var(--text-primary); background: var(--surface-1);
+  box-shadow: inset 0 1px 0 var(--surface-highlight), var(--shadow-soft);
+}
+.home-baby-initial {
+  display: grid; place-items: center; flex: 0 0 36px; width: 36px; height: 36px; border-radius: 50%;
+  color: var(--action-primary-text); background: var(--action-primary);
+  font-family: var(--font-display); font-size: 1.05rem;
+}
+:root[data-visual-theme="default"] [data-theme] .home-page .home-header--premium .home-baby-pill h1 {
+  min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--font-display); font-size: 1.05rem; font-weight: 400; letter-spacing: -.01em;
+}
+.home-baby-chevron { flex: 0 0 14px; width: 14px; height: 14px; fill: none; stroke: var(--text-secondary); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Premium live state: same content and gesture, less vertical air, pill controls. */
+:root[data-visual-theme="default"] [data-theme] .home-page { gap: 18px; }
+:root[data-visual-theme="default"] [data-theme] .home-page .home-live-state { gap: 4px; padding: 2px 4px 0; }
+:root[data-visual-theme="default"] [data-theme] .home-page .home-live-state .sleep-timer { line-height: 1.1; }
+:root[data-visual-theme="default"] [data-theme] .home-page .home-sleep-actions { margin-top: 8px; gap: 2px; }
+:root[data-visual-theme="default"] [data-theme] .home-page .primary-button.sleep-action {
+  min-height: 56px; border-radius: var(--radius-pill); letter-spacing: .005em;
+}
+:root[data-visual-theme="default"] [data-theme] .home-page .primary-button.sleep-action:not(.is-sleeping)::before {
+  content: ""; width: 0; height: 0; margin-right: 2px;
+  border-block: 7px solid transparent; border-left: 11px solid currentColor; border-radius: 2px;
+}
+:root[data-visual-theme="default"] [data-theme] .home-page .home-hold-hint { margin-top: 6px; text-align: center; color: var(--text-tertiary); }
+:root[data-visual-theme="default"] [data-theme] .home-page .home-change-time {
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 4px; padding: 8px 18px;
+  border: 1px solid var(--control-border); border-radius: var(--radius-pill);
+  background: var(--control-bg); box-shadow: inset 0 1px 0 var(--surface-highlight), var(--shadow-soft);
+  font-size: .92rem;
+}
+:root[data-visual-theme="default"] [data-theme] .home-page .home-change-time::before {
+  content: ""; width: 16px; height: 16px; background: currentColor; opacity: .8;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Ccircle cx='8' cy='9' r='5.8'/%3E%3Cpath d='M8 6v3.2l2 1.4M6.5 1.8h3'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Ccircle cx='8' cy='9' r='5.8'/%3E%3Cpath d='M8 6v3.2l2 1.4M6.5 1.8h3'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+:root[data-visual-theme="default"] [data-theme] .home-page .home-live-state + .sleep-wave { margin-top: 0; }
 
 /* Shared awake/asleep geometry. */
 .home-page .home-header { flex-direction: row; align-items: center; }
