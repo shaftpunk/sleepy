@@ -21,7 +21,6 @@
 }
 .home-page .home-live-state .sleep-subtitle { margin: 0; color: var(--ui-muted); font-size: .9rem; line-height: 1.5; }
 .home-sleep-insight { display: grid; align-content: center; min-height: 80px; padding: 8px 0; }
-.home-next-sleep p { margin: 0 0 4px; line-height: 1.5; }
 .home-live-state .active-sleep-estimate { display: grid; gap: 5px; width: 100%; max-width: 320px; margin: 0 auto; }
 .home-live-state .active-sleep-estimate progress { height: 8px; margin: 0 0 4px; appearance: none; border: 0; border-radius: 4px; overflow: hidden; background: rgba(149, 117, 225, .24); }
 .home-live-state progress::-webkit-progress-bar { background: rgba(149, 117, 225, .24); }

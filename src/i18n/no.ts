@@ -2,6 +2,16 @@
 // of truth: en.ts is written `satisfies Translations` against `typeof
 // noTranslations`, so a missing/extra key there is a compile error.
 const no = {
+  sleepWave: {
+    rhythm: "Barnets daglige søvnrytme", rhythmFor: "{{name}} · Dagens søvnrytme",
+    now: "Nå", expectedOnset: "Forventet innsovning",
+    sleepingTitle: "Sover nå", resting: "Dagens rytme, slik den utvikler seg.",
+    learningTitle: "Vi lærer søvnrytmen", learningBody: "Registrer søvn for å få personlige prognoser.",
+    recorded: "Registrert søvn", onsetWindow: "Mulig innsovning", lastSleep: "Sist registrert", status: "Akkurat nå", nextOnset: "Neste innsovning",
+    onsetNote: "Det markerte feltet anslår når søvnen kan begynne, ikke hvor lenge den varer.",
+    recordNote: "En rytme basert på registrert søvn. Ingen fast timeplan.",
+    recordedToday: "Registrert søvn i dagens tidslinje", activeSince: "Sover nå, startet {{time}}",
+  },
   sleepStart: {
     minutesAgo: "{{minutes}} minutter siden",
     question: "Når sovnet babyen?", now: "Nå", preset: "{{minutes}} min",

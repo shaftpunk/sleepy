@@ -111,7 +111,7 @@ test('haptics are optional on web, missing plugins, and rejecting or synchronous
 });
 test('Home keeps the shared predictors, Today calculator, authoritative writes and a synchronous duplicate guard', () => {
   const home = fs.readFileSync('src/pages/Home.tsx', 'utf8');
-  for (const name of ['computeNextSleepHint', 'getActiveSleepEstimate', 'computeTodayTotals', 'await startSleep(', 'await stopSleep(', 'sleepActionBusy.current = true']) assert.ok(home.includes(name));
+  for (const name of ['calculateNextSleep', 'getActiveSleepEstimate', 'computeTodayTotals', 'await startSleep(', 'await stopSleep(', 'sleepActionBusy.current = true']) assert.ok(home.includes(name));
   assert.doesNotMatch(home, /<SleepStartOptions|<SleepStopOptions|stars\(todayStats/);
   const action = fs.readFileSync('src/components/SleepPrimaryAction.tsx', 'utf8');
   for (const behavior of ['onPointerCancel', 'onLostPointerCapture', 'onPointerMove', 'visibilitychange', 'gesture.dispose()', 'suppressClick', 'busy.current = true', 'SleepTimeSheet']) assert.ok(action.includes(behavior));

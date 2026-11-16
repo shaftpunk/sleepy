@@ -48,7 +48,7 @@ export function isSleepAtLocalTime(session: Interval, localDate: string, selecte
 // limit, but union overlaps here: a duplicated/split registration must not inflate
 // coverage, day counts or weights. Do not change the personalized classifier's
 // separate first-seen overlap policy or use its nap/night labels for this feature.
-function recordedIntervals(sessions: SleepSession[], now: number): Interval[] {
+export function recordedIntervals(sessions: SleepSession[], now: number): Interval[] {
   const valid = sessions.filter(s => Number.isFinite(s.startMs) && Number.isFinite(s.endMs) &&
     s.endMs > s.startMs && s.endMs <= now && s.durationMin > 0 &&
     s.durationMin <= MAX_PLAUSIBLE_SESSION_MINUTES &&

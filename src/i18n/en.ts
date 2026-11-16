@@ -3,6 +3,16 @@ import type { Translations } from "./types";
 // English — mirrors no.ts's shape exactly. `satisfies Translations` makes a
 // missing or extra key here a compile error.
 const en = {
+  sleepWave: {
+    rhythm: "Your baby's daily rhythm", rhythmFor: "{{name}} · Daily rhythm",
+    now: "Now", expectedOnset: "Expected time to fall asleep",
+    sleepingTitle: "Sleeping now", resting: "Today's rhythm, as it unfolds.",
+    learningTitle: "We're learning your baby's rhythm", learningBody: "Keep tracking sleep for personalized forecasts.",
+    recorded: "Recorded sleep", onsetWindow: "Sleep onset window", lastSleep: "Last recorded", status: "Right now", nextOnset: "Next onset",
+    onsetNote: "The highlighted window estimates when sleep may begin, not how long it will last.",
+    recordNote: "A rhythm built from recorded sleep. No fixed schedule.",
+    recordedToday: "Recorded sleep in today's timeline", activeSince: "Currently sleeping, started {{time}}",
+  },
   sleepStart: {
     minutesAgo: "{{minutes}} minutes ago",
     question: "When did your baby fall asleep?", now: "Now", preset: "{{minutes}} min",

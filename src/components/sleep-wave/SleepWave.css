@@ -1,0 +1,86 @@
+.sleep-wave {
+  --wave-ink: #fff0ec;
+  --wave-muted: #e1cddc;
+  --wave-edge: #d6b0d1;
+  --wave-record-top: #b18ac2;
+  --wave-record-bottom: #654b74;
+  --wave-active: #e6c4c2;
+  --wave-forecast: #edcffa;
+  --wave-rule: #dbc1dc30;
+  --wave-border: #edcdda38;
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  padding: clamp(18px, 5vw, 28px);
+  border: 1px solid var(--wave-border);
+  border-radius: 30px;
+  color: var(--wave-ink);
+  background:
+    radial-gradient(ellipse at 49% 32%, #a97c8b40, transparent 48%),
+    radial-gradient(ellipse at 98% 62%, #a985bf36, transparent 58%),
+    radial-gradient(ellipse at 0 0, #a27e9954, transparent 58%),
+    linear-gradient(145deg, #4e374e, #302333 62%, #463348);
+  box-shadow: inset 0 1px 0 #ffe7ef18, 0 14px 35px #170f241f;
+}
+[data-theme="light"] .sleep-wave {
+  --wave-ink: #402338;
+  --wave-muted: #67465e;
+  --wave-edge: #8b5f91;
+  --wave-record-top: #9665a5;
+  --wave-record-bottom: #c6a7c9;
+  --wave-active: #84577e;
+  --wave-forecast: #ac74cb;
+  --wave-rule: #69426624;
+  --wave-border: #ffffffa8;
+  background:
+    radial-gradient(ellipse at 48% 32%, #fff7e9e0, transparent 52%),
+    radial-gradient(ellipse at 100% 62%, #c5aad77d, transparent 58%),
+    radial-gradient(ellipse at 0 0, #f9edec99, transparent 55%),
+    linear-gradient(140deg, #e2cbd9, #f0dedb 59%, #e9dce5);
+  box-shadow: inset 0 1px 0 #fff9, 0 12px 30px #59405714;
+}
+.sleep-wave .sleep-wave-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 0; }
+.sleep-wave-header > div { min-width: 0; flex: 1 1 160px; }
+.sleep-wave h2, .sleep-wave h3, .sleep-wave p { margin: 0; }
+.sleep-wave h2 { font-family: ui-serif, Georgia, "Times New Roman", serif; font-style: italic; font-weight: 400; font-size: clamp(1.85rem, 7.5vw, 2.5rem); line-height: 1.08; letter-spacing: -.045em; overflow-wrap: anywhere; }
+.sleep-wave-header p { margin-top: 6px; font-size: .75rem; line-height: 1.5; color: var(--wave-muted); overflow-wrap: anywhere; }
+.sleep-wave-today { flex-shrink: 0; margin-top: 2px; padding: 6px 12px; border: 1px solid var(--wave-border); border-radius: 30px; font-size: .75rem; background: #ffffff0d; }
+.sleep-wave-forecast { display: grid; align-content: center; gap: 6px; min-height: 150px; padding: 24px 0 14px; text-align: center; }
+.sleep-wave h3 { font-family: ui-serif, Georgia, "Times New Roman", serif; font-size: 1.25rem; line-height: 1.35; font-weight: 400; }
+.sleep-wave .sleep-wave-time { color: var(--wave-ink); font-family: ui-serif, Georgia, "Times New Roman", serif; font-weight: 400; font-size: clamp(2.25rem, 9.5vw, 3.3rem); line-height: 1.15; font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.055em; overflow-wrap: anywhere; }
+.sleep-wave .sleep-wave-caption { color: var(--wave-muted); font-family: ui-serif, Georgia, "Times New Roman", serif; font-style: italic; font-size: 1rem; line-height: 1.5; }
+.sleep-wave .sleep-wave-state-copy { max-width: 29ch; margin: 3px auto 0; font-size: .85rem; line-height: 1.6; color: var(--wave-muted); }
+.sleep-wave-chart { position: relative; padding-top: 23px; }
+.sleep-wave-chart svg { display: block; width: 100%; height: 145px; overflow: visible; }
+.sleep-wave-baseline { stroke: var(--wave-rule); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.sleep-wave-recorded { stroke: var(--wave-edge); stroke-width: 1; stroke-linejoin: round; }
+.sleep-wave-now-label { position: absolute; top: 0; transform: translateX(-50%); padding: 3px 7px; border-radius: 7px; background: var(--wave-ink); color: #402338; font-size: .65rem; line-height: 1.4; white-space: nowrap; }
+[data-theme="light"] .sleep-wave-now-label { color: #fff7f3; }
+.sleep-wave-now-marker line { stroke: var(--wave-ink); stroke-width: 1; vector-effect: non-scaling-stroke; opacity: .8; }
+.sleep-wave-now-marker circle { fill: var(--wave-ink); }
+.sleep-wave-now-marker .sleep-wave-now-halo { opacity: .12; }
+.sleep-wave-forecast-edge { fill: none; stroke: var(--wave-edge); stroke-width: 1; stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
+.sleep-wave-onset { fill: var(--wave-ink); stroke: var(--wave-edge); stroke-width: 1; }
+.sleep-wave-axis { position: relative; height: max(52px, 4.5em); color: var(--wave-muted); font-size: .65rem; font-variant-numeric: tabular-nums; }
+.sleep-wave-axis > span { position: absolute; top: 0; text-align: center; transform: translateX(-50%); white-space: nowrap; line-height: 1.5; }
+.sleep-wave-axis .is-first { transform: none; }
+.sleep-wave-axis .is-last { transform: translateX(-100%); }
+.sleep-wave-axis small { display: block; font-size: .85em; }
+.sleep-wave-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; color: var(--wave-muted); font-size: .65rem; line-height: 1.5; padding: 0 0 18px; }
+.sleep-wave-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.sleep-wave-legend i { width: 9px; height: 9px; border-radius: 50%; background: var(--wave-record-top); }
+.sleep-wave-legend .is-forecast { background: transparent; border: 1px dashed var(--wave-edge); border-radius: 2px; }
+.sleep-wave-legend .is-active { background: repeating-linear-gradient(45deg, var(--wave-active) 0 2px, transparent 2px 4px); }
+.sleep-wave-events { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 4.5rem), 1fr)); gap: 12px; margin: 0; padding: 16px 0 0; border-top: 1px solid var(--wave-rule); }
+.sleep-wave-events > div { min-width: 0; }
+.sleep-wave-events dt { margin: 0 0 6px; color: var(--wave-muted); font-size: .65rem; line-height: 1.5; overflow-wrap: anywhere; }
+.sleep-wave-events dd { margin: 0; font-size: .78rem; line-height: 1.6; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.sleep-wave .sleep-wave-note { margin-top: 16px; color: var(--wave-muted); font-size: .65rem; line-height: 1.6; }
+.sleep-wave-accessible-history { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (prefers-reduced-motion: no-preference) {
+  .sleep-wave-now-marker { transition: transform .3s ease; }
+}
+@media (max-width: 359px) {
+  .sleep-wave { border-radius: 26px; }
+  .sleep-wave-legend { gap: 8px 12px; }
+}

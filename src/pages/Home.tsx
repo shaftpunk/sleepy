@@ -39,11 +39,12 @@ import SleepStrip from "../components/SleepStrip";
 import BabySprite from "../themes/retro/BabySprite";
 
 import { useAnalyticsData } from "../hooks/useAnalyticsData";
-import { computeNextFeedSide, computeNextSleepHint, computeTodayTotals } from "../analytics/home";
-import { computeWakeWindows } from "../analytics/wakeWindows";
+import { computeNextFeedSide, computeTodayTotals } from "../analytics/home";
+import SleepWaveCard from "../components/sleep-wave/SleepWaveCard";
+import { calculateNextSleep } from "../analytics/nextSleep";
+import { ageInDays } from "../analytics/localDate";
 import { getActiveSleepEstimate, sleepEstimateHistoryRevision, subscribeSleepEstimateHistory, type SleepEstimatePresentation } from "../services/sleepEstimateService";
 import ActiveSleepEstimate from "../components/ActiveSleepEstimate";
-import { median } from "../analytics/time";
 import { feedTypeLabel, formatClock, formatDuration, sideLabel } from "../lib/format";
 import { useTranslation } from "../i18n";
 import "./SleepButton.css";
@@ -195,29 +196,14 @@ export default function Home() {
     [analyticsSessions, now]
   );
 
-  const wakeWindowStats = useMemo(() => {
-    const windows = computeWakeWindows(analyticsSessions).windows;
-    return {
-      count: windows.length,
-      medianMinutes: windows.length
-        ? median(windows.map((w) => w.minutes))
-        : null,
-    };
-  }, [analyticsSessions]);
-
-  const nextSleepHint = useMemo(
-    () =>
-      computeNextSleepHint({
-        lastSessionEndMs: lastSleep?.endtime
-          ? new Date(lastSleep.endtime).getTime()
-          : null,
-        isCurrentlyAsleep: Boolean(activeSleep),
-        wakeWindowCount: wakeWindowStats.count,
-        medianWakeWindowMinutes: wakeWindowStats.medianMinutes,
-        now,
-      }),
-    [lastSleep, activeSleep, wakeWindowStats, now]
-  );
+  const predictionMinute = Math.ceil(now / 60000) * 60000;
+  const nextSleep = useMemo(() => calculateNextSleep({
+    sessions: analyticsSessions, active: analyticsActive, now: predictionMinute,
+    ageDays: ageInDays(currentBaby?.birth_date, predictionMinute),
+  }), [analyticsSessions, analyticsActive, predictionMinute, currentBaby?.birth_date]);
+  const waveActive = useMemo(() => activeSleep?.baby_id === currentBabyId
+    ? { id: activeSleep.id, startMs: Date.parse(activeSleep.starttime) } : analyticsActive,
+  [activeSleep, currentBabyId, analyticsActive]);
 
   const nextFeedSide = useMemo(
     () => computeNextFeedSide(analyticsFeeds),
@@ -370,7 +356,8 @@ export default function Home() {
     const update = () => setNow(Date.now());
     const interval = window.setInterval(update, 1000);
     document.addEventListener("visibilitychange", update);
-    return () => { window.clearInterval(interval); document.removeEventListener("visibilitychange", update); };
+    document.addEventListener("resume", update);
+    return () => { window.clearInterval(interval); document.removeEventListener("visibilitychange", update); document.removeEventListener("resume", update); };
   }, []);
 
   const [sleepActionError, setSleepActionError] = useState<string | null>(null);
@@ -480,23 +467,19 @@ export default function Home() {
                 : t("home.readyForNextNap")}
           </p>
 
-          <div className="home-sleep-insight">
+          {activeSleep && <div className="home-sleep-insight">
             {activeSleep && activeSleep.baby_id === currentBabyId && wakeEstimate?.sleep === activeSleep &&
               <ActiveSleepEstimate presentation={wakeEstimate.presentation} sleepStartedAt={activeSleep.starttime} now={now} />}
-            {!activeSleep && nextSleepHint && <div className="home-next-sleep">
-              {nextSleepHint.kind === "predicted" ? <>
-                <p>{t("home.nextSleepAround", { time: formatClock(nextSleepHint.predictedTs, lang) })}</p>
-                <p className="sleep-subtitle">{t("home.nextSleepRemaining", { duration: formatHomeDuration(Math.ceil(Math.max(0, nextSleepHint.predictedTs - now) / 60000), lang) })}</p>
-              </> : <p className="sleep-subtitle">{nextSleepHint.kind === "about-usual" ? t("home.nextSleepAboutUsual")
-                : t("home.nextSleepLonger", { duration: formatDuration(nextSleepHint.overMinutes, lang) })}</p>}
-            </div>}
-          </div>
+          </div>}
           <SleepPrimaryAction key={`${currentBabyId}:${activeSleep?.id ?? "awake"}:${activeSleep?.starttime ?? lastSleep?.endtime ?? ""}`} ending={Boolean(activeSleep)}
             after={activeSleep ? Date.parse(activeSleep.starttime) : lastSleep?.endtime ? Date.parse(lastSleep.endtime) : null}
             babyName={currentBaby?.name ?? t("common.appName")} disabled={loading || saving || !currentBabyId || Boolean(activeSleep && activeSleep.baby_id !== currentBabyId)}
             saving={saving} onCommit={handleSleep} />
           {sleepActionError && <p role="alert">{sleepActionError}</p>}
         </section>
+
+        <SleepWaveCard key={currentBabyId} sessions={analyticsSessions} active={waveActive}
+          prediction={nextSleep} now={now} babyName={currentBaby?.name} />
 
         <SoundMonitorPanel sleep={activeSleep} />
 

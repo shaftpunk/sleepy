@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -27,6 +28,7 @@ import {
   normalizeFeedRows,
   normalizeSleepRows,
 } from "../analytics";
+import { SLEEP_PRESENTATION_CHANGED, type SleepPresentationChange } from "../services/sleepPresentationEvents";
 import { publishSleepEstimateHistory } from "../services/sleepEstimateService";
 import { sessionGeneration, isSessionGenerationCurrent } from "../auth/sessionLifecycle";
 
@@ -37,10 +39,10 @@ const HEARTBEAT_MS = 60000;
 export function useAnalyticsData(
   babyId: string | null,
 ) {
-  const [
-    rawSleeps,
-    setRawSleeps,
-  ] = useState<SleepRecord[]>([]);
+  const [sleepData, setSleepData] = useState<{ babyId: string | null; rows: SleepRecord[] }>({ babyId: null, rows: [] });
+  const requestEpoch = useRef({ value: 0 });
+  const sleepRequest = useRef(0);
+  const rawSleeps = useMemo(() => sleepData.babyId === babyId ? sleepData.rows : [], [sleepData, babyId]);
 
   const [
     rawFeeds,
@@ -55,7 +57,7 @@ export function useAnalyticsData(
   const loadSessions =
     useCallback(async () => {
       if (!babyId) {
-        setRawSleeps([]);
+        setSleepData({ babyId, rows: [] });
         return;
       }
 
@@ -68,18 +70,28 @@ export function useAnalyticsData(
             1000,
       );
 
+      const epoch = requestEpoch.current.value;
+      const request = ++sleepRequest.current;
       const generation = sessionGeneration();
       const to = new Date();
-      const data =
-        await getSleepsOverlappingPeriod(
+      let data: SleepRecord[];
+      try {
+        data = await getSleepsOverlappingPeriod(
           babyId,
           from.toISOString(),
           to.toISOString(),
         );
+      } catch (error) {
+        if (epoch === requestEpoch.current.value && request === sleepRequest.current) {
+          setSleepData({ babyId, rows: [] });
+        }
+        console.error("Analytics sleep load failed:", error);
+        return;
+      }
 
-      if (!isSessionGenerationCurrent(generation)) return;
+      if (!isSessionGenerationCurrent(generation) || epoch !== requestEpoch.current.value || request !== sleepRequest.current) return;
       publishSleepEstimateHistory(babyId, data, from.getTime(), to.getTime(), generation);
-      setRawSleeps(data);
+      setSleepData({ babyId, rows: data.filter(row => row.baby_id === babyId) });
     }, [babyId]);
 
   const loadFeeds =
@@ -109,10 +121,12 @@ export function useAnalyticsData(
 
   useEffect(() => {
     let mounted = true;
+    const lifecycle = requestEpoch.current;
+    lifecycle.value++;
 
     async function init() {
       if (!babyId) {
-        setRawSleeps([]);
+        setSleepData({ babyId, rows: [] });
         setRawFeeds([]);
         setLoading(false);
         return;
@@ -142,6 +156,7 @@ export function useAnalyticsData(
     if (!babyId) {
       return () => {
         mounted = false;
+        lifecycle.value++;
       };
     }
 
@@ -165,6 +180,7 @@ export function useAnalyticsData(
 
     return () => {
       mounted = false;
+      lifecycle.value++;
 
       window.clearInterval(
         heartbeat,
@@ -196,10 +212,18 @@ export function useAnalyticsData(
 
     document.addEventListener("visibilitychange", refetchIfVisible);
     window.addEventListener("focus", refetchIfVisible);
+    document.addEventListener("resume", refetchIfVisible);
+    const onSleepWrite = (event: Event) => {
+      // Authoritative active-state snapshots are reads, not history mutations.
+      if (!(event as Event & { sleepChange?: SleepPresentationChange }).sleepChange?.snapshot) void loadSessions();
+    };
+    window.addEventListener(SLEEP_PRESENTATION_CHANGED, onSleepWrite);
 
     return () => {
       document.removeEventListener("visibilitychange", refetchIfVisible);
       window.removeEventListener("focus", refetchIfVisible);
+      document.removeEventListener("resume", refetchIfVisible);
+      window.removeEventListener(SLEEP_PRESENTATION_CHANGED, onSleepWrite);
     };
   }, [babyId, loadSessions, loadFeeds]);
 

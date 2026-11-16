@@ -27,6 +27,7 @@ document.documentElement.dataset.visualTheme=p.get('skin')||'default';
 const baby={id:'baby',name:p.has('long')?'Amalie Alexandra Strande Engevik':'Amalie',birth_date:'2026-08-03'};
 useAppStore.setState({language:p.get('lang')||'no',theme,visualTheme:p.get('skin')||'default',currentBabyId:'baby',currentBbyId:'fixture-baby',babies:[baby,{...baby,id:'baby-2',name:'Alexander'}]});
 useSoundStore.setState({enabled:!!p.get('sound'),sensitivity:'medium'});
+if(p.has('wave-fixture'))window.__waveStore=useAppStore;
 const sleep={id:'sleep',baby_id:'baby',starttime:new Date(Date.now()-12*3600000).toISOString(),endtime:new Date(Date.now()-2*3600000).toISOString(),durationminutes:600,rate:'5',deleted_at:null,note:'Testnotat / a synthetic note'};
 const done=()=>{};const views={auth:React.createElement(Auth),onboarding:React.createElement(Onboarding,{onComplete:async()=>{}}),
 gate:React.createElement(AuthGate,null,'Ready'),splash:React.createElement(Splash),
@@ -47,9 +48,11 @@ function mock(url) {
   if (url === '/src/lib/supabase.ts') return `export const supabase={auth:{onAuthStateChange:f=>{window.recovery=()=>f('PASSWORD_RECOVERY');return {data:{subscription:{unsubscribe(){}}}}},getUser:async()=>({data:{user:{id:'user'}}})}};`;
   if (url === '/src/services/sleepService.ts') return records + failure + `
     if(p.has('probability-fixture')){const at=(days,h,m=0)=>{const d=new Date();d.setDate(d.getDate()-days);d.setHours(h,m,0,0);return d.getTime()};const row=(start,end)=>({id:String(start),baby_id:'baby',starttime:iso(start),endtime:iso(end),durationminutes:(end-start)/60000,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,i)=>{const d=i+1;return [row(at(d+1,23,30),at(d,7)),row(at(d,d<=9?9:11,30),at(d,d<=9?10:12,30)),row(at(d,20),at(d,21))]}).flat());}
+    if(p.has('next-sleep-fixture')&&!p.has('empty')){sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,d)=>Array.from({length:6},(_,i)=>{const end=now-(d+1)*86400000-i*4*3600000;return {id:String(end),baby_id:'baby',starttime:iso(end-3600000),endtime:iso(end),durationminutes:60,sleep_type:'sleep',rate:'4',deleted_at:null}})).flat(),{id:'last',baby_id:'baby',starttime:iso(now-2*3600000),endtime:iso(now-3600000),durationminutes:60,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.sort((a,b)=>Date.parse(b.endtime)-Date.parse(a.endtime));}
+    if(p.has('wave-fixture')&&!p.has('empty')){const at=(d,h,m=0)=>{const date=new Date(now);date.setDate(date.getDate()-d);date.setHours(h,m,0,0);return date.getTime()};const row=(start,end)=>({id:String(start),baby_id:'baby',starttime:iso(start),endtime:iso(end),durationminutes:(end-start)/60000,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,i)=>{const d=i+1;return [row(at(d+1,22),at(d,6)),row(at(d,9,15),at(d,10,5)),row(at(d,12,55),at(d,13,35)),row(at(d,16,10),at(d,16,50)),row(at(d,20),at(d,21))]}).flat(),row(at(0,9,15),at(0,10,5)));sleeps.sort((a,b)=>Date.parse(b.endtime)-Date.parse(a.endtime));}
     if(p.has('home-fixture')&&!p.has('empty')){sleeps.splice(0,sleeps.length,...Array.from({length:24},(_,i)=>({...sleeps[0],id:'history-'+i,baby_id:'baby',starttime:iso(now-(63+i*120)*60000),endtime:iso(now-(18+i*120)*60000),durationminutes:45,sleep_type:'sleep',rate:'4.8',deleted_at:null})));}
-    export const getActiveSleep=async()=>window.__homeActive!==undefined?window.__homeActive:p.has('active')?{...sleeps[0],id:'active',starttime:p.has('home-fixture')?iso(now-42*60000):sleeps[0].starttime,endtime:null}:null,
-    getLastCompletedSleep=async()=>window.__homeLast||(p.has('hold-room')?{...sleeps[0],endtime:iso(now-2*3600000)}:sleeps[0])||null,getRecentSleeps=async()=>sleeps.slice(0,8),getAllSleeps=async()=>sleeps,getSleepsFromDate=async()=>sleeps,getSleepsOverlappingPeriod=async()=>sleeps;
+    export const getActiveSleep=async()=>window.__homeActive!==undefined?window.__homeActive:p.has('active')?{...sleeps[0],id:'active',starttime:p.has('wave-fixture')?iso(now-42*60000):p.has('home-fixture')?iso(now-42*60000):sleeps[0].starttime,endtime:null}:null,
+    getLastCompletedSleep=async()=>window.__homeLast||(p.has('hold-room')?{...sleeps[0],endtime:iso(now-2*3600000)}:sleeps[0])||null,getRecentSleeps=async()=>sleeps.slice(0,8),getAllSleeps=async()=>sleeps,getSleepsFromDate=async()=>sleeps,getSleepsOverlappingPeriod=async()=>window.__waveRows??sleeps;
     export async function startSleep(babyId,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'start',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));return window.__homeActive={...sleeps[0],id:'started',baby_id:babyId,starttime:iso(Date.now()-minutes*60000),endtime:null};}
     export async function stopSleep(id,start,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'stop',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));window.__homeActive=null;return window.__homeLast={...sleeps[0],id,starttime:start,endtime:iso(Date.now()-minutes*60000)};}
     export {blocked as resumeSleep,blocked as updateSleep,blocked as deleteSleep,blocked as splitSleep,blocked as createManualSleep};`;
@@ -76,7 +79,8 @@ async function main() {
   try {
     for (let n = 0; n < 100; n++) { try { if ((await fetch(base)).ok) break; } catch { /* starting */ } await new Promise(r => setTimeout(r, 100)); }
     browser = await chromium.launch({ headless: true, ...(process.env.SLEEPY_CHROMIUM_PATH ? { executablePath: process.env.SLEEPY_CHROMIUM_PATH } : {}) });
-    const page = await browser.newPage();
+    const page = await browser.newPage({timezoneId:'Europe/Oslo'});
+    if(process.argv.includes('--sleep-wave-only'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
     if(process.argv.includes('--home-only')&&process.argv.includes('--quick'))await page.clock.install();
     const errors = [], failures = [], screens = [];
     page.on('pageerror', e => { errors.push(e.message); if(process.argv.includes('--entitlements-only')||process.argv.includes('--home-only'))console.error(e.message); });
@@ -91,7 +95,7 @@ async function main() {
       return route.continue();
     });
     const requestedWidth=process.argv.find(value=>value.startsWith('--width='))?.split('=')[1];
-    const sizes = (process.argv.includes('--quick') ? [[320,568]] : [[320,568],[375,667],[390,844],[430,932]])
+    const sizes = (process.argv.includes('--quick') ? [[320,568]] : (process.argv.includes('--sleep-wave-only')?[[320,568],[360,780],[375,667],[390,844],[430,932]]:[[320,568],[375,667],[390,844],[430,932]]))
       .filter(([width])=>!requestedWidth||width===Number(requestedWidth));
     const themes = process.argv.includes('--quick') ? ['dark'] : ['dark','light'];
     let context = '', query = '';
@@ -181,11 +185,66 @@ async function main() {
       const skin=(process.argv.find(value=>value.startsWith('--skin='))||'--skin=default').split('=')[1];
       context=`${width}x${height}-${theme}-${lang}-${skin}`;query=`theme=${theme}&lang=${lang}&skin=${skin}&long`;
       await page.setViewportSize({width,height});
+      if(process.argv.includes('--sleep-wave-only')){
+        const card=page.locator('.sleep-wave');
+        await visit('/','wave-fixture');await page.waitForSelector('.sleep-wave-time');
+        assert.equal(await card.getAttribute('data-wave-state'),'ready');
+        assert.equal(await card.locator('[data-wave-forecast]').count(),1);
+        assert.equal(await card.locator('svg').count(),1);
+        assert.equal(await card.evaluate(e=>e.previousElementSibling.classList.contains('home-live-state')),true);
+        const start=page.locator('.home-sleep-actions > .sleep-action');
+        await page.evaluate(()=>window.scrollTo(0,0));
+        assert.ok(await start.evaluate(e=>e.getBoundingClientRect().bottom<=innerHeight-70),'tracking action remains above the fold');
+        assert.equal(await card.locator('.sleep-wave-chart').getAttribute('aria-hidden'),'true');
+        const ticks=await card.locator('.sleep-wave-axis > span').evaluateAll(nodes=>nodes.map(e=>{const r=e.getBoundingClientRect();return {left:r.left,right:r.right}}));
+        for(let i=1;i<ticks.length;i++)assert.ok(ticks[i].left>=ticks[i-1].right-1,'axis labels overlap');
+        await check('sleep-wave-ready',true);
+        await page.emulateMedia({reducedMotion:'reduce'});
+        assert.equal(await card.locator('.sleep-wave-now-marker').evaluate(e=>getComputedStyle(e).transitionDuration),'0s');
+        await page.evaluate(()=>document.documentElement.style.fontSize='200%');
+        const largeText=await card.evaluate(e=>({overflow:e.scrollWidth>e.clientWidth+1,range:e.querySelector('.sleep-wave-time').scrollWidth>e.querySelector('.sleep-wave-time').clientWidth+1}));
+        assert.deepEqual(largeText,{overflow:false,range:false});
+        const largeTicks=await card.locator('.sleep-wave-axis > span').evaluateAll(nodes=>nodes.map(e=>{const r=e.getBoundingClientRect();return {left:r.left,right:r.right}}));
+        for(let i=1;i<largeTicks.length;i++)assert.ok(largeTicks[i].left>=largeTicks[i-1].right-1,'large-text axis labels overlap');
+        await card.screenshot({path:path.join(output,context+'-sleep-wave-large-text.png')});screens.push(context+'/sleep-wave-large-text');
+        await page.evaluate(()=>document.documentElement.style.fontSize='');await page.emulateMedia({reducedMotion:'no-preference'});
+        await page.evaluate(()=>window.__waveStore.setState({currentBabyId:'baby-2'}));
+        await page.waitForSelector('.sleep-wave[data-wave-state="insufficient_data"]');
+        assert.equal(await card.locator('[data-wave-forecast],.sleep-wave-recorded').count(),0);
+        await page.evaluate(()=>window.__waveStore.setState({currentBabyId:'baby'}));await page.waitForSelector('.sleep-wave-time');
+        await page.evaluate(()=>{window.__waveRows=[];window.dispatchEvent(new Event('sleepy:sleep-presentation-changed'))});
+        await page.waitForSelector('.sleep-wave[data-wave-state="insufficient_data"]');
+        assert.equal(await card.locator('[data-wave-forecast],.sleep-wave-recorded').count(),0);
+        await check('sleep-wave-deleted-history',true);
+        await visit('/','wave-fixture&active');await page.waitForSelector('[data-wave-active]');
+        assert.equal(await card.getAttribute('data-wave-state'),'sleeping');assert.equal(await card.locator('[data-wave-forecast]').count(),0);
+        await page.evaluate(()=>window.scrollTo(0,0));
+        assert.ok(await page.locator('.home-sleep-actions > .sleep-action').evaluate(e=>e.getBoundingClientRect().bottom<=innerHeight-70),'stop action remains above the fold');
+        await check('sleep-wave-sleeping',true);
+        await visit('/','empty');await page.waitForSelector('.sleep-wave');assert.equal(await card.locator('[data-wave-forecast]').count(),0);
+        await check('sleep-wave-learning',true);console.log(context+' Sleep Wave checked');continue;
+      }
+      if(process.argv.includes('--next-sleep-only')){
+        await visit('/','next-sleep-fixture');await page.waitForSelector('.sleep-wave-time');
+        const card=page.locator('.sleep-wave');
+        assert.ok((await card.textContent()).includes(lang==='en'?'Next Sleep':'Neste søvn'), await card.textContent());
+        assert.equal(await card.evaluate(e=>e.previousElementSibling.classList.contains('home-live-state')),true);
+        assert.equal(await card.locator('svg').count(),1);assert.equal(await card.locator('canvas,progress').count(),0);
+        await check('next-sleep-ready',true);
+        await visit('/','empty');await page.waitForSelector('.sleep-wave');
+        assert.equal(await page.locator('.sleep-wave-time').count(),0);
+        assert.ok((await page.locator('.sleep-wave').innerText()).includes(lang==='en'?'learning':'lærer'));
+        await check('next-sleep-learning',true);
+        await visit('/','active');await page.waitForSelector('.home-sleep-actions');
+        await page.waitForFunction(()=>!document.querySelector('.home-sleep-actions > .sleep-action')?.disabled);
+        assert.equal(await page.locator('.sleep-wave').count(),1);assert.equal(await page.locator('[data-wave-forecast]').count(),0);
+        await check('next-sleep-sleeping',true);console.log(context+' Next Sleep checked');continue;
+      }
       if(process.argv.includes('--home-only')){
         const action=page.locator('.home-sleep-actions > .sleep-action'),change=page.locator('.home-change-time');
         const ready=async(extra='')=>{await visit('/','home-fixture&home-actions&'+extra);await page.waitForFunction(()=>{const e=document.querySelector('.home-sleep-actions > .sleep-action');return e&&!e.disabled;});};
         await ready();assert.ok((await page.locator('.sleep-timer').textContent()).includes('18'));
-        assert.equal(await page.locator('.home-next-sleep').count(),1);
+        assert.equal(await page.locator('.sleep-wave').count(),1);
         assert.match(await page.locator('.today-stats > div').last().textContent(),lang==='en'?/4\.8/:/4,8/);
         await check('home-awake',true);
         await change.click();await page.waitForSelector('[role="dialog"]');await check('home-start-sheet',true);
@@ -304,7 +363,7 @@ async function main() {
           assert.equal(/Likely night sleep|Trolig natts\u00f8vn/.test(text),classification==='LONG_SLEEP_LIKE');
           await check('home-'+classification,true);
         }
-        await ready('empty');assert.equal(await page.locator('.home-next-sleep').count(),0);await check('home-no-history');
+        await ready('empty');assert.equal(await page.locator('.sleep-wave').count(),1);await check('home-no-history');
         await ready('action-error');await change.click();await page.getByRole('dialog').getByRole('button',{name:lang==='en'?'Now':'Nå',exact:true}).click();
         await page.getByRole('dialog').getByRole('alert').waitFor();
         assert.ok(!/duplicate key|unique constraint/.test(await page.getByRole('dialog').textContent()));
