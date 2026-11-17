@@ -74,3 +74,12 @@ test('condensed night renders its true times, a break cue and a legend entry in 
  for(const lang of ['en','no']){const html=render(lang,nightProps);assert.ok(html.includes('data-wave-compressed="true"'));assert.ok(html.includes('20:09')&&html.includes('06:53'));assert.ok(html.includes(lang==='en'?'Night condensed':'Natten er forkortet'));}
  assert.ok(!render('en').includes('data-wave-compressed'));
 });
+test('active first future nap uses existing dashed waves and remains accessible in both languages',()=>{
+ const active={id:'active',startMs:at(11,30)};
+ const interval={earliestMs:at(14),typicalMs:at(14,15),latestMs:at(14,30)};
+ const forecast={status:'partial',activeAnchor:active,lastUpdated:now,diagnostics:{},predictedNaps:[{id:'future',sequenceIndex:1,isNext:false,onset:interval,wakeTime:{earliestMs:at(14,45),typicalMs:at(15),latestMs:at(15,15)},quality:'low'}]};
+ for(const lang of ['en','no']){const html=render(lang,{...props,active,prediction:{status:'sleeping'},forecast});
+ assert.ok(html.includes('data-wave-predicted="1"'));assert.ok(html.includes('data-wave-active="true"'));assert.ok(html.includes('sleep-wave-predicted'));assert.ok(html.includes('14:00'));assert.ok(!html.includes('data-wave-forecast="onset"'));
+ assert.ok(html.includes(lang==='en'?'Sleeping now':'Sover n\u00e5'));
+ }
+});

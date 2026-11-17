@@ -137,3 +137,29 @@ function summarize(report) {
 
 module.exports = { runBacktest, summarize };
 if (require.main === module) console.log(summarize(runBacktest()));
+
+// Active checkpoints reveal only the start of the ongoing nap, never its end.
+function runActiveBacktest({ seeds=[1,2,3,4,5], evalDays=12 }={}) {
+ const report={};
+ for(const profile of ['conditional','transition','newborn']){
+  let checkpoints=0,forecasted=0,events=0,covered=0,error=0,matched=0,falseEvents=0,leaks=0;
+  for(const seed of seeds){const {sessions,dayPlans,profile:p}=generate(profile,{seed});
+   for(const plan of dayPlans.slice(-evalDays-1,-1)){
+    const naps=sessions.filter(s=>s.startMs>=plan.wakeAt&&s.startMs<plan.bedtime&&s.durationMin<NIGHT);
+    for(const activeNap of naps)for(const elapsed of [10,30,60,120]){
+     const now=activeNap.startMs+elapsed*MINUTE;if(now>=activeNap.endMs)continue;
+     checkpoints++;const history=sessions.filter(s=>s.endMs<=now),active={id:activeNap.id,startMs:activeNap.startMs};
+     const nextSleep=calculateNextSleep({sessions:history,active,now,ageDays:p.ageDays});
+     const f=calculateDailySleepForecast({sessions:history,active,now,nextSleep,ageDays:p.ageDays});
+     if(f.predictedNaps.length)forecasted++;
+     const actual=naps.filter(s=>s.startMs>now);
+     f.predictedNaps.forEach((n,i)=>{events++;if(n.onset.earliestMs<now)leaks++;if(!actual[i]){falseEvents++;return;}matched++;error+=Math.abs(n.onset.typicalMs-actual[i].startMs)/MINUTE;if(actual[i].startMs>=n.onset.earliestMs&&actual[i].startMs<=n.onset.latestMs)covered++;});
+    }
+   }
+  }
+  report[profile]={checkpoints,forecasted,events,matched,falseEvents,leaks,maeMinutes:matched?error/matched:null,coverage:matched?covered/matched:null};
+ }
+ return report;
+}
+module.exports.runActiveBacktest=runActiveBacktest;
+if(require.main===module)console.log(JSON.stringify({active:runActiveBacktest()},null,2));

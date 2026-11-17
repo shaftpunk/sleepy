@@ -45,6 +45,7 @@ export type PredictedNap = {
 export type ForecastStopReason = "night-likely" | "insufficient-continuations" | "disagreement" | "horizon"
   | "evening" | "incoherent" | "duration-unknown" | null;
 export type DailySleepForecast = {
+  activeAnchor?: ActiveSleep;
   status: "ready" | "partial" | "insufficient_data" | "sleeping";
   predictedNaps: PredictedNap[];
   lastUpdated: number;
@@ -164,8 +165,9 @@ export function calculateDailySleepForecast({ sessions, active, now, nextSleep, 
   const diagnostics: DailySleepForecast["diagnostics"] = { scenarioDays: 0, effectiveSampleSize: 0, nextSleepAgreement: "not-evaluated", stopReason: null };
   const result = (status: DailySleepForecast["status"], predictedNaps: PredictedNap[] = []): DailySleepForecast =>
     ({ status, predictedNaps, lastUpdated: now, diagnostics });
-  // An active sleep has no known end: forecasting after it would invent one.
-  if (active || nextSleep.status === "sleeping") return result("sleeping");
+  // Active daytime sleep uses conditional historical continuations.
+  if (active) return activeDaytimeForecast(sessions, active, now, ageDays);
+  if (nextSleep.status === "sleeping") return result("sleeping");
   if (nextSleep.status !== "ready" || !Number.isFinite(nextSleep.earliestStart) || !Number.isFinite(nextSleep.latestStart)
     || nextSleep.earliestStart! < now) return result("insufficient_data");
 
@@ -438,4 +440,67 @@ export function calculateUpcomingDayForecast({ sessions, active, now, ageDays = 
   }
   if (!naps.length) return insufficient(diagnostics.stopReason ?? "insufficient-continuations");
   return { ...base, status: "ready", morningWake, predictedNaps: naps };
+}
+
+/** Conditional continuations observed inside a daytime episode. No estimated
+ * end is inserted into history: every wake and later onset stays paired. */
+function activeDaytimeForecast(sessions: SleepSession[], active: ActiveSleep, now: number, ageDays: number | null): DailySleepForecast {
+  const diagnostics: DailySleepForecast["diagnostics"] = { scenarioDays: 0, effectiveSampleSize: 0, nextSleepAgreement: "not-evaluated", stopReason: null };
+  const predictedNaps: PredictedNap[] = [];
+  const finish = (reason: ForecastStopReason): DailySleepForecast => {
+    diagnostics.stopReason = reason;
+    return { status: predictedNaps.length ? "partial" : "sleeping", activeAnchor: { ...active }, predictedNaps, lastUpdated: now, diagnostics };
+  };
+  if (!Number.isFinite(now) || !Number.isFinite(active.startMs) || active.startMs > now || nightContext(sessions, active, now).night) return finish(null);
+  const all = episodes(sessions, now), previous = all[all.length - 1];
+  if (previous && previous.endMs > active.startMs) return finish("incoherent");
+  const joined = previous && active.startMs - previous.endMs <= FORECAST_RULES.joinGapMinutes * MINUTE;
+  const start = joined ? previous.startMs : active.startMs;
+  const elapsed = (now - start) / MINUTE;
+  if (elapsed >= FORECAST_RULES.nightMinutes || (joined && previous.night)) return finish(null);
+  const ordinal = previous && active.startMs - previous.endMs <= FORECAST_RULES.maxWakeGapMinutes * MINUTE && previous.napsSinceNight !== null
+    ? previous.napsSinceNight + (joined ? 0 : 1) : null;
+  const best = new Map<string, Scenario & { wake: number }>();
+  all.forEach((anchor, index) => {
+    const day = dayKeyOf(anchor.startMs), ago = Math.floor((now - anchor.endMs) / 86400000);
+    if (anchor.night || anchor.minutes < elapsed || day >= dayKeyOf(start) || ago < 1 || ago > FORECAST_RULES.lookbackDays) return;
+    const weight = getRecencyWeight(ago) * Math.exp(-clockDistance(minutesSinceLocalMidnight(anchor.startMs), minutesSinceLocalMidnight(start)) / 90)
+      * (ordinal === null || anchor.napsSinceNight === null ? .8 : .6 ** Math.abs(ordinal - anchor.napsSinceNight));
+    if (weight < FORECAST_RULES.minSimilarity || (best.get(day)?.weight ?? 0) >= weight) return;
+    const naps: Scenario["naps"] = []; let ended: Scenario["ended"] = "incomplete", end = anchor.endMs;
+    for (const event of all.slice(index + 1)) {
+      if ((event.startMs - end) / MINUTE > FORECAST_RULES.maxWakeGapMinutes) break;
+      if (event.night) { ended = "night"; break; }
+      if (dayKeyOf(event.startMs) !== day) break;
+      naps.push({ onsetOffsetMin: (event.startMs - anchor.startMs) / MINUTE, durationMin: event.minutes }); end = event.endMs;
+    }
+    best.set(day, { day, weight, naps, ended, wake: anchor.minutes });
+  });
+  const scenarios = [...best.values()];
+  diagnostics.scenarioDays = days(scenarios); diagnostics.effectiveSampleSize = effective(scenarios);
+  if (days(scenarios) < FORECAST_RULES.minScenarioDays || effective(scenarios) < FORECAST_RULES.minEffectiveEvidence) return finish("insufficient-continuations");
+  const quantile = (rows: typeof scenarios, value: (s: typeof scenarios[number]) => number, q: number) => weightedQuantile(rows.map(s => ({ value: value(s), weight: s.weight, day: s.day })), q);
+  const wakeLow = quantile(scenarios, s => s.wake, .1), wakeHigh = quantile(scenarios, s => s.wake, .9);
+  if (wakeHigh - wakeLow > 90) return finish("duration-unknown");
+  let previousEnd = start + wakeHigh * MINUTE, width = Math.max(30 * MINUTE, (wakeHigh - wakeLow) * MINUTE);
+  const midnight = new Date(startOfLocalDay(now)); midnight.setDate(midnight.getDate() + 1);
+  for (let k = 0; k < FORECAST_RULES.maxPredictedNaps; k++) {
+    const support = scenarios.filter(s => s.naps.length > k), ended = scenarios.filter(s => s.naps.length <= k && s.ended === "night");
+    const sum = (rows: typeof scenarios) => rows.reduce((v, s) => v + s.weight, 0);
+    if (sum(support) / Math.max(1e-9, sum(support) + sum(ended)) < FORECAST_RULES.continueShare) return finish("night-likely");
+    if (days(support) < FORECAST_RULES.minEventDays || effective(support) < FORECAST_RULES.minEffectiveEvidence) return finish("insufficient-continuations");
+    const interval = (value: (s: typeof scenarios[number]) => number) => atLeast({ earliestMs: floor5(start + quantile(support, value, .1) * MINUTE), typicalMs: round5(start + quantile(support, value, .5) * MINUTE), latestMs: ceil5(start + quantile(support, value, .9) * MINUTE) }, width);
+    const onset = interval(s => s.naps[k].onsetOffsetMin);
+    if (onset.earliestMs < now || onset.earliestMs < previousEnd) return finish("incoherent");
+    if (onset.latestMs >= midnight.getTime() || minutesSinceLocalMidnight(onset.latestMs) >= FORECAST_RULES.latestNapOnsetClock || minutesSinceLocalMidnight(onset.earliestMs) < FORECAST_RULES.earliestNapOnsetClock) return finish("evening");
+    const lowMin = quantile(support, s => s.naps[k].durationMin, .1), highMin = quantile(support, s => s.naps[k].durationMin, .9), typicalMin = quantile(support, s => s.naps[k].durationMin, .5);
+    const nap: PredictedNap = { id: "active-nap-" + (k + 1), sequenceIndex: k + 1, isNext: false, onset, quality: ageDays === null || ageDays < 90 || k > 0 || effective(support) < 4 ? "low" : "medium", evidenceCount: days(support), effectiveEvidence: effective(support) };
+    predictedNaps.push(nap);
+    if (highMin - lowMin > Math.max(45, 1.2 * typicalMin)) return finish("duration-unknown");
+    nap.durationMinutes = { lowMin, typicalMin, highMin };
+    nap.wakeTime = interval(s => s.naps[k].onsetOffsetMin + s.naps[k].durationMin);
+    if (nap.wakeTime.typicalMs <= onset.typicalMs) { predictedNaps.pop(); return finish("incoherent"); }
+    previousEnd = nap.wakeTime.latestMs; width = onset.latestMs - onset.earliestMs;
+  }
+  return finish("horizon");
 }

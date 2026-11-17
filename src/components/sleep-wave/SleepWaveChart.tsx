@@ -43,7 +43,7 @@ export default function SleepWaveChart({ model, now, formatRange }: {
     const candidates: (Omit<Label, "x" | "width"> & { center: number })[] = [
       ...model.forecasts.map((f, i) => ({ key: `f${i}`, kind: "forecast" as const, text: formatRange(f.startMs, f.endMs),
         top: toPx(52) - 22, center: (f.start + f.end) / 2 })),
-      ...model.predicted.filter(p => p.sequenceIndex > 1).map(p => ({ key: `p${p.sequenceIndex}`, kind: "later" as const,
+      ...model.predicted.filter(p => !p.isNext).map(p => ({ key: `p${p.sequenceIndex}`, kind: "later" as const,
         text: formatRange(p.onset.startMs, p.onset.endMs), top: toPx(p.wave ? recordedWaveCrest(p.wave) : 58) - 20, center: (p.onset.start + p.onset.end) / 2 })),
       ...displayed.map((s, i) => ({ key: `r${i}`, kind: "recorded" as const, text: formatRange(model.recorded[i].startMs, model.recorded[i].endMs),
         top: toPx(recordedWaveCrest(s)) - 20, center: (s.start + s.end) / 2 })).reverse(),
@@ -77,7 +77,7 @@ export default function SleepWaveChart({ model, now, formatRange }: {
   const tickLabels = model.ticks.map(tick => formatClock(tick.instant, lang));
   const compact = tickLabels.length > 4 && tickLabels.every(label => /^[0-9]{2}[:.]00$/.test(label));
   const sparse = tickLabels.length > 4 && !compact;
-  const nextWave = model.predicted.find(p => p.sequenceIndex === 1 && p.wave)?.wave;
+  const nextWave = model.predicted.find(p => p.isNext && p.wave)?.wave;
 
   return <div ref={chartRef} className="sleep-wave-chart" aria-hidden="true" style={{ paddingTop: LABEL_SPACE }}>
     <div className="sleep-wave-now-label" style={{ left: `${model.now * 100}%` }}>
@@ -148,9 +148,9 @@ export default function SleepWaveChart({ model, now, formatRange }: {
           <path className="sleep-wave-onset" d={`M ${forecast.likely * 640} 150 V 104`} />
         </g>;
       })}
-      {model.predicted.filter(p => p.sequenceIndex > 1).map(p => {
+      {model.predicted.filter(p => !p.isNext).map(p => {
         const x0 = p.onset.start * 640, x1 = p.onset.end * 640;
-        return <g key={p.sequenceIndex} data-wave-predicted={p.sequenceIndex} className="sleep-wave-later" style={{ opacity: laterOpacity(p.sequenceIndex) }}>
+        return <g key={p.sequenceIndex} data-wave-predicted={p.sequenceIndex} className="sleep-wave-later" style={{ opacity: laterOpacity(Math.max(2, p.sequenceIndex)) }}>
           <path className="sleep-wave-later-band" d={`M ${x0} 150 V 70 Q ${x0} 62 ${(x0 + x1) / 2} 62 Q ${x1} 62 ${x1} 70 V 150 Z`} fill={`url(#${id}-band)`} />
           {p.wave && <path className="sleep-wave-predicted" d={recordedWavePath(p.wave)} fill={`url(#${id}-predicted)`} />}
         </g>;

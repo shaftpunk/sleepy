@@ -224,6 +224,8 @@ async function main() {
         assert.equal(await card.getAttribute('data-wave-state'),'sleeping');assert.equal(await card.locator('[data-wave-forecast]').count(),0);
         await page.evaluate(()=>window.scrollTo(0,0));
         assert.ok(await page.locator('.home-sleep-actions > .sleep-action').evaluate(e=>e.getBoundingClientRect().bottom<=innerHeight-70),'stop action remains above the fold');
+        await page.waitForSelector('[data-wave-predicted="1"]');
+        assert.ok((await card.locator('.sleep-wave-accessible-history').innerText()).includes('15:'), 'first active continuation has accessible timing');
         await check('sleep-wave-sleeping',true);
         await visit('/','empty');await page.waitForSelector('.sleep-wave');assert.equal(await card.locator('[data-wave-forecast]').count(),0);
         await check('sleep-wave-learning',true);

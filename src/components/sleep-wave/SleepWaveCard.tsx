@@ -40,7 +40,7 @@ export default function SleepWaveCard({ sessions, active, prediction, forecast =
   };
   const last = model.lastCompleted;
   const sleeping = model.status === "sleeping";
-  const later = model.predicted.filter(p => p.sequenceIndex > 1);
+  const later = model.predicted.filter(p => !p.isNext);
   const estimated = model.predicted.some(p => p.wave);
   // Shown only when the existing forecast supplies it; never estimated here.
   const awakeRange = prediction.status === "ready" && prediction.typicalAwakeMinutes

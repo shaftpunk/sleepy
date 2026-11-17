@@ -26,7 +26,7 @@ export type SleepWaveModel = {
   compressed: WaveSegment | null;
 };
 export type PredictedWave = {
-  sequenceIndex: number; quality: ForecastQuality;
+  sequenceIndex: number; quality: ForecastQuality; isNext: boolean;
   onset: WaveSegment & { likely: number };
   wave: WaveSegment | null;
 };
@@ -81,9 +81,11 @@ export function buildSleepWaveModel({ sessions, active, prediction, now, forecas
   // current sleep, now, and the entire next onset window. No silent clipping.
   const morning = new Date(dayStart); morning.setHours(6);
   const evening = new Date(dayStart); evening.setHours(21);
-  // Forecast events only accompany a shown next-onset window, never in the
+  // Forecast events accompany an awake onset window or a matching active
+  // session forecast. They must remain in order and never in the
   // past, and in order; anything else is dropped rather than repositioned.
-  const predictedNaps = windows.length && forecast && (forecast.status === "ready" || forecast.status === "partial")
+  const activeForecast = Boolean(active && forecast?.activeAnchor?.id === active.id && forecast.activeAnchor.startMs === active.startMs && forecast.lastUpdated >= now);
+  const predictedNaps = (windows.length || activeForecast) && forecast && (forecast.status === "ready" || forecast.status === "partial")
     ? forecast.predictedNaps.filter((n, i, all) => n.onset.earliestMs >= now && n.onset.earliestMs <= n.onset.typicalMs
       && n.onset.typicalMs <= n.onset.latestMs && (i === 0 || n.onset.typicalMs > all[i - 1].onset.typicalMs)
       && (!n.wakeTime || n.wakeTime.typicalMs > n.onset.typicalMs)) : [];
@@ -132,7 +134,7 @@ export function buildSleepWaveModel({ sessions, active, prediction, now, forecas
     forecasts: windows.map(w => ({ ...segment(w), likely: position(Math.max(w.startMs, Math.min(w.endMs, w.likelyMs ?? (w.startMs + w.endMs) / 2))) })),
     now: position(now), ticks, lastCompleted,
     compressed: squeezed ? segment({ startMs: domain.startMs, endMs: nightEnd }) : null,
-    predicted: predictedNaps.map(n => ({ sequenceIndex: n.sequenceIndex, quality: n.quality,
+    predicted: predictedNaps.map(n => ({ sequenceIndex: n.sequenceIndex, quality: n.quality, isNext: n.isNext,
       onset: { ...segment({ startMs: n.onset.earliestMs, endMs: n.onset.latestMs }), likely: position(n.onset.typicalMs) },
       wave: n.wakeTime ? segment({ startMs: n.onset.typicalMs, endMs: n.wakeTime.typicalMs }) : null })) };
 }
@@ -174,7 +176,7 @@ export function buildUpcomingDayWaveModel(forecast: UpcomingDayForecast | null):
   const ticks = [6, 10, 14, 18].map(clock).filter(t => t >= domain.startMs && t <= domain.endMs).map(instant => ({ instant, position: position(instant) }));
   return { targetDayStartMs: forecast.targetDayStartMs, domain, ticks,
     wake: { ...segment({ startMs: forecast.morningWake.earliestMs, endMs: forecast.morningWake.latestMs }), likely: position(forecast.morningWake.typicalMs) },
-    naps: forecast.predictedNaps.map(n => ({ sequenceIndex: n.sequenceIndex, quality: n.quality,
+    naps: forecast.predictedNaps.map(n => ({ sequenceIndex: n.sequenceIndex, quality: n.quality, isNext: n.isNext,
       onset: { ...segment({ startMs: n.onset.earliestMs, endMs: n.onset.latestMs }), likely: position(n.onset.typicalMs) },
       wave: n.wakeTime ? segment({ startMs: n.onset.typicalMs, endMs: n.wakeTime.typicalMs }) : null })) };
 }

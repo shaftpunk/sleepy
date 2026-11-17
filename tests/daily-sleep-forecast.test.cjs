@@ -210,3 +210,47 @@ test('forecast events are dropped (not shifted) when past, unordered, or without
   const learning = buildSleepWaveModel({ sessions, active: null, prediction: { status: 'insufficient_data', sampleSize: 0 }, now, forecast });
   assert.equal(learning.predicted.length, 0);
 });
+
+test('active daytime checkpoints condition on surviving durations and retain later naps', () => {
+ for (const elapsed of [10,30,60,120]) {
+  const sessions=[...history(()=>[[9,0,150],[14,0,45],[17,0,30]]),session(at(1,19,30),at(0,7))];
+  const active={id:'active',startMs:at(0,9)}, checkpoint=active.startMs+elapsed*minute;
+  const {forecast,nextSleep}=run(sessions,checkpoint,{active});
+  assert.equal(nextSleep.status,'sleeping');assert.ok(forecast.predictedNaps.length>=1,JSON.stringify(forecast));
+  assert.equal(forecast.activeAnchor.id,active.id);
+  for(const nap of forecast.predictedNaps){assert.ok(nap.onset.earliestMs>=checkpoint);assert.equal(nap.isNext,false);assert.notEqual(nap.quality,'high');}
+ }
+});
+test('active tail conditioning abstains after shorter histories expire and for sparse babies',()=>{
+ const sessions=[...history(regular),session(at(1,19,30),at(0,7))],active={id:'a',startMs:at(0,9)};
+ assert.equal(run(sessions,at(0,11),{active}).forecast.predictedNaps.length,0);
+ assert.equal(run([],at(0,9,30),{active}).forecast.predictedNaps.length,0);
+ assert.equal(run(sessions,at(0,12,1),{active}).forecast.predictedNaps.length,0);
+ const young=run(sessions,at(0,9,30),{active,ageDays:30}).forecast;
+ assert.ok(young.predictedNaps.length);assert.ok(young.predictedNaps.every(n=>n.quality==='low'));
+});
+test('active forecasts validate identity and render index one as a later event',()=>{
+ const sessions=[...history(regular),session(at(1,19,30),at(0,7))],active={id:'a',startMs:at(0,9)},now=at(0,9,30);
+ const {forecast,nextSleep}=run(sessions,now,{active});
+ const {buildSleepWaveModel}=load('src/analytics/sleepWaveModel.ts');
+ const model=buildSleepWaveModel({sessions,active,now,prediction:nextSleep,forecast});
+ assert.equal(model.status,'sleeping');assert.equal(model.forecasts.length,0);assert.ok(model.predicted.length);assert.equal(model.predicted[0].isNext,false);
+ assert.ok(model.predicted.every(n=>n.onset.startMs>=model.active.endMs));
+ assert.equal(buildSleepWaveModel({sessions,active:{...active,id:'other'},now,prediction:nextSleep,forecast}).predicted.length,0);
+ assert.equal(buildSleepWaveModel({sessions,active:null,now,prediction:{status:'insufficient_data'},forecast}).predicted.length,0);
+});
+test('active wake handoff, future records, midnight and DST preserve deterministic boundaries',()=>{
+ for(const base of [new Date(2026,2,29),new Date(2026,9,25),new Date(2026,10,16)]){
+  const sessions=[...history(regular,{base}),session(at(1,19,30,base),at(0,7,0,base))],active={id:'a',startMs:at(0,9,0,base)},now=at(0,9,30,base);
+  const a=run(sessions,now,{active}).forecast,b=run([...sessions,session(at(0,14,0,base),at(0,15,0,base))],now,{active}).forecast;
+  assert.equal(JSON.stringify(a),JSON.stringify(b));assert.ok(a.predictedNaps.length);
+  const awake=run([...sessions,session(active.startMs,at(0,10,0,base))],at(0,10,15,base)).forecast;
+  assert.equal(awake.activeAnchor,undefined);
+  assert.equal(run(sessions,at(0,23,55,base),{active:{id:'night',startMs:at(0,20,0,base)}}).forecast.predictedNaps.length,0);
+ }
+});
+test('rolling active-nap checkpoints never expose future completed sessions',()=>{
+ const report=require('./daily-forecast-backtest.cjs').runActiveBacktest({seeds:[1,2],evalDays:6});
+ for(const result of Object.values(report)){assert.ok(result.checkpoints>0);assert.equal(result.leaks,0);}
+ assert.ok(report.conditional.forecasted>0);
+});

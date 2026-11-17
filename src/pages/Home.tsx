@@ -197,6 +197,9 @@ export default function Home() {
     [analyticsSessions, now]
   );
 
+  const waveActive = useMemo(() => activeSleep?.baby_id === currentBabyId
+    ? { id: activeSleep.id, startMs: Date.parse(activeSleep.starttime) } : analyticsActive,
+  [activeSleep, currentBabyId, analyticsActive]);
   const predictionMinute = Math.ceil(now / 60000) * 60000;
   const nextSleep = useMemo(() => calculateNextSleep({
     sessions: analyticsSessions, active: analyticsActive, now: predictionMinute,
@@ -206,9 +209,9 @@ export default function Home() {
   // recalculates on every sleep start/stop, edit, delete, realtime update,
   // resume, baby switch and date change those inputs already reflect.
   const dailyForecast = useMemo(() => calculateDailySleepForecast({
-    sessions: analyticsSessions, active: analyticsActive, now: predictionMinute, nextSleep,
+    sessions: analyticsSessions, active: waveActive, now: predictionMinute, nextSleep,
     ageDays: ageInDays(currentBaby?.birth_date, predictionMinute),
-  }), [analyticsSessions, analyticsActive, predictionMinute, nextSleep, currentBaby?.birth_date]);
+  }), [analyticsSessions, waveActive, predictionMinute, nextSleep, currentBaby?.birth_date]);
   // At night: a preliminary forecast for the coming day. It replaces (never
   // adds to) the remaining-day forecast, so the two cannot contradict; after
   // the morning wake-up it reports not_applicable and the daytime one returns.
@@ -217,9 +220,7 @@ export default function Home() {
     ageDays: ageInDays(currentBaby?.birth_date, predictionMinute),
   }), [analyticsSessions, analyticsActive, predictionMinute, currentBaby?.birth_date]);
   const nightForecast = upcomingForecast.status !== "not_applicable";
-  const waveActive = useMemo(() => activeSleep?.baby_id === currentBabyId
-    ? { id: activeSleep.id, startMs: Date.parse(activeSleep.starttime) } : analyticsActive,
-  [activeSleep, currentBabyId, analyticsActive]);
+
 
   const nextFeedSide = useMemo(
     () => computeNextFeedSide(analyticsFeeds),
