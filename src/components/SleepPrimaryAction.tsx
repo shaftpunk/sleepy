@@ -84,9 +84,9 @@ export default function SleepPrimaryAction({ ending, after, babyName, disabled, 
       }}>
       {saving ? t("common.saving") : offset > 0 ? t("home.actionMinutesAgo", { minutes: offset }) : t(ending ? "home.stopSleep" : "home.startSleep")}
     </button>
-    <p className="home-hold-hint" id={hint}>{t("home.holdToAdjust")}</p>
+    <p className="home-hold-hint sr-only" id={hint}>{t("home.holdToAdjust")}</p>
     <span className="sr-only" role="status">{offset > 0 ? t("home.actionMinutesAgo", { minutes: offset }) : ""}</span>
-    <button type="button" className="text-button home-change-time" disabled={disabled} onClick={() => setSheet(true)}>{t("home.changeTime")}</button>
+    <button type="button" className="text-button home-change-time" title={t(ending ? "home.whenWoke" : "home.whenAsleep", { name: babyName })} aria-label={t(ending ? "home.whenWoke" : "home.whenAsleep", { name: babyName })} disabled={disabled} onClick={() => setSheet(true)}>{t("home.changeTime")}</button>
     {sheet && <SleepTimeSheet babyName={babyName} ending={ending} after={after} disabled={disabled}
       onClose={() => setSheet(false)} onCommit={commit} />}
   </div>;

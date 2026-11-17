@@ -328,3 +328,9 @@
 .sleep-wave-now-label time { margin-top: 2px; color: var(--wave-key); }
 .sleep-wave .sleep-wave-awake-range { border: 0; background: transparent; box-shadow: none; }
 .sleep-wave-forecast { padding-top: 2px; }
+/* Soft reflected light sits below the timestamp baseline, not over data. */
+.sleep-wave-mist.is-front { opacity: .72; }
+.sleep-wave-now-label { box-shadow: 0 8px 18px -10px var(--wave-light); }
+.sleep-wave-hills { opacity: .86; }
+.sleep-wave-cloudscape { opacity: .8; }
+[data-theme="light"] .sleep-wave-cloudscape { opacity: .65; }

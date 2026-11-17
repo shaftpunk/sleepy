@@ -125,3 +125,10 @@
 
 /* Bring the tracking section and forecast together without changing actions. */
 .home-page .home-live-state + .sleep-wave { margin-top: -10px; }
+/* Compact action pair: the secondary clock shares the CTA row, never a new row. */
+:root[data-visual-theme="default"] [data-theme] .home-page .home-live-state { gap: 2px; }
+:root[data-visual-theme="default"] [data-theme] .home-page .home-sleep-actions { grid-template-columns: minmax(0, 1fr) 44px; align-items: center; gap: 8px; margin-top: 5px; }
+:root[data-visual-theme="default"] [data-theme] .home-page .home-change-time { width: 44px; height: 44px; min-height: 44px; padding: 0; margin: 0; justify-content: center; border: 0; background: transparent; box-shadow: none; font-size: 0; gap: 0; }
+:root[data-visual-theme="default"] [data-theme] .home-page .home-change-time::before { width: 19px; height: 19px; }
+:root[data-visual-theme="default"] [data-theme] .home-page .home-hold-hint.sr-only { margin: 0; }
+:root[data-visual-theme="default"] [data-theme] .home-page .home-live-state + .sleep-wave { margin-top: -6px; }
