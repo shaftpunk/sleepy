@@ -251,3 +251,191 @@ export function calculateDailySleepForecast({ sessions, active, now, nextSleep, 
   }
   return stop("horizon");
 }
+
+/* ------------------------------------------------------------------------
+   Upcoming-day (preliminary) forecast for the night.
+
+   At night the remaining-day forecast has nothing to say: an active night
+   sleep has no known end, and later naps are daytime-only. This forecasts the
+   next daytime period instead, from whole historical days anchored at their
+   morning wake-up. Each scenario keeps its own wake time and nap clock times
+   together (one coherent trajectory), so uncertainty about the unknown
+   morning wake-up is carried into every nap window rather than added on top
+   of an average. Conditioning on the current night uses only what is known
+   now: the bedtime, and that the baby has not woken for the morning yet. */
+
+export const NIGHT_CONTEXT = {
+  /** An active sleep starting in [from, until) local time is a night sleep. */
+  activeNightFrom: 19 * 60,
+  /** Awake in [from, until) local time without a morning wake is night. */
+  awakeNightFrom: 20 * 60,
+  nightUntil: 6 * 60,
+  /** A night-like episode ending in this window is a morning wake-up. */
+  morningWakeFrom: 4 * 60,
+  morningWakeUntil: 11 * 60,
+} as const;
+
+export type UpcomingDayForecast = {
+  status: "ready" | "insufficient_data" | "not_applicable";
+  /** Local calendar day (YYYY-MM-DD) the forecast describes. */
+  targetDay: string | null;
+  targetDayStartMs: number | null;
+  morningWake: ForecastInterval | null;
+  predictedNaps: PredictedNap[];
+  lastUpdated: number;
+  diagnostics: { scenarioDays: number; effectiveSampleSize: number; stopReason: ForecastStopReason };
+};
+
+type DayScenario = { day: string; weight: number; wakeClock: number; naps: { onsetClock: number; durationMin: number }[]; ended: "night" | "incomplete" };
+
+const inWindow = (clock: number, from: number, until: number) => from <= until ? clock >= from && clock < until : clock >= from || clock < until;
+const sameLocalDay = (a: number, b: number) => dayKeyOf(a) === dayKeyOf(b);
+/** Preliminary windows are never narrower than this, even for a perfectly
+    regular history: the morning wake-up is still unknown. */
+const MIN_PRELIMINARY_WIDTH = 30 * MINUTE;
+function atLeast(interval: ForecastInterval, width: number): ForecastInterval {
+  const missing = width - (interval.latestMs - interval.earliestMs);
+  if (missing <= 0) return interval;
+  return { earliestMs: floor5(interval.earliestMs - missing / 2), typicalMs: interval.typicalMs, latestMs: ceil5(interval.latestMs + missing / 2) };
+}
+function localDayStart(dayKey: string): number {
+  const [y, m, d] = dayKey.split("-").map(Number);
+  return new Date(y, m - 1, d).getTime();
+}
+/** Local wall-clock minutes on a local day, as an instant (DST-aware). */
+function onDay(dayKey: string, minutes: number): number {
+  const [y, m, d] = dayKey.split("-").map(Number);
+  return new Date(y, m - 1, d, Math.floor(minutes / 60), Math.round(minutes % 60)).getTime();
+}
+
+/** Night context and the local day a preliminary forecast should describe. */
+export function nightContext(sessions: SleepSession[], active: ActiveSleep | null, now: number): { night: boolean; targetDay: string | null } {
+  const clock = minutesSinceLocalMidnight(now);
+  const target = () => {
+    if (clock < 12 * 60) return dayKeyOf(now);
+    const tomorrow = new Date(startOfLocalDay(now)); tomorrow.setDate(tomorrow.getDate() + 1);
+    return dayKeyOf(tomorrow.getTime());
+  };
+  if (active && Number.isFinite(active.startMs) && active.startMs <= now) {
+    const night = inWindow(minutesSinceLocalMidnight(active.startMs), NIGHT_CONTEXT.activeNightFrom, NIGHT_CONTEXT.nightUntil)
+      || (now - active.startMs) / MINUTE >= FORECAST_RULES.nightMinutes;
+    return { night, targetDay: night ? target() : null };
+  }
+  if (!inWindow(clock, NIGHT_CONTEXT.awakeNightFrom, NIGHT_CONTEXT.nightUntil)) return { night: false, targetDay: null };
+  // Awake before 06:00 after a night-like sleep that ended from 04:00 today:
+  // that is the morning wake-up, so the daytime forecast takes over.
+  const all = episodes(sessions, now), last = all[all.length - 1];
+  if (last?.night && clock < NIGHT_CONTEXT.nightUntil && sameLocalDay(last.endMs, now)
+    && inWindow(minutesSinceLocalMidnight(last.endMs), NIGHT_CONTEXT.morningWakeFrom, NIGHT_CONTEXT.morningWakeUntil)) return { night: false, targetDay: null };
+  return { night: true, targetDay: target() };
+}
+
+export function upcomingDayScenarios(sessions: SleepSession[], active: ActiveSleep | null, now: number, targetDay: string): DayScenario[] {
+  const all = episodes(sessions, now);
+  const targetIsToday = targetDay === dayKeyOf(now), nowClock = minutesSinceLocalMidnight(now);
+  // Tonight's bedtime, when known: the active sleep, or the night-like
+  // episode currently interrupted by a night waking.
+  const interrupted = [...all].reverse().find(e => e.night && now - e.endMs < 8 * 3600000);
+  const tonight = active?.startMs ?? interrupted?.startMs ?? null;
+  const best = new Map<string, DayScenario>();
+  all.forEach((anchor, index) => {
+    if (!anchor.night) return;
+    const day = dayKeyOf(anchor.endMs), wakeClock = minutesSinceLocalMidnight(anchor.endMs);
+    if (day >= targetDay || !inWindow(wakeClock, NIGHT_CONTEXT.morningWakeFrom, NIGHT_CONTEXT.morningWakeUntil)) return;
+    if (tonight !== null && anchor.startMs >= tonight) return; // tonight itself is not history
+    // Consistent with what is observed now: no morning wake-up has happened yet.
+    if (targetIsToday && wakeClock <= nowClock) return;
+    const recency = getRecencyWeight(Math.max(1, Math.floor((now - anchor.endMs) / 86400000)));
+    if (!recency) return;
+    const bedtime = tonight === null ? 1
+      : Math.exp(-clockDistance(minutesSinceLocalMidnight(anchor.startMs), minutesSinceLocalMidnight(tonight)) / 90);
+    const weight = recency * bedtime;
+    if (weight < FORECAST_RULES.minSimilarity || (best.get(day)?.weight ?? 0) >= weight) return;
+    const naps: DayScenario["naps"] = [];
+    let ended: DayScenario["ended"] = "incomplete", previousEnd = anchor.endMs;
+    for (const event of all.slice(index + 1)) {
+      if ((event.startMs - previousEnd) / MINUTE > FORECAST_RULES.maxWakeGapMinutes) break;
+      if (event.night) { ended = "night"; break; }
+      naps.push({ onsetClock: minutesSinceLocalMidnight(event.startMs), durationMin: event.minutes });
+      previousEnd = event.endMs;
+    }
+    best.set(day, { day, weight, wakeClock, naps, ended });
+  });
+  return [...best.values()];
+}
+
+export function calculateUpcomingDayForecast({ sessions, active, now, ageDays = null }: {
+  sessions: SleepSession[]; active: ActiveSleep | null; now: number; ageDays?: number | null;
+}): UpcomingDayForecast {
+  const { night, targetDay } = nightContext(sessions, active, now);
+  const diagnostics: UpcomingDayForecast["diagnostics"] = { scenarioDays: 0, effectiveSampleSize: 0, stopReason: null };
+  const base = { targetDay, targetDayStartMs: targetDay ? localDayStart(targetDay) : null, lastUpdated: now, diagnostics };
+  if (!night || !targetDay || !Number.isFinite(now)) return { ...base, status: "not_applicable", morningWake: null, predictedNaps: [] };
+  const insufficient = (reason: ForecastStopReason): UpcomingDayForecast => {
+    diagnostics.stopReason = reason;
+    return { ...base, status: "insufficient_data", morningWake: null, predictedNaps: [] };
+  };
+
+  const scenarios = upcomingDayScenarios(sessions, active, now, targetDay);
+  diagnostics.scenarioDays = days(scenarios);
+  diagnostics.effectiveSampleSize = Math.round(effective(scenarios) * 10) / 10;
+  if (diagnostics.scenarioDays < FORECAST_RULES.minScenarioDays || effective(scenarios) < FORECAST_RULES.minEffectiveEvidence)
+    return insufficient("insufficient-continuations");
+
+  const young = ageDays === null || ageDays < 90;
+  // The morning wake-up is still unknown: use the wider P10–P90 band for every
+  // preliminary window (backtested: P20–P80 covered only ~55% of nap onsets).
+  const [lo, hi] = [0.1, 0.9];
+  const wakes = scenarios.map(s => ({ value: s.wakeClock, weight: s.weight, day: s.day }));
+  const morningWake: ForecastInterval = atLeast({
+    earliestMs: floor5(onDay(targetDay, weightedQuantile(wakes, lo))),
+    typicalMs: round5(onDay(targetDay, weightedQuantile(wakes, 0.5))),
+    latestMs: ceil5(onDay(targetDay, weightedQuantile(wakes, hi))) }, MIN_PRELIMINARY_WIDTH);
+  morningWake.earliestMs = Math.max(ceil5(now), morningWake.earliestMs);
+  if (morningWake.latestMs <= morningWake.earliestMs) return insufficient("incoherent");
+  morningWake.typicalMs = Math.min(morningWake.latestMs, Math.max(morningWake.earliestMs, morningWake.typicalMs));
+
+  const naps: PredictedNap[] = [];
+  let previousEnd = morningWake.typicalMs, previousWidth = morningWake.latestMs - morningWake.earliestMs;
+  let previousQuality: ForecastQuality = young ? "low" : "medium";
+  for (let k = 1; k <= FORECAST_RULES.maxPredictedNaps; k++) {
+    const withNap = scenarios.filter(s => s.naps.length >= k);
+    const endedBefore = scenarios.filter(s => s.naps.length < k && s.ended === "night");
+    const share = withNap.reduce((a, s) => a + s.weight, 0) / Math.max(1e-9, [...withNap, ...endedBefore].reduce((a, s) => a + s.weight, 0));
+    const support = withNap.map(s => ({ weight: s.weight, day: s.day }));
+    if (share < FORECAST_RULES.continueShare) { diagnostics.stopReason = "night-likely"; break; }
+    if (effective(support) < FORECAST_RULES.minEffectiveEvidence || days(support) < FORECAST_RULES.minEventDays) {
+      diagnostics.stopReason = "insufficient-continuations"; break;
+    }
+    // Absolute clock times from whole days: wake-time and wake-window
+    // variability stay together within each scenario.
+    const onsets = withNap.map(s => ({ value: s.naps[k - 1].onsetClock, weight: s.weight, day: s.day }));
+    const onset: ForecastInterval = atLeast({ earliestMs: floor5(onDay(targetDay, weightedQuantile(onsets, lo))),
+      typicalMs: round5(onDay(targetDay, weightedQuantile(onsets, 0.5))), latestMs: ceil5(onDay(targetDay, weightedQuantile(onsets, hi))) },
+      Math.max(MIN_PRELIMINARY_WIDTH, previousWidth));
+    onset.earliestMs = Math.max(onset.earliestMs, morningWake.earliestMs);
+    onset.typicalMs = Math.min(onset.latestMs, Math.max(onset.earliestMs, onset.typicalMs));
+    const onsetClock = minutesSinceLocalMidnight(onset.typicalMs);
+    if (onset.typicalMs <= previousEnd || onset.earliestMs < now) { diagnostics.stopReason = "incoherent"; break; }
+    if (onsetClock < FORECAST_RULES.earliestNapOnsetClock || onsetClock >= FORECAST_RULES.latestNapOnsetClock) {
+      diagnostics.stopReason = "evening"; break;
+    }
+    const quality = minQuality(previousQuality, k === 1 && !young ? "medium" : "low");
+    const nap: PredictedNap = { id: `upcoming-${k}`, sequenceIndex: k, isNext: false, onset, quality,
+      evidenceCount: days(support), effectiveEvidence: Math.round(effective(support) * 10) / 10 };
+    const durations = withNap.map(s => ({ value: s.naps[k - 1].durationMin, weight: s.weight, day: s.day }));
+    const typical = weightedQuantile(durations, 0.5);
+    const duration: DurationInterval = { lowMin: Math.floor(weightedQuantile(durations, lo) / 5) * 5,
+      typicalMin: Math.round(typical / 5) * 5, highMin: Math.ceil(weightedQuantile(durations, hi) / 5) * 5 };
+    naps.push(nap);
+    // A later nap depends on this one's unknown length: stop without support.
+    if ((duration.highMin - duration.lowMin) > Math.max(45, 1.2 * typical)) { diagnostics.stopReason = "duration-unknown"; break; }
+    nap.durationMinutes = duration;
+    nap.wakeTime = { earliestMs: onset.earliestMs + duration.lowMin * MINUTE, typicalMs: onset.typicalMs + duration.typicalMin * MINUTE,
+      latestMs: onset.latestMs + duration.highMin * MINUTE };
+    previousEnd = nap.wakeTime.typicalMs; previousWidth = onset.latestMs - onset.earliestMs; previousQuality = quality;
+    if (k === FORECAST_RULES.maxPredictedNaps) diagnostics.stopReason = "horizon";
+  }
+  if (!naps.length) return insufficient(diagnostics.stopReason ?? "insufficient-continuations");
+  return { ...base, status: "ready", morningWake, predictedNaps: naps };
+}

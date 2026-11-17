@@ -1,5 +1,5 @@
 import { useId, useMemo } from "react";
-import type { DailySleepForecast } from "../../analytics/dailySleepForecast";
+import type { DailySleepForecast, UpcomingDayForecast } from "../../analytics/dailySleepForecast";
 import type { NextSleepPrediction } from "../../analytics/nextSleep";
 import { buildSleepWaveModel } from "../../analytics/sleepWaveModel";
 import { sameDay } from "../../analytics/time";
@@ -7,6 +7,7 @@ import type { ActiveSleep, SleepSession } from "../../analytics/types";
 import { LOCALES, useTranslation } from "../../i18n";
 import { formatClock, formatDuration } from "../../lib/format";
 import SleepWaveChart from "./SleepWaveChart";
+import SleepWaveUpcoming from "./SleepWaveUpcoming";
 import "./SleepWave.css";
 
 // Decorative icons drawn with CSS masks, so the card keeps a single SVG (the
@@ -16,8 +17,8 @@ function TileIcon({ kind }: { kind: "last" | "next" | "status" | "sun" }) {
 }
 
 type Props = { sessions: SleepSession[]; active: ActiveSleep | null; prediction: NextSleepPrediction;
-  forecast?: DailySleepForecast | null; now: number; babyName?: string };
-export default function SleepWaveCard({ sessions, active, prediction, forecast = null, now, babyName }: Props) {
+  forecast?: DailySleepForecast | null; upcoming?: UpcomingDayForecast | null; now: number; babyName?: string };
+export default function SleepWaveCard({ sessions, active, prediction, forecast = null, upcoming = null, now, babyName }: Props) {
   const { t, lang } = useTranslation();
   const titleId = useId(), summaryId = useId();
   const latestEnd = useMemo(() => sessions.reduce((last, session) => Number.isFinite(session.endMs)
@@ -75,6 +76,7 @@ export default function SleepWaveCard({ sessions, active, prediction, forecast =
       <strong>{awakeRange.min === awakeRange.max ? formatDuration(awakeRange.min, lang)
         : `${formatDuration(awakeRange.min, lang)}–${formatDuration(awakeRange.max, lang)}`}</strong>
     </p>}
+    {upcoming && upcoming.status !== "not_applicable" && <SleepWaveUpcoming forecast={upcoming} />}
     <div className="sleep-wave-legend" aria-hidden="true">
       <span><i className="is-recorded" />{t("sleepWave.recorded")}</span>
       {sleeping && <span><i className="is-active" />{t("common.sleeping")}</span>}

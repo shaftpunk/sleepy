@@ -1,4 +1,4 @@
-import type { DailySleepForecast, ForecastQuality } from "./dailySleepForecast";
+import type { DailySleepForecast, ForecastQuality, UpcomingDayForecast } from "./dailySleepForecast";
 import type { NextSleepPrediction } from "./nextSleep";
 import { sameDay, startOfLocalDay } from "./time";
 import type { ActiveSleep, SleepSession } from "./types";
@@ -121,4 +121,32 @@ export function recordedDisplaySegments(segments: WaveSegment[], chartWidth: num
     radius = Math.max((segment.end - segment.start) / 2, Math.min(radius, center - left, right - center));
     return { ...segment, start: center - radius, end: center + radius };
   });
+}
+
+/** Preliminary upcoming-day timeline: its own explicit date and axis, never
+    merged into the current day's chart. Positions use the same instant-based
+    geometry as the main chart. */
+export type UpcomingDayWaveModel = {
+  targetDayStartMs: number;
+  domain: WaveInterval;
+  wake: (WaveSegment & { likely: number }) | null;
+  naps: PredictedWave[];
+  ticks: { instant: number; position: number }[];
+};
+export function buildUpcomingDayWaveModel(forecast: UpcomingDayForecast | null): UpcomingDayWaveModel | null {
+  if (!forecast || forecast.status !== "ready" || forecast.targetDayStartMs === null || !forecast.morningWake) return null;
+  const day = new Date(forecast.targetDayStartMs);
+  const clock = (hour: number) => { const d = new Date(day); d.setHours(hour, 0, 0, 0); return d.getTime(); };
+  const spans = [forecast.morningWake, ...forecast.predictedNaps.flatMap(n => [n.onset, ...(n.wakeTime ? [n.wakeTime] : [])])];
+  const from = Math.min(clock(5), ...spans.map(s => s.earliestMs));
+  const to = Math.max(clock(19), ...spans.map(s => s.latestMs));
+  const padding = 20 * 60000, domain = { startMs: from - padding, endMs: to + padding };
+  const position = (instant: number) => wavePosition(instant, domain);
+  const segment = ({ startMs, endMs }: WaveInterval): WaveSegment => ({ startMs, endMs, start: position(startMs), end: position(endMs) });
+  const ticks = [6, 10, 14, 18].map(clock).filter(t => t >= domain.startMs && t <= domain.endMs).map(instant => ({ instant, position: position(instant) }));
+  return { targetDayStartMs: forecast.targetDayStartMs, domain, ticks,
+    wake: { ...segment({ startMs: forecast.morningWake.earliestMs, endMs: forecast.morningWake.latestMs }), likely: position(forecast.morningWake.typicalMs) },
+    naps: forecast.predictedNaps.map(n => ({ sequenceIndex: n.sequenceIndex, quality: n.quality,
+      onset: { ...segment({ startMs: n.onset.earliestMs, endMs: n.onset.latestMs }), likely: position(n.onset.typicalMs) },
+      wave: n.wakeTime ? segment({ startMs: n.onset.typicalMs, endMs: n.wakeTime.typicalMs }) : null })) };
 }

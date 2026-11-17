@@ -3,7 +3,8 @@
    verbatim from that file, not duplicated). No app/API writes, no assertions.
    node tests/visual-capture.cjs <playwright module path> [--out=<dir>] [--only=<name,...>]
      [--reference=<png>]   also writes compare-*.png: reference | capture side by side
-   Clock is pinned to 12:08 Europe/Oslo (the approved mockup's "Nå" time). */
+   Clock is pinned to 12:08 Europe/Oslo (the approved mockup's "Nå" time);
+   --time=<ISO instant> overrides it (e.g. 2026-11-16T00:32:00Z for 01:32). */
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -27,6 +28,7 @@ for (const theme of ['light', 'dark']) {
     [`home-${theme}`, '/', `${q}&skin=default&wave-fixture`, false],
     [`home-${theme}-full`, '/', `${q}&skin=default&wave-fixture`, true],
     [`home-${theme}-sleeping`, '/', `${q}&skin=default&wave-fixture&active`, false],
+    [`home-${theme}-sleeping-full`, '/', `${q}&skin=default&wave-fixture&active`, true],
     [`home-${theme}-empty`, '/', `${q}&skin=default&empty`, false],
     [`home-${theme}-alive`, '/', `${q}&skin=alive&wave-fixture`, false],
     [`home-${theme}-retro`, '/', `${q}&skin=retro&wave-fixture`, false],
@@ -47,7 +49,7 @@ async function main() {
     for (let n = 0; n < 150; n++) { try { if ((await fetch(base)).ok) break; } catch { /* starting */ } await new Promise(r => setTimeout(r, 100)); }
     browser = await chromium.launch({ headless: true, ...(process.env.SLEEPY_CHROMIUM_PATH ? { executablePath: process.env.SLEEPY_CHROMIUM_PATH } : {}) });
     const page = await browser.newPage({ timezoneId: 'Europe/Oslo', viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
-    await page.clock.install({ time: new Date('2026-11-16T11:08:00Z') });
+    await page.clock.install({ time: new Date(arg('time') || '2026-11-16T11:08:00Z') });
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     await page.route('**/*', route => {
