@@ -52,3 +52,25 @@ test('nearby short naps and active sleep limit symmetric expansion without overl
  for(let i=0;i<2;i++)assert.ok(Math.abs(result[i].start+result[i].end-segments[i].start-segments[i].end)<1e-9);
  const edge=display([{start:0,end:.001}],250)[0];assert.ok(edge.start>=0);
 });
+const night=session(new Date(2026,10,15,20,9).getTime(),at(6,53)),nightProps={...props,sessions:[night,session(at(9,15),at(10,5))]};
+test('a completed long night is condensed in display only; timestamps and day scale stay true',()=>{
+ const m=build(nightProps),plain=build(props),c=m.compressed;assert.ok(c);assert.equal(plain.compressed,null);
+ assert.equal(c.endMs,at(6,53));assert.ok(Math.abs(c.end-.16)<1e-9);
+ const n=m.recorded.find(s=>s.startMs===night.startMs),nap=m.recorded.find(s=>s.startMs===at(9,15));
+ assert.equal(n.endMs,night.endMs);assert.ok(n.start>=0&&n.end<=c.end+1e-9);assert.equal(nap.endMs-nap.startMs,50*minute);
+ // After the wake-up the axis is linear: equal durations get equal widths.
+ const perMs=(nap.end-nap.start)/(50*minute),f=m.forecasts[0];
+ assert.ok(Math.abs((f.end-f.start)/(f.endMs-f.startMs)-perMs)<1e-12);assert.ok(Math.abs((m.now-nap.end)/(now-nap.endMs)-perMs)<1e-12);
+ // The day gets more room than on the uncondensed axis, and order is kept.
+ assert.ok(perMs>1/(m.domain.endMs-m.domain.startMs));assert.ok(n.end<=nap.start&&nap.end<m.now&&m.now<f.start);
+ assert.ok(m.ticks.every(t=>t.position>=c.end&&t.position<=1));assert.ok(m.ticks.length>=3);
+});
+test('nothing is condensed without a long night, while it is still running, or when later items overlap it',()=>{
+ assert.equal(build({...props,sessions:[session(at(5),at(6,30)),session(at(9,15),at(10,5))]}).compressed,null);
+ assert.equal(build({...props,sessions:[],active:{id:'a',startMs:new Date(2026,10,15,20,9).getTime()}}).compressed,null);
+ assert.equal(build({...props,now:at(3),sessions:[],active:{id:'a',startMs:new Date(2026,10,15,20,9).getTime()},prediction:{status:'insufficient_data',sampleSize:0}}).compressed,null);
+});
+test('condensed night renders its true times, a break cue and a legend entry in both locales',()=>{
+ for(const lang of ['en','no']){const html=render(lang,nightProps);assert.ok(html.includes('data-wave-compressed="true"'));assert.ok(html.includes('20:09')&&html.includes('06:53'));assert.ok(html.includes(lang==='en'?'Night condensed':'Natten er forkortet'));}
+ assert.ok(!render('en').includes('data-wave-compressed'));
+});

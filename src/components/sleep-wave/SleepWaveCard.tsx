@@ -82,6 +82,7 @@ export default function SleepWaveCard({ sessions, active, prediction, forecast =
       {sleeping && <span><i className="is-active" />{t("common.sleeping")}</span>}
       {window && <span><i className="is-forecast" />{t("sleepWave.onsetWindow")}</span>}
       {estimated && <span><i className="is-estimated" />{t("sleepWave.estimatedSleep")}</span>}
+      {model.compressed && <span><i className="is-compressed" />{t("sleepWave.nightCompressed")}</span>}
     </div>
     <p className="sleep-wave-note">{later.length || estimated ? t("sleepWave.forecastNote") : window ? t("sleepWave.onsetNote") : t("sleepWave.recordNote")}</p>
     <div className="sleep-wave-accessible-history">

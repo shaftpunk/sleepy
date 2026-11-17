@@ -19,12 +19,21 @@ export type SleepWaveModel = {
       is the next sleep (its onset band is forecasts[0]); a wave is present
       only when the engine supports a duration. */
   predicted: PredictedWave[];
+  /** Display-only: a long overnight record at the start of the frame is drawn
+      on a condensed scale (0..end of the width) so the day ahead gets the
+      room. Timestamps are untouched; everything after it shares one linear
+      scale. Null when the frame is a single linear scale. */
+  compressed: WaveSegment | null;
 };
 export type PredictedWave = {
   sequenceIndex: number; quality: ForecastQuality;
   onset: WaveSegment & { likely: number };
   wave: WaveSegment | null;
 };
+
+// A night is a sleep of three hours or more (as in the forecast engine); when
+// condensed it takes this share of the chart width.
+const NIGHT_MINUTES = 180, NIGHT_SHARE = .16;
 
 export function wavePosition(instant: number, domain: WaveInterval): number {
   return (instant - domain.startMs) / (domain.endMs - domain.startMs);
@@ -85,15 +94,27 @@ export function buildSleepWaveModel({ sessions, active, prediction, now, forecas
   const to = Math.max(evening.getTime(), now, ...intervals.map(s => s.endMs));
   const padding = Math.max(10 * 60000, (to - from) * .025);
   const domain = { startMs: from - padding, endMs: to + padding };
-  const position = (instant: number) => wavePosition(instant, domain);
+  // Timestamps and display positions are separate: a completed night sleep
+  // that began before the daytime frame is condensed to a fixed share of the
+  // width when it would otherwise crowd out the day. Nothing else may start
+  // inside the condensed stretch, and the rest of the frame stays linear.
+  const nightEnd = today.filter(s => s.endMs - s.startMs >= NIGHT_MINUTES * 60000 && s.startMs < morning.getTime())
+    .reduce((end, s) => Math.max(end, s.endMs), 0);
+  const squeezed = nightEnd > 0 && nightEnd < to
+    && (nightEnd - domain.startMs) / (domain.endMs - domain.startMs) > NIGHT_SHARE * 1.4
+    && [...(activeInterval ? [activeInterval] : []), ...windows, ...predictedSpans].every(s => s.startMs >= nightEnd);
+  const position = (instant: number) => !squeezed ? wavePosition(instant, domain)
+    : instant <= nightEnd ? (instant - domain.startMs) / (nightEnd - domain.startMs) * NIGHT_SHARE
+    : NIGHT_SHARE + (instant - nightEnd) / (domain.endMs - nightEnd) * (1 - NIGHT_SHARE);
   const segment = ({ startMs, endMs }: WaveInterval): WaveSegment => ({ startMs, endMs, start: position(startMs), end: position(endMs) });
+  const tickFrom = squeezed ? nightEnd : from;
   // An ordinary single-day frame gets a tick every third local hour (06, 09 ...).
   // Otherwise up to four elapsed-time ticks, with interior ticks rounded to
   // local hours; date/offset labels use just two anchors to avoid collisions.
   const crossesOffset = new Date(from).getTimezoneOffset() !== new Date(to).getTimezoneOffset();
   const threeHourly: number[] = [];
-  if (!crossesOffset && sameDay(from, now) && sameDay(to, now)) {
-    const tick = new Date(from); tick.setHours(Math.ceil((tick.getHours() * 60 + tick.getMinutes()) / 180) * 3, 0, 0, 0);
+  if (!crossesOffset && sameDay(tickFrom, now) && sameDay(to, now)) {
+    const tick = new Date(tickFrom); tick.setHours(Math.ceil((tick.getHours() * 60 + tick.getMinutes()) / 180) * 3, 0, 0, 0);
     for (; tick.getTime() <= to; tick.setHours(tick.getHours() + 3)) threeHourly.push(tick.getTime());
   }
   const tickInstants = threeHourly.length >= 3 ? threeHourly : [0, 1 / 3, 2 / 3, 1].map(fraction => {
@@ -110,6 +131,7 @@ export function buildSleepWaveModel({ sessions, active, prediction, now, forecas
     recorded: today.map(segment), active: activeInterval ? segment(activeInterval) : null,
     forecasts: windows.map(w => ({ ...segment(w), likely: position(Math.max(w.startMs, Math.min(w.endMs, w.likelyMs ?? (w.startMs + w.endMs) / 2))) })),
     now: position(now), ticks, lastCompleted,
+    compressed: squeezed ? segment({ startMs: domain.startMs, endMs: nightEnd }) : null,
     predicted: predictedNaps.map(n => ({ sequenceIndex: n.sequenceIndex, quality: n.quality,
       onset: { ...segment({ startMs: n.onset.earliestMs, endMs: n.onset.latestMs }), likely: position(n.onset.typicalMs) },
       wave: n.wakeTime ? segment({ startMs: n.onset.typicalMs, endMs: n.wakeTime.typicalMs }) : null })) };

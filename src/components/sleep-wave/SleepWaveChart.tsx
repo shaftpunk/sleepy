@@ -48,6 +48,16 @@ export default function SleepWaveChart({ model, now, formatRange }: {
       ...displayed.map((s, i) => ({ key: `r${i}`, kind: "recorded" as const, text: formatRange(model.recorded[i].startMs, model.recorded[i].endMs),
         top: toPx(recordedWaveCrest(s)) - 20, center: (s.start + s.end) / 2 })).reverse(),
     ];
+    // Sleep in the condensed night keeps its true times, set in the open sky
+    // above it (clock times only: the dusk shade already says "last night").
+    const night = model.compressed;
+    if (night) displayed.forEach((_, i) => {
+      const record = model.recorded[i], candidate = candidates.find(c => c.key === `r${i}`);
+      if (!candidate || record.endMs > night.endMs || record.endMs - record.startMs < 3 * 3600000) return;
+      candidate.text = `${formatClock(record.startMs, lang)}–${formatClock(record.endMs, lang)}`;
+      candidate.top = LABEL_SPACE + 2;
+      candidates.unshift(...candidates.splice(candidates.indexOf(candidate), 1));
+    });
     for (const candidate of candidates) {
       const labelWidth = candidate.text.length * 6.6 + 12;
       if (labelWidth > width) continue;
@@ -92,6 +102,12 @@ export default function SleepWaveChart({ model, now, formatRange }: {
           <stop offset=".3" stopColor="var(--wave-mist)" stopOpacity=".5" />
           <stop offset="1" stopColor="var(--wave-mist)" stopOpacity="0" />
         </linearGradient>
+        <clipPath id={`${id}-sky`}><rect width="640" height="150" /></clipPath>
+        <radialGradient id={`${id}-night`}>
+          <stop offset="0" stopColor="var(--wave-night)" stopOpacity=".6" />
+          <stop offset=".55" stopColor="var(--wave-night)" stopOpacity=".3" />
+          <stop offset="1" stopColor="var(--wave-night)" stopOpacity="0" />
+        </radialGradient>
         <filter id={`${id}-soft`} x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="15 9" /></filter>
         <filter id={`${id}-feather`} x="-200%" y="-20%" width="500%" height="140%"><feGaussianBlur stdDeviation="5 2" /></filter>
         <linearGradient id={`${id}-band`} x1="0" y1="0" x2="0" y2="1">
@@ -118,6 +134,10 @@ export default function SleepWaveChart({ model, now, formatRange }: {
           <line x1="0" x2="0" y2="10" stroke="var(--wave-ink)" strokeOpacity=".24" strokeWidth="2" />
         </pattern>
       </defs>
+      {model.compressed && <g data-wave-compressed="true">
+        <ellipse className="sleep-wave-night-shade" clipPath={`url(#${id}-sky)`} cx={model.compressed.end * 320} cy="150" rx={model.compressed.end * 520} ry="118" fill={`url(#${id}-night)`} />
+        <path className="sleep-wave-night-break" d={`M ${model.compressed.end * 640 - 7} 158 l 6 -16 M ${model.compressed.end * 640 + 1} 158 l 6 -16`} />
+      </g>}
       <path className="sleep-wave-mist is-back" d={SWELL_BACK} fill={`url(#${id}-swell)`} />
       {model.forecasts.map((forecast, i) => {
         const x0 = forecast.start * 640, x1 = forecast.end * 640, mid = (x0 + x1) / 2;

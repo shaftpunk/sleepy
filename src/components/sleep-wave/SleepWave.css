@@ -25,6 +25,7 @@
   --wave-record-mid: #c39bb3;
   --wave-dune: #e4c1cd1a;
   --wave-halo-tint: #cdb5dd;
+  --wave-night: #24161f;
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -77,6 +78,7 @@
   --wave-dune: #fffaf894;
   --wave-halo-tint: #b596c8;
   --wave-now: #ffffff;
+  --wave-night: #a98fbd;
   --wave-rule: #79556924;
   --wave-border: #f9f0edb8;
   --wave-light: #f0d4b4;
@@ -257,6 +259,10 @@
 .sleep-wave-peak-label.is-later { color: var(--wave-muted); font-weight: 500; }
 .sleep-wave-legend .is-estimated { background: transparent; border: 1px dashed var(--wave-edge); }
 .sleep-wave-events > [data-tile="later"] dd { color: var(--wave-muted); }
+
+/* Condensed overnight stretch: a dusk shade and an axis break on the baseline. */
+.sleep-wave-night-break { fill: none; stroke: var(--wave-edge); stroke-width: 1.25; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.sleep-wave-legend .is-compressed { border-radius: 0; background: linear-gradient(108deg, transparent 22%, var(--wave-edge) 22% 38%, transparent 38% 60%, var(--wave-edge) 60% 76%, transparent 76%); }
 
 /* Preliminary coming-day forecast (night only): own date and axis. */
 .sleep-wave-upcoming { margin-top: 12px; padding: 12px 14px 10px; border: 1px dashed var(--wave-border); border-radius: 18px; background: var(--wave-tile); }

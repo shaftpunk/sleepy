@@ -189,7 +189,10 @@ test('Sleep Wave keeps actual and predicted apart: recorded geometry and 12 px d
   const withForecast = buildSleepWaveModel({ sessions, active: null, prediction: nextSleep, now, forecast });
   assert.ok(withForecast.predicted.length >= 2);
   // Same axis: positions of recorded sleep may only rescale with the domain, never move relative to time.
-  const at = (m, ms) => (ms - m.domain.startMs) / (m.domain.endMs - m.domain.startMs);
+  // A condensed night is one linear stretch up to the wake-up; the day after it is another.
+  const at = (m, ms) => { const c = m.compressed, d = m.domain;
+    return !c ? (ms - d.startMs) / (d.endMs - d.startMs) : ms <= c.endMs ? (ms - d.startMs) / (c.endMs - d.startMs) * c.end
+      : c.end + (ms - c.endMs) / (d.endMs - c.endMs) * (1 - c.end); };
   for (const [i, r] of withForecast.recorded.entries()) { assert.equal(r.startMs, plain.recorded[i].startMs); assert.equal(r.endMs, plain.recorded[i].endMs); assert.ok(Math.abs(r.start - at(withForecast, r.startMs)) < 1e-12); }
   const display = recordedDisplaySegments(withForecast.recorded, 320, []);
   for (const d of display) assert.ok((d.end - d.start) * 320 >= 12 - 1e-9);

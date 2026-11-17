@@ -49,7 +49,7 @@ function mock(url) {
   if (url === '/src/services/sleepService.ts') return records + failure + `
     if(p.has('probability-fixture')){const at=(days,h,m=0)=>{const d=new Date();d.setDate(d.getDate()-days);d.setHours(h,m,0,0);return d.getTime()};const row=(start,end)=>({id:String(start),baby_id:'baby',starttime:iso(start),endtime:iso(end),durationminutes:(end-start)/60000,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,i)=>{const d=i+1;return [row(at(d+1,23,30),at(d,7)),row(at(d,d<=9?9:11,30),at(d,d<=9?10:12,30)),row(at(d,20),at(d,21))]}).flat());}
     if(p.has('next-sleep-fixture')&&!p.has('empty')){sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,d)=>Array.from({length:6},(_,i)=>{const end=now-(d+1)*86400000-i*4*3600000;return {id:String(end),baby_id:'baby',starttime:iso(end-3600000),endtime:iso(end),durationminutes:60,sleep_type:'sleep',rate:'4',deleted_at:null}})).flat(),{id:'last',baby_id:'baby',starttime:iso(now-2*3600000),endtime:iso(now-3600000),durationminutes:60,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.sort((a,b)=>Date.parse(b.endtime)-Date.parse(a.endtime));}
-    if(p.has('wave-fixture')&&!p.has('empty')){const at=(d,h,m=0)=>{const date=new Date(now);date.setDate(date.getDate()-d);date.setHours(h,m,0,0);return date.getTime()};const row=(start,end)=>({id:String(start),baby_id:'baby',starttime:iso(start),endtime:iso(end),durationminutes:(end-start)/60000,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,i)=>{const d=i+1;return [row(at(d+1,22),at(d,6)),row(at(d,9,15),at(d,10,5)),row(at(d,12,55),at(d,13,35)),row(at(d,16,10),at(d,16,50)),row(at(d,20),at(d,21))]}).flat(),row(at(0,9,15),at(0,10,5)));sleeps.sort((a,b)=>Date.parse(b.endtime)-Date.parse(a.endtime));}
+    if(p.has('wave-fixture')&&!p.has('empty')){const at=(d,h,m=0)=>{const date=new Date(now);date.setDate(date.getDate()-d);date.setHours(h,m,0,0);return date.getTime()};const row=(start,end)=>({id:String(start),baby_id:'baby',starttime:iso(start),endtime:iso(end),durationminutes:(end-start)/60000,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,i)=>{const d=i+1;return [row(at(d+1,22),at(d,6)),row(at(d,9,15),at(d,10,5)),row(at(d,12,55),at(d,13,35)),row(at(d,16,10),at(d,16,50)),row(at(d,20),at(d,21))]}).flat(),row(at(0,9,15),at(0,10,5)),...(p.has('night')?[row(at(1,20,9),at(0,6,53))]:[]));sleeps.sort((a,b)=>Date.parse(b.endtime)-Date.parse(a.endtime));}
     if(p.has('home-fixture')&&!p.has('empty')){sleeps.splice(0,sleeps.length,...Array.from({length:24},(_,i)=>({...sleeps[0],id:'history-'+i,baby_id:'baby',starttime:iso(now-(63+i*120)*60000),endtime:iso(now-(18+i*120)*60000),durationminutes:45,sleep_type:'sleep',rate:'4.8',deleted_at:null})));}
     export const getActiveSleep=async()=>window.__homeActive!==undefined?window.__homeActive:p.has('active')?{...sleeps[0],id:'active',starttime:p.has('wave-fixture')?iso(now-42*60000):p.has('home-fixture')?iso(now-42*60000):sleeps[0].starttime,endtime:null}:null,
     getLastCompletedSleep=async()=>window.__homeLast||(p.has('hold-room')?{...sleeps[0],endtime:iso(now-2*3600000)}:sleeps[0])||null,getRecentSleeps=async()=>sleeps.slice(0,8),getAllSleeps=async()=>sleeps,getSleepsFromDate=async()=>sleeps,getSleepsOverlappingPeriod=async()=>window.__waveRows??sleeps;
@@ -226,7 +226,18 @@ async function main() {
         assert.ok(await page.locator('.home-sleep-actions > .sleep-action').evaluate(e=>e.getBoundingClientRect().bottom<=innerHeight-70),'stop action remains above the fold');
         await check('sleep-wave-sleeping',true);
         await visit('/','empty');await page.waitForSelector('.sleep-wave');assert.equal(await card.locator('[data-wave-forecast]').count(),0);
-        await check('sleep-wave-learning',true);console.log(context+' Sleep Wave checked');continue;
+        await check('sleep-wave-learning',true);
+        await visit('/','wave-fixture&night');await page.waitForSelector('[data-wave-compressed]');
+        assert.equal(await card.locator('svg').count(),1);assert.equal(await card.locator('[data-wave-forecast]').count(),1);
+        assert.ok((await card.locator('.sleep-wave-peak-label').allTextContents()).some(text=>text.includes('20:09')&&text.includes('06:53')),'condensed night keeps its timestamps');
+        const nightBox=await card.locator('.sleep-wave-night-break').evaluate(e=>e.getBoundingClientRect().right),plotBox=await card.locator('svg').evaluate(e=>{const r=e.getBoundingClientRect();return {left:r.left,width:r.width}});
+        assert.ok(nightBox-plotBox.left<plotBox.width*.2,'night stays condensed');
+        const nightTicks=await card.locator('.sleep-wave-axis > span').evaluateAll(nodes=>nodes.map(e=>{const r=e.getBoundingClientRect();return {left:r.left,right:r.right}}));
+        assert.ok(nightTicks.length>=3,'day axis keeps its hours');
+        for(let i=1;i<nightTicks.length;i++)assert.ok(nightTicks[i].left>=nightTicks[i-1].right-1,'condensed axis labels overlap');
+        const peaks=await card.locator('.sleep-wave-peak-label').evaluateAll(nodes=>nodes.map(e=>{const r=e.getBoundingClientRect();return {l:r.left,r:r.right,t:r.top,b:r.bottom}}));
+        for(let i=0;i<peaks.length;i++)for(let j=i+1;j<peaks.length;j++)assert.ok(peaks[i].r<=peaks[j].l+1||peaks[j].r<=peaks[i].l+1||peaks[i].b<=peaks[j].t+1||peaks[j].b<=peaks[i].t+1,'condensed labels overlap');
+        await check('sleep-wave-night',true);console.log(context+' Sleep Wave checked');continue;
       }
       if(process.argv.includes('--next-sleep-only')){
         await visit('/','next-sleep-fixture');await page.waitForSelector('.sleep-wave-time');

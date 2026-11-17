@@ -29,6 +29,7 @@ for (const theme of ['light', 'dark']) {
   scenes.push(
     [`home-${theme}`, '/', `${q}&skin=default&wave-fixture`, false],
     [`home-${theme}-full`, '/', `${q}&skin=default&wave-fixture`, true],
+    [`home-${theme}-night`, '/', `${q}&skin=default&wave-fixture&night`, false],
     [`home-${theme}-sleeping`, '/', `${q}&skin=default&wave-fixture&active`, false],
     [`home-${theme}-sleeping-full`, '/', `${q}&skin=default&wave-fixture&active`, true],
     [`home-${theme}-empty`, '/', `${q}&skin=default&empty`, false],

@@ -15,7 +15,7 @@ const no = {
     upcomingTitle: "Kommende dags søvnrytme", preliminary: "Foreløpig – bygger på lignende netter og morgener.",
     upcomingWake: "Mulig oppvåkning", upcomingNap: "Mulig {{n}}. lur",
     upcomingLearning: "Vi trenger flere registrerte netter og morgener før vi kan anslå dagen som kommer.",
-    laterNap: "Mulig senere lur", estimatedSleep: "Anslått søvn", laterNapSummary: "Mulig senere lur, innsovning {{range}}",
+    laterNap: "Mulig senere lur", estimatedSleep: "Anslått søvn", nightCompressed: "Natten er forkortet", laterNapSummary: "Mulig senere lur, innsovning {{range}}",
     forecastNote: "Anslagene bygger på dager med lignende rytme. Senere lurer er mer usikre og oppdateres fortløpende.",
   },
   sleepStart: {

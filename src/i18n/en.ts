@@ -16,7 +16,7 @@ const en = {
     upcomingTitle: "Coming day's sleep rhythm", preliminary: "Preliminary – based on similar nights and mornings.",
     upcomingWake: "Possible wake-up", upcomingNap: "Possible nap {{n}}",
     upcomingLearning: "We need more recorded nights and mornings before estimating the coming day.",
-    laterNap: "Possible later nap", estimatedSleep: "Estimated sleep", laterNapSummary: "Possible later nap, falling asleep {{range}}",
+    laterNap: "Possible later nap", estimatedSleep: "Estimated sleep", nightCompressed: "Night condensed", laterNapSummary: "Possible later nap, falling asleep {{range}}",
     forecastNote: "Estimates are based on days with a similar rhythm. Later naps are less certain and update as the day unfolds.",
   },
   sleepStart: {
