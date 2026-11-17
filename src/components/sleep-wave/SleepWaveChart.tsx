@@ -15,6 +15,12 @@ const SWELL_MID = "M 0 152 C 90 146 170 158 270 150 S 450 148 540 151 S 615 156 
 const SWELL_FRONT = "M 0 158 C 110 152 200 164 320 156 S 500 151 640 160 L 640 174 L 0 174 Z";
 
 type Label = { key: string; text: string; x: number; top: number; width: number; kind: "forecast" | "later" | "recorded" };
+// A soft, wider hill of light under a wave, like the approved artwork. It is
+// blurred decoration only: the crisp wave drawn on top keeps the true times.
+const hill = ({ start, end }: { start: number; end: number }, crest: number) => {
+  const c = (start + end) / 2 * 640, r = Math.max((end - start) * 640 * 2.2, 52), h = 150 - (150 - crest) * .6;
+  return `M ${c - r} 150 C ${c - r * .45} 150 ${c - r * .42} ${h} ${c} ${h} C ${c + r * .42} ${h} ${c + r * .45} 150 ${c + r} 150 Z`;
+};
 // Later forecast events fade with horizon; emphasis never grows further ahead.
 const laterOpacity = (sequenceIndex: number) => Math.max(.38, .98 - (sequenceIndex - 1) * .28);
 
@@ -109,6 +115,11 @@ export default function SleepWaveChart({ model, now, formatRange }: {
           <stop offset="1" stopColor="var(--wave-night)" stopOpacity="0" />
         </radialGradient>
         <filter id={`${id}-soft`} x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="15 9" /></filter>
+        <filter id={`${id}-hill`} x="-30%" y="-40%" width="160%" height="180%"><feGaussianBlur stdDeviation="8 5" /></filter>
+        <linearGradient id={`${id}-hillfill`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="var(--wave-halo-tint)" stopOpacity=".72" />
+          <stop offset="1" stopColor="var(--wave-halo-tint)" stopOpacity=".18" />
+        </linearGradient>
         <filter id={`${id}-feather`} x="-200%" y="-20%" width="500%" height="140%"><feGaussianBlur stdDeviation="5 2" /></filter>
         <linearGradient id={`${id}-band`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="var(--wave-band-core)" stopOpacity="0" />
@@ -139,6 +150,13 @@ export default function SleepWaveChart({ model, now, formatRange }: {
         <path className="sleep-wave-night-break" d={`M ${model.compressed.end * 640 - 7} 158 l 6 -16 M ${model.compressed.end * 640 + 1} 158 l 6 -16`} />
       </g>}
       <path className="sleep-wave-mist is-back" d={SWELL_BACK} fill={`url(#${id}-swell)`} />
+      <g className="sleep-wave-hills" filter={`url(#${id}-hill)`}>
+        {displayed.map((s, i) => <path key={i} d={hill(s, recordedWaveCrest(s))} fill={`url(#${id}-hillfill)`} />)}
+        {model.active && <path d={hill(model.active, recordedWaveCrest(model.active))} fill={`url(#${id}-hillfill)`} />}
+        {nextWave && <path className="is-next" d={hill(nextWave, recordedWaveCrest(nextWave))} />}
+        {model.predicted.filter(p => !p.isNext && p.wave).map(p => <path key={p.sequenceIndex} className="is-later"
+          style={{ opacity: laterOpacity(p.sequenceIndex) * .6 }} d={hill(p.wave!, recordedWaveCrest(p.wave!))} fill={`url(#${id}-hillfill)`} />)}
+      </g>
       {model.forecasts.map((forecast, i) => {
         const x0 = forecast.start * 640, x1 = forecast.end * 640, mid = (x0 + x1) / 2;
         return <g key={i} data-wave-forecast="onset">

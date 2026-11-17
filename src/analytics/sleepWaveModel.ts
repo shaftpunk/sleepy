@@ -45,7 +45,7 @@ export function wavePosition(instant: number, domain: WaveInterval): number {
 // symmetric ease (bell-like for naps, a soft plateau for long sleeps), and
 // nothing extends beyond the recorded timestamps.
 export function recordedWaveCrest(segment: Pick<WaveSegment, "start" | "end">): number {
-  return 150 - Math.min(78, 30 + (segment.end - segment.start) * 640 * .4);
+  return 150 - Math.min(84, 42 + (segment.end - segment.start) * 640 * .4);
 }
 export function recordedWavePath(segment: Pick<WaveSegment, "start" | "end">): string {
   const left = segment.start * 640, right = segment.end * 640, width = right - left;

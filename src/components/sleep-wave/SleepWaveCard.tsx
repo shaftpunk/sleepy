@@ -16,6 +16,8 @@ export default function SleepWaveCard({ sessions, active, prediction, forecast =
   const { t, lang } = useTranslation();
   const titleId = useId(), summaryId = useId(), infoId = useId();
   const [infoOpen, setInfoOpen] = useState(false);
+  // Decorative tile icons (CSS masks), so the card keeps a single SVG.
+  const icon = (kind: "last" | "next" | "status" | "sun") => <span className={`sleep-wave-icon is-${kind}`} aria-hidden="true" />;
   const chartNow = useMemo(() => waveModelNow(sessions, active, now), [sessions, active, now]);
   const model = useMemo(() => buildSleepWaveModel({ sessions, active, prediction, forecast, now: chartNow }), [sessions, active, prediction, forecast, chartNow]);
   const window = model.forecasts[0];
@@ -41,14 +43,15 @@ export default function SleepWaveCard({ sessions, active, prediction, forecast =
   // always get the full explanation.
   return <section className="sleep-wave" data-wave-state={model.status} aria-labelledby={titleId} aria-describedby={summaryId}>
     <header className="sleep-wave-header">
-      <h2 id={titleId}>Sleep Wave<span className="sleep-wave-sr"> – {babyName ? t("sleepWave.rhythmFor", { name: babyName }) : t("sleepWave.rhythm")}</span></h2>
+      <div><h2 id={titleId}>Sleep Wave</h2>
+        <p className="sleep-wave-subtitle">{babyName ? t("sleepWave.rhythmFor", { name: babyName }) : t("sleepWave.rhythm")}</p></div>
       <span className="sleep-wave-today">{t("common.today")}</span>
     </header>
     <div className="sleep-wave-forecast">
       {window ? <>
-        <h3>{t("sleepWave.nextOnset")}</h3>
+        <h3>{t("home.nextSleepTitle")}</h3>
         <p className="sleep-wave-time">{range(window.startMs, window.endMs)}</p>
-        <p className="sleep-wave-sr">{t("sleepWave.expectedOnset")}</p>
+        <p className="sleep-wave-caption">{t("sleepWave.expectedOnset")}</p>
       </> : sleeping ? <>
         <h3>{t("sleepWave.sleepingTitle")}</h3>
         {model.active && <p className="sleep-wave-state-copy">{t("home.startedAt", { time: formatClock(model.active.startMs, lang) })}</p>}
@@ -58,10 +61,14 @@ export default function SleepWaveCard({ sessions, active, prediction, forecast =
     </div>
     <SleepWaveChart model={model} now={chartNow} formatRange={range} />
     <dl className="sleep-wave-events" id={summaryId}>
-      <div data-tile="last"><dt>{t("sleepWave.lastSleep")}</dt><dd>{last ? range(last.startMs, last.endMs) : t("common.notRegistered")}</dd></div>
-      <div data-tile="status"><dt>{t("sleepWave.status")}</dt><dd>{sleeping ? t("common.sleeping") : window ? t("common.awake") : t("common.notRegistered")}</dd></div>
-      {later[0] && <div data-tile="later"><dt>{t("sleepWave.laterNap")}</dt><dd>{range(later[0].onset.startMs, later[0].onset.endMs)}</dd></div>}
+      <div data-tile="last">{icon("last")}<dt>{t("sleepWave.lastSleep")}</dt><dd>{last ? range(last.startMs, last.endMs) : t("common.notRegistered")}</dd></div>
+      {window ? <div data-tile="next">{icon("next")}<dt>{t("sleepWave.nextOnset")}</dt><dd>{range(window.startMs, window.endMs)}</dd></div>
+        : <div data-tile="status">{icon(sleeping ? "next" : "status")}<dt>{t("sleepWave.status")}</dt><dd>{sleeping ? t("common.sleeping") : t("common.notRegistered")}</dd></div>}
+      {later[0] && <div data-tile="later">{icon("status")}<dt>{t("sleepWave.laterNap")}</dt><dd>{range(later[0].onset.startMs, later[0].onset.endMs)}</dd></div>}
     </dl>
+    {window && awakeRange && <p className="sleep-wave-awake-range">{icon("sun")}<span>{t("sleepWave.typicalAwake")}</span>
+      <strong>{awakeRange.min === awakeRange.max ? formatDuration(awakeRange.min, lang)
+        : `${formatDuration(awakeRange.min, lang)}–${formatDuration(awakeRange.max, lang)}`}</strong></p>}
     {upcoming && upcoming.status !== "not_applicable" && <SleepWaveUpcoming forecast={upcoming} />}
     <div className="sleep-wave-footer">
       <div className="sleep-wave-legend" aria-hidden="true">
@@ -77,9 +84,6 @@ export default function SleepWaveCard({ sessions, active, prediction, forecast =
     <div id={infoId} className={`sleep-wave-info${infoOpen ? "" : " sleep-wave-sr"}`}>
       {!window && !sleeping && <p>{t("sleepWave.learningBody")}</p>}
       <p className="sleep-wave-note">{later.length || estimated ? t("sleepWave.forecastNote") : window ? t("sleepWave.onsetNote") : t("sleepWave.recordNote")}</p>
-      {window && awakeRange && <p className="sleep-wave-awake-range"><span>{t("sleepWave.typicalAwake")}</span>
-        <strong>{awakeRange.min === awakeRange.max ? formatDuration(awakeRange.min, lang)
-          : `${formatDuration(awakeRange.min, lang)}–${formatDuration(awakeRange.max, lang)}`}</strong></p>}
     </div>
     <div className="sleep-wave-accessible-history">
       <p>{t("sleepWave.recordedToday")}</p>
