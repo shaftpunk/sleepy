@@ -71,6 +71,7 @@ export const FORECAST_RULES = {
   /** Weighted share of scenarios that must contain the next event. */
   continueShare: 0.6,
   maxPredictedNaps: 4,
+  maxRemainingDayNaps: 3,
   /** Later naps are daytime only: evening and night sleep is ambiguous
       between nap and bedtime and is never forecast. */
   earliestNapOnsetClock: 6 * 60,
@@ -194,7 +195,7 @@ export function calculateDailySleepForecast({ sessions, active, now, nextSleep, 
   }
 
   let previous = first;
-  for (let k = 1; k <= FORECAST_RULES.maxPredictedNaps; k++) {
+  for (let k = 1; k <= FORECAST_RULES.maxRemainingDayNaps; k++) {
     // Scenarios still informative at depth k: they either contain nap k, or
     // reached a night-like sleep before it. Incomplete logs are not votes.
     const withNap = scenarios.filter(s => s.naps.length >= k);
@@ -484,14 +485,19 @@ function activeDaytimeForecast(sessions: SleepSession[], active: ActiveSleep, no
   if (wakeHigh - wakeLow > 90) return finish("duration-unknown");
   let previousEnd = start + wakeHigh * MINUTE, width = Math.max(30 * MINUTE, (wakeHigh - wakeLow) * MINUTE);
   const midnight = new Date(startOfLocalDay(now)); midnight.setDate(midnight.getDate() + 1);
-  for (let k = 0; k < FORECAST_RULES.maxPredictedNaps; k++) {
+  for (let k = 0; k < FORECAST_RULES.maxRemainingDayNaps; k++) {
     const support = scenarios.filter(s => s.naps.length > k), ended = scenarios.filter(s => s.naps.length <= k && s.ended === "night");
     const sum = (rows: typeof scenarios) => rows.reduce((v, s) => v + s.weight, 0);
     if (sum(support) / Math.max(1e-9, sum(support) + sum(ended)) < FORECAST_RULES.continueShare) return finish("night-likely");
     if (days(support) < FORECAST_RULES.minEventDays || effective(support) < FORECAST_RULES.minEffectiveEvidence) return finish("insufficient-continuations");
     const interval = (value: (s: typeof scenarios[number]) => number) => atLeast({ earliestMs: floor5(start + quantile(support, value, .1) * MINUTE), typicalMs: round5(start + quantile(support, value, .5) * MINUTE), latestMs: ceil5(start + quantile(support, value, .9) * MINUTE) }, width);
     const onset = interval(s => s.naps[k].onsetOffsetMin);
-    if (onset.earliestMs < now || onset.earliestMs < previousEnd) return finish("incoherent");
+    // Marginal uncertainty bands may overlap across coherent trajectories.
+    // Check the paired wake gap, and keep typical rendered waves disjoint.
+    const gapLow = quantile(support, s => s.naps[k].onsetOffsetMin - (k === 0 ? s.wake
+      : s.naps[k - 1].onsetOffsetMin + s.naps[k - 1].durationMin), .1);
+    if (gapLow <= FORECAST_RULES.joinGapMinutes || onset.earliestMs < now
+      || (k === 0 ? onset.earliestMs < previousEnd : onset.typicalMs <= previousEnd)) return finish("incoherent");
     if (onset.latestMs >= midnight.getTime() || minutesSinceLocalMidnight(onset.latestMs) >= FORECAST_RULES.latestNapOnsetClock || minutesSinceLocalMidnight(onset.earliestMs) < FORECAST_RULES.earliestNapOnsetClock) return finish("evening");
     const lowMin = quantile(support, s => s.naps[k].durationMin, .1), highMin = quantile(support, s => s.naps[k].durationMin, .9), typicalMin = quantile(support, s => s.naps[k].durationMin, .5);
     const nap: PredictedNap = { id: "active-nap-" + (k + 1), sequenceIndex: k + 1, isNext: false, onset, quality: ageDays === null || ageDays < 90 || k > 0 || effective(support) < 4 ? "low" : "medium", evidenceCount: days(support), effectiveEvidence: effective(support) };
@@ -500,7 +506,7 @@ function activeDaytimeForecast(sessions: SleepSession[], active: ActiveSleep, no
     nap.durationMinutes = { lowMin, typicalMin, highMin };
     nap.wakeTime = interval(s => s.naps[k].onsetOffsetMin + s.naps[k].durationMin);
     if (nap.wakeTime.typicalMs <= onset.typicalMs) { predictedNaps.pop(); return finish("incoherent"); }
-    previousEnd = nap.wakeTime.latestMs; width = onset.latestMs - onset.earliestMs;
+    previousEnd = nap.wakeTime.typicalMs; width = onset.latestMs - onset.earliestMs;
   }
   return finish("horizon");
 }

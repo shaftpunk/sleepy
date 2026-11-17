@@ -254,7 +254,7 @@
 /* Forecast-engine events: estimated, never solid like recorded sleep. */
 .sleep-wave-predicted { stroke: var(--wave-edge); stroke-width: 1; stroke-dasharray: 3 4; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 /* The next sleep is the luminous shape; its pale light sets it apart from recorded sleep. */
-.sleep-wave-predicted.is-next { stroke: var(--wave-crest); stroke-dasharray: none; }
+.sleep-wave-predicted.is-next { stroke: var(--wave-crest); stroke-dasharray: 3 4; }
 .sleep-wave-later-band { opacity: .3; }
 .sleep-wave-peak-label.is-later { color: var(--wave-muted); font-weight: 500; }
 .sleep-wave-legend .is-estimated { background: transparent; border: 1px dashed var(--wave-edge); }
@@ -278,3 +278,9 @@
 .sleep-wave-upcoming-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 10px; }
 .sleep-wave-upcoming-list span { color: var(--wave-muted); }
 .sleep-wave-upcoming-list strong { color: var(--wave-key); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Remaining-day forecasts become quieter with distance into the future. */
+.sleep-wave-chart .sleep-wave-predicted { stroke-linecap: round; }
+.sleep-wave-chart .is-depth-1 .sleep-wave-predicted { stroke: var(--wave-crest); }
+.sleep-wave-chart .is-depth-2 .sleep-wave-predicted { stroke-dasharray: 2 5; fill-opacity: .6; }
+.sleep-wave-chart .is-depth-3 .sleep-wave-predicted { stroke-dasharray: 1 5; stroke-width: .8; fill-opacity: .3; }

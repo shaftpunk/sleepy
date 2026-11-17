@@ -83,3 +83,11 @@ test('active first future nap uses existing dashed waves and remains accessible 
  assert.ok(html.includes(lang==='en'?'Sleeping now':'Sover n\u00e5'));
  }
 });
+test('three active predictions remain accessible and onset-only events never receive duration waves',()=>{
+ const active={id:'a',startMs:at(11,30)};
+ const naps=[14,16,18].map((h,i)=>({id:String(i),sequenceIndex:i+1,isNext:false,quality:'low',onset:{earliestMs:at(h),typicalMs:at(h,15),latestMs:at(h,30)},...(i===2?{}:{wakeTime:{earliestMs:at(h,45),typicalMs:at(h+1),latestMs:at(h+1,15)}})}));
+ const forecast={status:'partial',activeAnchor:active,lastUpdated:now,predictedNaps:naps,diagnostics:{}};
+ const input={...props,active,prediction:{status:'sleeping'},forecast};const m=build(input);
+ assert.equal(m.predicted.length,3);assert.equal(m.predicted[2].wave,null);assert.ok(m.domain.endMs>=at(18,30));
+ for(const lang of ['no','en']){const html=render(lang,input);assert.equal((html.match(/data-wave-predicted=/g)||[]).length,3);assert.equal((html.match(/class="sleep-wave-predicted"/g)||[]).length,2);for(const h of ['14:00','16:00','18:00'])assert.ok(html.includes(h));}
+});

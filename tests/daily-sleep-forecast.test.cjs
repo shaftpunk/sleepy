@@ -254,3 +254,18 @@ test('rolling active-nap checkpoints never expose future completed sessions',()=
  for(const result of Object.values(report)){assert.ok(result.checkpoints>0);assert.equal(result.leaks,0);}
  assert.ok(report.conditional.forecasted>0);
 });
+test('remaining-day forecast emits one, two or three supported continuations, never four',()=>{
+ for(const count of [1,2,3,4]){
+  const later=[[11,30,30],[14,0,30],[16,30,30],[18,0,30]].slice(0,count);
+  const sessions=[...history(()=>[[9,0,45],...later]),session(at(1,19,30),at(0,7))];
+  const f=run(sessions,at(0,9,30),{active:{id:'a',startMs:at(0,9)}}).forecast;
+  assert.equal(f.predictedNaps.length,Math.min(count,3),JSON.stringify(f));
+  f.predictedNaps.forEach((n,i)=>{assert.ok(n.onset.earliestMs>=at(0,9,30));if(i)assert.ok(n.onset.typicalMs>f.predictedNaps[i-1].wakeTime.typicalMs);});
+ }
+});
+test('paired continuations survive overlapping marginal bands without overlapping typical waves',()=>{
+ const sessions=[...history(d=>[[9,0,60],[12,d%2?60:-30,45],[14,d%2?60:-30,45]]),session(at(1,19,30),at(0,7))];
+ const f=run(sessions,at(0,9,30),{active:{id:'a',startMs:at(0,9)}}).forecast;
+ assert.equal(f.predictedNaps.length,2,JSON.stringify(f));const [a,b]=f.predictedNaps;
+ assert.ok(b.onset.earliestMs<a.wakeTime.latestMs);assert.ok(b.onset.typicalMs>a.wakeTime.typicalMs);
+});
