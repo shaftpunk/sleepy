@@ -1,7 +1,7 @@
 import { useId, useMemo } from "react";
 import type { DailySleepForecast, UpcomingDayForecast } from "../../analytics/dailySleepForecast";
 import type { NextSleepPrediction } from "../../analytics/nextSleep";
-import { buildSleepWaveModel } from "../../analytics/sleepWaveModel";
+import { buildSleepWaveModel, waveModelNow } from "../../analytics/sleepWaveModel";
 import { sameDay } from "../../analytics/time";
 import type { ActiveSleep, SleepSession } from "../../analytics/types";
 import { LOCALES, useTranslation } from "../../i18n";
@@ -21,12 +21,7 @@ type Props = { sessions: SleepSession[]; active: ActiveSleep | null; prediction:
 export default function SleepWaveCard({ sessions, active, prediction, forecast = null, upcoming = null, now, babyName }: Props) {
   const { t, lang } = useTranslation();
   const titleId = useId(), summaryId = useId();
-  const latestEnd = useMemo(() => sessions.reduce((last, session) => Number.isFinite(session.endMs)
-    ? Math.max(last, session.endMs) : last, 0), [sessions]);
-  // Reuse Home's clock, but update geometry only each minute or on a new record.
-  // Keep a just-started/ended interval visible immediately within that minute.
-  const chartNow = Math.max(Math.floor(now / 60000) * 60000,
-    latestEnd <= now ? latestEnd : 0, active && active.startMs <= now ? active.startMs : 0);
+  const chartNow = useMemo(() => waveModelNow(sessions, active, now), [sessions, active, now]);
   const model = useMemo(() => buildSleepWaveModel({ sessions, active, prediction, forecast, now: chartNow }), [sessions, active, prediction, forecast, chartNow]);
   const window = model.forecasts[0];
   const range = (start: number, end: number) => {

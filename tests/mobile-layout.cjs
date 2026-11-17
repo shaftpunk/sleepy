@@ -85,7 +85,7 @@ async function main() {
     // started after local midnight: on the real clock the quality assertion
     // failed between 00:00 and ~01:03 Oslo. A fixed midday start (time still
     // flows, so hold gestures behave normally) makes every run deterministic.
-    if(process.argv.includes('--home-only'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
+    if(process.argv.includes('--home-only')||process.argv.includes('--history-only'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
     const errors = [], failures = [], screens = [];
     page.on('pageerror', e => { errors.push(e.message); if(process.argv.includes('--entitlements-only')||process.argv.includes('--home-only'))console.error(e.message); });
     await page.route('**/*', route => {
@@ -99,7 +99,7 @@ async function main() {
       return route.continue();
     });
     const requestedWidth=process.argv.find(value=>value.startsWith('--width='))?.split('=')[1];
-    const sizes = (process.argv.includes('--quick') ? [[320,568]] : (process.argv.includes('--sleep-wave-only')?[[320,568],[360,780],[375,667],[390,844],[430,932]]:[[320,568],[375,667],[390,844],[430,932]]))
+    const sizes = (process.argv.includes('--quick') ? [[320,568]] : (process.argv.includes('--sleep-wave-only')||process.argv.includes('--history-only')?[[320,568],[360,780],[375,667],[390,844],[430,932]]:[[320,568],[375,667],[390,844],[430,932]]))
       .filter(([width])=>!requestedWidth||width===Number(requestedWidth));
     const themes = process.argv.includes('--quick') ? ['dark'] : ['dark','light'];
     let context = '', query = '';
@@ -247,6 +247,47 @@ async function main() {
         const peaks=await card.locator('.sleep-wave-peak-label').evaluateAll(nodes=>nodes.map(e=>{const r=e.getBoundingClientRect();return {l:r.left,r:r.right,t:r.top,b:r.bottom}}));
         for(let i=0;i<peaks.length;i++)for(let j=i+1;j<peaks.length;j++)assert.ok(peaks[i].r<=peaks[j].l+1||peaks[j].r<=peaks[i].l+1||peaks[i].b<=peaks[j].t+1||peaks[j].b<=peaks[i].t+1,'condensed labels overlap');
         await check('sleep-wave-night',true);console.log(context+' Sleep Wave checked');continue;
+      }
+      if(process.argv.includes('--history-only')){
+        // Daily planner: same forecast as Sleep Wave, linear calendar, rolling 24 h, collapsible older history.
+        await visit('/','wave-fixture&night');await page.waitForSelector('.sleep-wave-time');
+        const waveWindow=(await page.locator('.sleep-wave-time').innerText()).trim();
+        await visit('/history','wave-fixture&night');await page.waitForSelector('.sleep-planner [data-planner-event]');
+        const planner=page.locator('.sleep-planner');
+        assert.equal(await planner.count(),1);
+        assert.equal((await planner.locator('[data-planner-event="next"] strong').innerText()).trim(),waveWindow,'planner and Sleep Wave show the same window');
+        assert.equal(await planner.locator('[data-planner-event="recorded"]').count(),2);
+        assert.ok(await planner.locator('[data-planner-event="later"]').count()>=1);
+        assert.ok((await planner.locator('[data-planner-event="recorded"]').first().innerText()).includes('20:09'),'overnight sleep keeps its true start');
+        const scroll=planner.locator('.sleep-planner-scroll');
+        assert.ok(await scroll.evaluate(e=>e.scrollTop>0&&e.scrollHeight>e.clientHeight),'calendar opens at now');
+        assert.ok(await scroll.evaluate(e=>{const n=e.querySelector('.sleep-planner-now').getBoundingClientRect(),r=e.getBoundingClientRect();return n.top>=r.top&&n.top<=r.bottom;}),'now line visible');
+        assert.ok(await planner.evaluate(e=>e.getBoundingClientRect().height<=innerHeight*.9+260),'planner height is bounded');
+        const rows=page.locator('.history-last-24 .history-item');
+        assert.ok(await rows.count()>=2);assert.ok((await rows.allInnerTexts()).some(text=>text.includes('06:53')),'overnight session in last 24 h');
+        assert.ok(await rows.evaluateAll(nodes=>nodes.every(n=>n.getBoundingClientRect().height<=96)),'compact rows');
+        const toggle=page.locator('.history-more-toggle'),more=page.locator('.history-more');
+        assert.equal(await toggle.getAttribute('aria-expanded'),'false');assert.equal(await more.isVisible(),false);
+        await check('history-plan',true);
+        await toggle.click();assert.equal(await toggle.getAttribute('aria-expanded'),'true');assert.equal(await more.isVisible(),true);
+        assert.ok(await more.locator('.history-item').count()>=1,'older history available');await check('history-more',true);
+        await toggle.focus();await page.keyboard.press('Enter');assert.equal(await toggle.getAttribute('aria-expanded'),'false');assert.equal(await more.isVisible(),false);
+        await planner.locator('button.sleep-planner-hit').last().click();await page.waitForSelector('[role="dialog"]');
+        await page.keyboard.press('Escape');await page.waitForSelector('[role="dialog"]',{state:'detached'});
+        await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await scroll.evaluate(e=>getComputedStyle(e).scrollBehavior),'auto');await page.emulateMedia({reducedMotion:'no-preference'});
+        // 200% text: the planner and rows must not overflow horizontally. (The app-wide
+        // bottom-nav padding check also fails on Settings at 200%; not History-specific.)
+        await page.evaluate(()=>document.documentElement.style.fontSize='200%');
+        assert.deepEqual(await page.evaluate(()=>({page:document.documentElement.scrollWidth>innerWidth+1,planner:[...document.querySelectorAll('.sleep-planner,.sleep-planner-scroll,.history-last-24 .history-item')].filter(e=>e.scrollWidth>e.clientWidth+1).map(e=>e.className+':'+e.scrollWidth+'>'+e.clientWidth).join()||false})),{page:false,planner:false});
+        await page.screenshot({path:path.join(output,context+'-history-plan-large-text.png'),fullPage:true});screens.push(context+'/history-plan-large-text');
+        await page.evaluate(()=>document.documentElement.style.fontSize='');
+        await page.evaluate(()=>window.__waveStore.setState({currentBabyId:'baby-2'}));
+        await page.waitForFunction(()=>!document.querySelector('[data-planner-event="recorded"]'));
+        await page.evaluate(()=>window.__waveStore.setState({currentBabyId:'baby'}));await page.waitForSelector('[data-planner-event="recorded"]');
+        await page.evaluate(()=>{window.__waveRows=[];window.dispatchEvent(new Event('sleepy:sleep-presentation-changed'))});
+        await page.waitForFunction(()=>!document.querySelector('[data-planner-event="recorded"],[data-planner-event="next"]'));
+        await visit('/history','empty');await page.waitForSelector('.sleep-planner');assert.equal(await page.locator('[data-planner-event]').count(),0);
+        await check('history-plan-empty',true);console.log(context+' History checked');continue;
       }
       if(process.argv.includes('--next-sleep-only')){
         await visit('/','next-sleep-fixture');await page.waitForSelector('.sleep-wave-time');

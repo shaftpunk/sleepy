@@ -57,6 +57,14 @@ export function recordedWavePath(segment: Pick<WaveSegment, "start" | "end">): s
   return `M ${left} 150 ${flank(left, 150, left + shoulder, crest)} L ${right - shoulder} ${crest} ${flank(right - shoulder, crest, right, 150)} Z`;
 }
 
+/** The model clock shared by Sleep Wave and the History planner: the page clock
+    floored to the minute, so geometry updates each minute or on a new record,
+    while a just-started/ended interval stays visible within that minute. */
+export function waveModelNow(sessions: SleepSession[], active: ActiveSleep | null, now: number): number {
+  const latestEnd = sessions.reduce((last, session) => Number.isFinite(session.endMs) ? Math.max(last, session.endMs) : last, 0);
+  return Math.max(Math.floor(now / 60000) * 60000, latestEnd <= now ? latestEnd : 0, active && active.startMs <= now ? active.startMs : 0);
+}
+
 // Input is already normalized and scoped to the selected baby by the existing
 // hook. Display actual records, including long sleeps; don't apply prediction
 // plausibility cutoffs to the history visualization. A single compound SVG path

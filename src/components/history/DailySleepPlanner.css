@@ -1,0 +1,255 @@
+/* History: Today's Sleep Plan. Same palette roles as Sleep Wave: solid plum /
+   lavender for recorded sleep, champagne for the next onset window, fading
+   dashed lavender for later naps. Midnight Plum by default, Daylight Blush
+   under [data-theme="light"]. */
+.sleep-planner {
+  --planner-ink: #f9f0ed;
+  --planner-muted: #d9c0cf;
+  --planner-faint: #c4a8b9;
+  --planner-rule: #f9f0ed14;
+  --planner-border: #f9f0ed2b;
+  --planner-well: #1f141f5c;
+  --planner-record-top: #8e6a8c;
+  --planner-record-bottom: #6a4862;
+  --planner-record-ink: #fcf5f1;
+  --planner-active-glow: #e4c1cd59;
+  --planner-next: #f6e2c8;
+  --planner-next-fill: #f6e2c824;
+  --planner-later: #cdb5dd;
+  --planner-later-fill: #cdb5dd14;
+  --planner-sleep: #cdb5dd38;
+  --planner-now: #f6e2c8;
+  --planner-now-ink: #3a2438;
+  position: relative;
+  min-width: 0;
+  margin: 0 0 18px;
+  padding: clamp(16px, 4.4vw, 22px) clamp(14px, 4.4vw, 22px) clamp(14px, 4vw, 18px);
+  border: 1px solid var(--planner-border);
+  border-radius: 28px;
+  color: var(--planner-ink);
+  background:
+    radial-gradient(ellipse at 8% 0, #ac849845, transparent 60%),
+    radial-gradient(ellipse at 100% 30%, #cdb5dd1f, transparent 55%),
+    linear-gradient(170deg, #3d2a3f, #2a1e2c 70%);
+  box-shadow: 0 14px 36px #140a1838;
+  font-variant-numeric: tabular-nums;
+}
+[data-theme="light"] .sleep-planner {
+  --planner-ink: #3f2a40;
+  --planner-muted: #694e63;
+  --planner-faint: #765a6f;
+  --planner-rule: #79556920;
+  --planner-border: #f9f0edb8;
+  --planner-well: #fffaf673;
+  --planner-record-top: #c9b0da;
+  --planner-record-bottom: #b193c4;
+  --planner-record-ink: #38273c;
+  --planner-active-glow: #b596c866;
+  --planner-next: #c99a63;
+  --planner-next-fill: #fbe9d2b3;
+  --planner-later: #9b7bb0;
+  --planner-later-fill: #efe4f466;
+  --planner-sleep: #b193c42e;
+  --planner-now: #a87a4e;
+  --planner-now-ink: #fffaf4;
+  background:
+    radial-gradient(ellipse at 6% 0, #fff8ef, transparent 58%),
+    radial-gradient(ellipse at 100% 35%, #e6bfcf40, transparent 55%),
+    linear-gradient(170deg, #fbf3ef, #f1e6ef 75%);
+  box-shadow: 0 14px 36px #7955691f;
+}
+
+.sleep-planner-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 12px; }
+.sleep-planner-header > div { flex: 1 1 12rem; min-width: 0; }
+.sleep-planner-header h2 { overflow-wrap: anywhere; }
+.sleep-planner-header h2 {
+  margin: 0;
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  font-size: clamp(1.45rem, 6vw, 1.75rem);
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: -.01em;
+  line-height: 1.1;
+}
+.sleep-planner-header p { margin: 4px 0 0; color: var(--planner-muted); font-size: .9rem; }
+.sleep-planner-chip {
+  flex: none;
+  padding: 6px 14px;
+  border: 1px solid var(--planner-border);
+  border-radius: 999px;
+  color: var(--planner-ink);
+  background: #f9f0ed12;
+  font-size: .82rem;
+  white-space: nowrap;
+}
+.sleep-planner-note, .sleep-planner-footnote { margin: 10px 0 0; color: var(--planner-muted); font-size: .84rem; line-height: 1.4; }
+.sleep-planner-footnote { margin-top: 10px; color: var(--planner-faint); font-size: .78rem; text-align: center; }
+
+/* Scrollable day: a fixed share of the screen, so the page never becomes a
+   very tall column; opens at the current time. */
+.sleep-planner-scroll {
+  position: relative;
+  max-height: min(58vh, 520px);
+  margin-top: 14px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 8px 12px 0;
+  border-radius: 20px;
+  background: var(--planner-well);
+  box-shadow: inset 0 1px 0 #f9f0ed0d;
+}
+.sleep-planner-scroll:focus-visible { outline: 2px solid var(--planner-now); outline-offset: 2px; }
+@media (prefers-reduced-motion: no-preference) { .sleep-planner-scroll { scroll-behavior: smooth; } }
+
+.sleep-planner-day { position: relative; margin: 10px 0; }
+/* The time gutter scales with the text size. */
+.sleep-planner-hour { position: absolute; left: 2.9rem; right: 0; height: 0; border-top: 1px solid var(--planner-rule); }
+.sleep-planner-hour span {
+  position: absolute;
+  right: calc(100% + 6px);
+  top: -.62em;
+  color: var(--planner-faint);
+  font-size: .72rem;
+  line-height: 1.2;
+}
+.sleep-planner-events { position: absolute; inset: 0 0 0 3.25rem; }
+.sleep-planner-events.is-list { pointer-events: none; }
+
+.sleep-planner-awake {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding-left: 12px;
+  border-left: 1px dashed var(--planner-rule);
+  color: var(--planner-faint);
+  font-size: .74rem;
+  font-style: italic;
+}
+
+.sleep-planner-event { position: absolute; min-width: 0; pointer-events: auto; }
+.sleep-planner-hit {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: none;
+  font: inherit;
+  text-align: left;
+}
+button.sleep-planner-hit { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button.sleep-planner-hit:focus-visible { outline: 2px solid var(--planner-now); outline-offset: 2px; border-radius: 14px; }
+.sleep-planner-block, .sleep-planner-window, .sleep-planner-sleep { position: absolute; left: 0; right: 0; border-radius: 14px; }
+/* The block's height is the true duration; a short nap's tap target extends
+   below it to 44 px without changing what is drawn. */
+.sleep-planner-block { top: 0; }
+button.sleep-planner-hit { bottom: auto; height: 100%; min-height: 44px; }
+
+.is-recorded .sleep-planner-block, .is-active .sleep-planner-block {
+  background: linear-gradient(180deg, var(--planner-record-top), var(--planner-record-bottom));
+  box-shadow: inset 0 1px 0 #ffffff26, 0 6px 16px #140a1824;
+}
+.is-active .sleep-planner-block { box-shadow: inset 0 1px 0 #ffffff26, 0 0 0 1px var(--planner-active-glow), 0 0 22px var(--planner-active-glow); border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
+.is-clipped-start .sleep-planner-block {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 22px);
+  mask-image: linear-gradient(180deg, transparent, #000 22px);
+}
+.is-recorded .sleep-planner-label, .is-active .sleep-planner-label { color: var(--planner-record-ink); }
+
+.sleep-planner-window { top: 0; border: 1.5px dashed var(--planner-later); background: var(--planner-later-fill); }
+.is-next .sleep-planner-window { border-color: var(--planner-next); background: var(--planner-next-fill); box-shadow: 0 0 20px #f6e2c826; }
+.is-wake .sleep-planner-window { border-style: dotted; border-color: var(--planner-next); background: none; }
+/* Estimated sleep (only when the forecast supplies a wake time): a slim dotted
+   bar from the typical onset to the typical wake-up, beside the label. */
+.sleep-planner-sleep { left: 5px; right: auto; width: 5px; border: 1px dotted var(--planner-later); border-radius: 4px; background: var(--planner-sleep); }
+.is-next .sleep-planner-sleep { border-color: var(--planner-next); }
+.sleep-planner-event.has-sleep .sleep-planner-label { left: 17px; }
+.is-depth-2 { opacity: .86; }
+.is-depth-3 { opacity: .72; }
+
+.sleep-planner-label {
+  position: absolute;
+  left: 10px;
+  right: 8px;
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  line-height: 1.25;
+}
+.sleep-planner-label strong, .sleep-planner-label small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sleep-planner-label strong { font-size: .86rem; font-weight: 650; }
+.sleep-planner-label small { font-size: .72rem; opacity: .86; }
+.is-next .sleep-planner-label, .is-later .sleep-planner-label, .is-wake .sleep-planner-label { color: var(--planner-ink); }
+
+.sleep-planner-now { position: absolute; left: 2.9rem; right: 0; height: 0; border-top: 1.5px solid var(--planner-now); z-index: 2; pointer-events: none; }
+.sleep-planner-now::before { content: ""; position: absolute; left: -4px; top: -4.75px; width: 8px; height: 8px; border-radius: 50%; background: var(--planner-now); }
+.sleep-planner-now span {
+  position: absolute;
+  right: calc(100% + 4px);
+  top: -.75em;
+  padding: 1px 5px;
+  border-radius: 999px;
+  color: var(--planner-now-ink);
+  background: var(--planner-now);
+  font-size: .68rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.sleep-planner-divider {
+  display: grid;
+  gap: 2px;
+  margin: 18px 0 4px 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--planner-border);
+}
+.sleep-planner-divider strong { font-family: ui-serif, Georgia, "Times New Roman", serif; font-size: 1.1rem; font-style: italic; font-weight: 500; }
+.sleep-planner-divider span { color: var(--planner-muted); font-size: .84rem; }
+.sleep-planner-divider small { color: var(--planner-faint); font-size: .76rem; }
+
+.sleep-planner-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; margin-top: 12px; color: var(--planner-muted); font-size: .76rem; }
+.sleep-planner-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sleep-planner-legend i { width: 14px; height: 10px; border-radius: 4px; }
+.sleep-planner-legend .is-recorded { background: linear-gradient(180deg, var(--planner-record-top), var(--planner-record-bottom)); }
+.sleep-planner-legend .is-active { background: var(--planner-record-top); box-shadow: 0 0 8px var(--planner-active-glow); }
+.sleep-planner-legend .is-next { border: 1.5px dashed var(--planner-next); background: var(--planner-next-fill); }
+.sleep-planner-legend .is-later { border: 1.5px dashed var(--planner-later); }
+.sleep-planner-legend .is-wake { border: 1.5px dotted var(--planner-next); }
+.sleep-planner-legend .is-sleep { border: 1px dotted var(--planner-later); background: var(--planner-sleep); }
+
+/* Last 24 hours: compact single-line rows with the existing actions. */
+.history-last-24 .history-list { gap: 8px; }
+.history-last-24 .history-list .history-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; }
+.history-last-24 .history-icon { width: 32px; height: 32px; font-size: .9rem; }
+.history-last-24 .history-content { min-width: 0; width: 100%; }
+.history-last-24 .history-content { align-items: stretch; }
+.history-last-24 .history-content strong, .history-last-24 .history-content > span { display: block; max-width: 100%; overflow-wrap: anywhere; }
+.history-last-24 .history-item .history-actions { grid-column: auto; flex: none; flex-wrap: nowrap; gap: 4px; }
+@media (max-width: 389px) {
+  .history-last-24 .history-list .history-item { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding-left: 14px; }
+  .history-last-24 .history-icon { display: none; }
+}
+
+/* Older history */
+.history-live {
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--status-info-bg, #cdb5dd21);
+  color: var(--status-info-text, inherit);
+  font-size: .76rem;
+  font-style: normal;
+}
+.history-more-toggle { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin: 4px 0 18px; }
+.history-more-toggle::after { content: ""; width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-2px) rotate(45deg); }
+.history-more-toggle[aria-expanded="true"]::after { transform: translateY(2px) rotate(-135deg); }
+@media (prefers-reduced-motion: no-preference) { .history-more-toggle::after { transition: transform .2s ease; } }
