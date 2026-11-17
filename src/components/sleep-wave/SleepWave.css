@@ -318,3 +318,13 @@
 
 /* Let enlarged text widen tiles into additional rows without splitting times. */
 .sleep-wave-events { grid-auto-flow: row; grid-template-columns: repeat(auto-fit, minmax(min(100%, 5.4em), 1fr)); }
+/* Landscape lighting: static layers keep data paths and their boundaries crisp. */
+.sleep-wave { --wave-record-light: #ead5f4; }
+[data-theme="light"] .sleep-wave { --wave-record-light: #ba96ce; }
+.sleep-wave-cloudscape { pointer-events: none; }
+.sleep-wave-halo.is-next { opacity: .8; }
+.sleep-wave-now-label { gap: 0; padding: 2px 3px 3px; border-radius: 12px; background: linear-gradient(180deg, var(--wave-tile-next), transparent); }
+.sleep-wave-now-label span { box-shadow: inset 0 1px 0 var(--wave-border), 0 2px 12px var(--wave-glow); }
+.sleep-wave-now-label time { margin-top: 2px; color: var(--wave-key); }
+.sleep-wave .sleep-wave-awake-range { border: 0; background: transparent; box-shadow: none; }
+.sleep-wave-forecast { padding-top: 2px; }

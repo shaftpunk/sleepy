@@ -94,7 +94,8 @@ export default function SleepWaveChart({ model, now, formatRange }: {
     <svg viewBox="0 0 640 174" preserveAspectRatio="none" focusable="false" style={{ height: CHART_HEIGHT }}>
       <defs>
         <linearGradient id={`${id}-recorded`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="var(--wave-record-top)" />
+          <stop offset="0" stopColor="var(--wave-record-light, var(--wave-record-top))" />
+          <stop offset=".18" stopColor="var(--wave-record-top)" />
           <stop offset=".55" stopColor="var(--wave-record-mid, var(--wave-record-top))" />
           <stop offset="1" stopColor="var(--wave-record-bottom)" />
         </linearGradient>
@@ -140,7 +141,10 @@ export default function SleepWaveChart({ model, now, formatRange }: {
           <stop offset=".45" stopColor="var(--wave-band-core)" stopOpacity=".38" />
           <stop offset="1" stopColor="var(--wave-band-core)" stopOpacity=".12" />
         </linearGradient>
-        <clipPath id={`${id}-sky`}><rect width="640" height="150" /></clipPath>
+        <radialGradient id={`${id}-inner`} cx="50%" cy="12%" r="85%">
+          <stop stopColor="var(--wave-crest)" stopOpacity=".62" /><stop offset=".38" stopColor="var(--wave-light)" stopOpacity=".18" /><stop offset="1" stopColor="var(--wave-crest)" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id={`${id}-beam`} x1="0" y1="0" x2="0" y2="1"><stop stopColor="var(--wave-now)" stopOpacity=".12" /><stop offset="1" stopColor="var(--wave-now)" stopOpacity=".9" /></linearGradient>
         <pattern id={`${id}-stripes`} width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
           <line x1="0" x2="0" y2="10" stroke="var(--wave-ink)" strokeOpacity=".24" strokeWidth="2" />
         </pattern>
@@ -149,6 +153,10 @@ export default function SleepWaveChart({ model, now, formatRange }: {
         <ellipse className="sleep-wave-night-shade" clipPath={`url(#${id}-sky)`} cx={model.compressed.end * 320} cy="150" rx={model.compressed.end * 520} ry="118" fill={`url(#${id}-night)`} />
         <path className="sleep-wave-night-break" d={`M ${model.compressed.end * 640 - 7} 158 l 6 -16 M ${model.compressed.end * 640 + 1} 158 l 6 -16`} />
       </g>}
+      <g className="sleep-wave-cloudscape" fill={`url(#${id}-swell)`}>
+        <path opacity=".28" d="M0 80 C45 62 65 92 112 96 S180 127 260 126 S365 92 430 97 S555 52 640 76 V174 H0Z" />
+        <path opacity=".38" d="M0 110 C62 93 96 105 151 128 S246 146 322 135 S427 104 495 117 S578 108 640 103 V174 H0Z" />
+      </g>
       <path className="sleep-wave-mist is-back" d={SWELL_BACK} fill={`url(#${id}-swell)`} />
       <g className="sleep-wave-hills" filter={`url(#${id}-hill)`}>
         {displayed.map((s, i) => <path key={i} d={hill(s, recordedWaveCrest(s))} fill={`url(#${id}-hillfill)`} />)}
@@ -174,18 +182,20 @@ export default function SleepWaveChart({ model, now, formatRange }: {
         </g>;
       })}
       {nextWave && <path className="sleep-wave-halo is-next" d={recordedWavePath(nextWave)} filter={`url(#${id}-soft)`} />}
-      {nextWave && <path className="sleep-wave-predicted is-next" d={recordedWavePath(nextWave)} fill={`url(#${id}-next)`} />}
+      {nextWave && <><path className="sleep-wave-predicted is-next" d={recordedWavePath(nextWave)} fill={`url(#${id}-next)`} /><path d={recordedWavePath(nextWave)} fill={`url(#${id}-inner)`} /></>}
       <line className="sleep-wave-baseline" x1="0" x2="640" y1="150" y2="150" />
       {recorded && <path className="sleep-wave-halo" d={recorded} filter={`url(#${id}-soft)`} />}
       {recorded && <path className="sleep-wave-recorded" d={recorded} fill={`url(#${id}-recorded)`} />}
       {model.active && <g data-wave-active="true">
         <path d={recordedWavePath(model.active)} fill={`url(#${id}-active)`} />
+        <path d={recordedWavePath(model.active)} fill={`url(#${id}-inner)`} />
         <path d={recordedWavePath(model.active)} fill={`url(#${id}-stripes)`} />
       </g>}
       <path className="sleep-wave-mist is-mid" d={SWELL_MID} fill={`url(#${id}-swell)`} />
       <path className="sleep-wave-mist is-front" d={SWELL_FRONT} fill={`url(#${id}-swell)`} />
       <g className="sleep-wave-now-marker" style={{ transform: `translateX(${model.now * 640}px)` }}>
-        <line y1="0" y2="150" />
+        <path d="M-4 0 L4 0 L7 150 L-7 150Z" fill={`url(#${id}-beam)`} opacity=".14" />
+        <line y1="0" y2="150" style={{ stroke: `url(#${id}-beam)` }} />
         <circle className="sleep-wave-now-halo" cy="150" r="16" fill={`url(#${id}-glow)`} />
         <circle cy="150" r="3.5" />
       </g>
