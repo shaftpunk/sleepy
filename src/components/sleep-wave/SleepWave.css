@@ -6,8 +6,8 @@
   --wave-ink: #f9f0ed;
   --wave-muted: #ecd5db;
   --wave-edge: #c39bab;
-  --wave-record-top: #ac8498;
-  --wave-record-bottom: #795569;
+  --wave-record-top: #dcb9cd;
+  --wave-record-bottom: #a57d98;
   --wave-active: #e4c1cd;
   --wave-forecast: #cdb5dd;
   --wave-band-core: #cdb5dd;
@@ -21,6 +21,10 @@
   --wave-border: #f9f0ed36;
   --wave-tile: #f9f0ed0d;
   --wave-tile-next: #f6e2c81f;
+  --wave-crest: #fff3e4;
+  --wave-record-mid: #c39bb3;
+  --wave-dune: #e4c1cd1a;
+  --wave-halo-tint: #cdb5dd;
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -37,6 +41,15 @@
   box-shadow: inset 0 1px 0 #f6e2c83b, 0 14px 35px #4930442b;
 }
 /* Atmospheric cloud light inside the card: decorative, static, paint-only. */
+.sleep-wave::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 96px; height: 290px;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--wave-dune);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 260' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-opacity='.9'/%3E%3Cstop offset='.7' stop-opacity='.12'/%3E%3Cstop offset='1' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='url(%23a)' opacity='.55' d='M0 58C70 34 130 78 210 66S330 22 400 40V150L0 170Z'/%3E%3Cpath fill='url(%23a)' d='M400 78C345 70 300 112 255 166C228 198 200 214 165 222L400 260Z'/%3E%3Cpath fill='url(%23a)' opacity='.85' d='M0 124C48 116 92 150 132 188C162 216 195 226 240 228L0 260Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 260' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-opacity='.9'/%3E%3Cstop offset='.7' stop-opacity='.12'/%3E%3Cstop offset='1' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='url(%23a)' opacity='.55' d='M0 58C70 34 130 78 210 66S330 22 400 40V150L0 170Z'/%3E%3Cpath fill='url(%23a)' d='M400 78C345 70 300 112 255 166C228 198 200 214 165 222L400 260Z'/%3E%3Cpath fill='url(%23a)' opacity='.85' d='M0 124C48 116 92 150 132 188C162 216 195 226 240 228L0 260Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
 .sleep-wave::before {
   content: "";
   position: absolute;
@@ -53,28 +66,35 @@
   --wave-ink: #493044;
   --wave-muted: #694658;
   --wave-edge: #9a748d;
-  --wave-record-top: #795569;
-  --wave-record-bottom: #ac8498;
+  --wave-record-top: #76557f;
+  --wave-record-mid: #94749f;
+  --wave-record-bottom: #bfa3cb;
   --wave-active: #e4c1cd;
   --wave-forecast: #ad88bd;
   --wave-band-core: #c3a2d6;
-  --wave-mist: #c9add9;
+  --wave-mist: #d6c0e2;
+  --wave-crest: #fffaf4;
+  --wave-dune: #fffaf894;
+  --wave-halo-tint: #b596c8;
+  --wave-now: #ffffff;
   --wave-rule: #79556924;
   --wave-border: #f9f0edb8;
   --wave-light: #f0d4b4;
   --wave-key: #493044;
   --wave-glow: #f6e2c830;
-  --wave-contour: #9a748d;
+  --wave-contour: #cdb4d8;
   --wave-tile: #fffaf68c;
   --wave-tile-next: #fff4e6d9;
   --wave-cloud: #fffaf6a6;
   --wave-halo: #fff6eacc;
   --wave-band-edge: #b48fc4;
+  --wave-tile-shadow: #7955691a;
+  --wave-tile-glow: #f3d9b68c;
   background:
-    radial-gradient(ellipse at 50% 30%, #faf3eeee, transparent 54%),
-    radial-gradient(ellipse at 52% 65%, #e4c1cd66, transparent 52%),
-    radial-gradient(ellipse at 0 4%, #ac84982b, transparent 62%),
-    linear-gradient(140deg, #ead2d8, #f5e4df 59%, #ead0d9);
+    radial-gradient(ellipse 85% 30% at 50% 34%, #fcf3f1e0, transparent 72%),
+    radial-gradient(ellipse at 0 0, #c9b0d575, transparent 56%),
+    radial-gradient(ellipse at 100% 62%, #d3bbdc66, transparent 55%),
+    linear-gradient(165deg, #decbe1, #f0e2ea 52%, #ead9e5);
   box-shadow: inset 0 1px 0 #f9f0edcc, 0 12px 30px #7955691f;
 }
 
@@ -91,7 +111,7 @@
 .sleep-wave .sleep-wave-time {
   color: var(--wave-key);
   font-family: var(--font-editorial);
-  font-weight: 500;
+  font-weight: 600;
   font-size: clamp(2.3rem, 10.5vw, 3.35rem);
   line-height: 1.12;
   font-variant-numeric: lining-nums tabular-nums;
@@ -107,14 +127,17 @@
 .sleep-wave-chart { position: relative; margin-top: 2px; }
 .sleep-wave-chart svg { display: block; width: 100%; height: 116px; overflow: visible; }
 .sleep-wave-baseline { stroke: var(--wave-rule); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.sleep-wave-mist { opacity: .7; }
-.sleep-wave-mist.is-front { opacity: .45; }
-.sleep-wave-recorded { stroke: var(--wave-contour); stroke-width: 1; stroke-linejoin: round; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 3px var(--wave-glow)); }
+.sleep-wave-mist.is-back { opacity: .8; }
+.sleep-wave-mist.is-mid { opacity: .7; }
+.sleep-wave-mist.is-front { opacity: .6; }
+.sleep-wave-recorded { stroke: var(--wave-contour); stroke-width: 1; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+/* Soft light around a shape: glow only, the crisp path carries the timestamps. */
+.sleep-wave-halo { fill: var(--wave-halo-tint); opacity: .6; pointer-events: none; }
+.sleep-wave-halo.is-next { fill: var(--wave-light); opacity: .85; }
 .sleep-wave [data-wave-active] { filter: drop-shadow(0 0 2px var(--wave-glow)); }
 .sleep-wave-band-glow { mix-blend-mode: normal; }
-.sleep-wave-band { filter: drop-shadow(0 0 4px var(--wave-glow)); }
-.sleep-wave-forecast-edge { fill: none; stroke: var(--wave-band-edge, var(--wave-light)); stroke-width: 1; stroke-opacity: .85; vector-effect: non-scaling-stroke; }
-.sleep-wave-onset { fill: none; stroke: var(--wave-light); stroke-width: 1.5; stroke-linecap: round; stroke-opacity: .95; vector-effect: non-scaling-stroke; }
+.sleep-wave-forecast-edge { fill: none; stroke: var(--wave-band-edge, var(--wave-light)); stroke-width: 1; stroke-opacity: .22; vector-effect: non-scaling-stroke; }
+.sleep-wave-onset { fill: none; stroke: var(--wave-crest); stroke-width: 1.5; stroke-linecap: round; stroke-opacity: .9; vector-effect: non-scaling-stroke; }
 
 .sleep-wave-now-label {
   position: absolute; top: 0; z-index: 1;
@@ -126,9 +149,9 @@
 [data-theme="light"] .sleep-wave-now-label span { color: #f9f0ed; background: #795569; }
 .sleep-wave-now-label time { color: var(--wave-muted); font-size: .65rem; line-height: 1.3; font-variant-numeric: tabular-nums; }
 .sleep-wave-now-marker { filter: drop-shadow(0 0 1px #493044b3) drop-shadow(0 0 3px var(--wave-glow)); }
-.sleep-wave-now-marker line { stroke: var(--wave-now); stroke-width: 1; vector-effect: non-scaling-stroke; opacity: .65; }
-.sleep-wave-now-marker circle { fill: var(--wave-now); }
-.sleep-wave-now-marker .sleep-wave-now-halo { opacity: .09; }
+.sleep-wave-now-marker line { stroke: var(--wave-now); stroke-width: 1.5; vector-effect: non-scaling-stroke; opacity: .9; }
+.sleep-wave-now-marker circle:not(.sleep-wave-now-halo) { fill: var(--wave-now); }
+.sleep-wave-now-marker .sleep-wave-now-halo { opacity: 1; }
 
 .sleep-wave-peak-label {
   position: absolute; z-index: 1;
@@ -141,12 +164,15 @@
 .sleep-wave-peak-label.is-recorded { color: var(--wave-key); font-weight: 600; }
 .sleep-wave-peak-label.is-forecast { color: var(--wave-key); font-weight: 600; text-shadow: 0 0 10px var(--wave-glow); }
 
-.sleep-wave-axis { position: relative; height: max(24px, 1.6em); margin-top: 4px; color: var(--wave-muted); font-size: .65rem; font-variant-numeric: tabular-nums; }
-.sleep-wave-axis > span { position: absolute; top: 0; text-align: center; transform: translateX(-50%); white-space: nowrap; line-height: 1.5; }
+.sleep-wave-axis { position: relative; height: max(30px, calc(1.6em + 8px)); margin-top: 2px; color: var(--wave-muted); font-size: .65rem; font-variant-numeric: tabular-nums; }
+.sleep-wave-axis > span { position: absolute; top: 0; padding-top: 8px; text-align: center; transform: translateX(-50%); white-space: nowrap; line-height: 1.5; }
+.sleep-wave-axis > span::before { content: ""; position: absolute; top: 0; left: 50%; width: 1px; height: 5px; background: var(--wave-edge); opacity: .7; }
+.sleep-wave-axis > .is-first::before { left: 0; }
+.sleep-wave-axis > .is-last::before { left: auto; right: 0; }
 .sleep-wave-axis .is-first { transform: none; }
 .sleep-wave-axis .is-last { transform: translateX(-100%); }
 .sleep-wave-axis small { display: block; font-size: .85em; }
-.sleep-wave-axis:has(small) { height: max(48px, 4.5em); }
+.sleep-wave-axis:has(small) { height: max(56px, calc(4.5em + 8px)); }
 
 /* Summary tiles: value above label, like the approved design. dt stays first
    in the DOM for assistive technology. */
@@ -160,15 +186,15 @@
 .sleep-wave-events > div {
   display: flex; flex-direction: column; align-items: center; gap: 1px;
   min-width: 0; padding: 10px 6px 9px;
-  border: 1px solid var(--wave-border); border-radius: 16px;
+  border: 1px solid var(--wave-border); border-radius: 18px;
   background: var(--wave-tile);
-  box-shadow: inset 0 1px 0 var(--wave-border);
+  box-shadow: inset 0 1px 0 var(--wave-border), 0 6px 14px var(--wave-tile-shadow, #2a17241f);
   text-align: center;
 }
 .sleep-wave-events > [data-tile="next"] {
   background: var(--wave-tile-next);
   border-color: var(--wave-light);
-  box-shadow: inset 0 1px 0 var(--wave-border), 0 0 18px var(--wave-glow);
+  box-shadow: inset 0 1px 0 var(--wave-border), 0 0 22px var(--wave-tile-glow, #f6e2c838);
 }
 .sleep-wave-events dt { order: 2; margin: 0; color: var(--wave-muted); font-family: var(--font-editorial); font-style: italic; font-size: .75rem; line-height: 1.4; overflow-wrap: anywhere; }
 .sleep-wave-events dd { order: 1; margin: 0; color: var(--wave-key); font-size: .82rem; line-height: 1.45; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
@@ -225,8 +251,9 @@
 
 /* Forecast-engine events: estimated, never solid like recorded sleep. */
 .sleep-wave-predicted { stroke: var(--wave-edge); stroke-width: 1; stroke-dasharray: 3 4; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-.sleep-wave-predicted.is-next { filter: drop-shadow(0 0 5px var(--wave-glow)); }
-.sleep-wave-later-band { opacity: .55; }
+/* The next sleep is the luminous shape; its pale light sets it apart from recorded sleep. */
+.sleep-wave-predicted.is-next { stroke: var(--wave-crest); stroke-dasharray: none; }
+.sleep-wave-later-band { opacity: .3; }
 .sleep-wave-peak-label.is-later { color: var(--wave-muted); font-weight: 500; }
 .sleep-wave-legend .is-estimated { background: transparent; border: 1px dashed var(--wave-edge); }
 .sleep-wave-events > [data-tile="later"] dd { color: var(--wave-muted); }

@@ -7,9 +7,12 @@ import { formatClock } from "../../lib/format";
 // labels layered over it. Labels are positioned from the same timestamps.
 const LABEL_SPACE = 40, CHART_HEIGHT = 116;
 const toPx = (units: number) => LABEL_SPACE + units / 174 * CHART_HEIGHT;
-// Decorative ground mist under the baseline: fixed shapes, never data.
-const MIST_BACK = "M 0 152 C 90 142 170 158 270 149 S 450 140 540 150 S 615 156 640 148 L 640 174 L 0 174 Z";
-const MIST_FRONT = "M 0 156 C 110 150 200 162 320 154 S 500 148 640 157 L 640 174 L 0 174 Z";
+// Decorative rolling ground around the baseline: fixed shapes, never data. The
+// back swell sits behind every sleep shape; the front ones stay at or below
+// the baseline so they never hide recorded sleep.
+const SWELL_BACK = "M 0 143 C 60 131 140 150 230 141 S 390 127 470 139 S 585 149 640 134 L 640 174 L 0 174 Z";
+const SWELL_MID = "M 0 152 C 90 146 170 158 270 150 S 450 148 540 151 S 615 156 640 149 L 640 174 L 0 174 Z";
+const SWELL_FRONT = "M 0 158 C 110 152 200 164 320 156 S 500 151 640 160 L 640 174 L 0 174 Z";
 
 type Label = { key: string; text: string; x: number; top: number; width: number; kind: "forecast" | "later" | "recorded" };
 // Later forecast events fade with horizon; emphasis never grows further ahead.
@@ -48,12 +51,23 @@ export default function SleepWaveChart({ model, now, formatRange }: {
     for (const candidate of candidates) {
       const labelWidth = candidate.text.length * 6.6 + 12;
       if (labelWidth > width) continue;
-      const x = Math.min(width - labelWidth / 2, Math.max(labelWidth / 2, candidate.center * width));
+      let x = Math.min(width - labelWidth / 2, Math.max(labelWidth / 2, candidate.center * width));
+      // Keep the text clear of the now line: nudge it to the side its event is on.
+      if (Math.abs(nowX - x) < labelWidth / 2 + 3) {
+        const side = candidate.center * width >= nowX ? 1 : -1, moved = nowX + side * (labelWidth / 2 + 4);
+        if (moved >= labelWidth / 2 && moved <= width - labelWidth / 2) x = moved;
+      }
       const clashes = labels.some(l => Math.abs(l.x - x) < (l.width + labelWidth) / 2 + 6 && Math.abs(l.top - candidate.top) < 20)
         || (candidate.top < LABEL_SPACE && Math.abs(nowX - x) < labelWidth / 2 + 28);
       if (!clashes) labels.push({ key: candidate.key, kind: candidate.kind, text: candidate.text, top: candidate.top, x, width: labelWidth });
     }
   }
+
+  // Whole-hour axes read as "06 09 12"; other clock formats keep every other tick.
+  const tickLabels = model.ticks.map(tick => formatClock(tick.instant, lang));
+  const compact = tickLabels.length > 4 && tickLabels.every(label => /^[0-9]{2}[:.]00$/.test(label));
+  const sparse = tickLabels.length > 4 && !compact;
+  const nextWave = model.predicted.find(p => p.sequenceIndex === 1 && p.wave)?.wave;
 
   return <div ref={chartRef} className="sleep-wave-chart" aria-hidden="true" style={{ paddingTop: LABEL_SPACE }}>
     <div className="sleep-wave-now-label" style={{ left: `${model.now * 100}%` }}>
@@ -63,12 +77,23 @@ export default function SleepWaveChart({ model, now, formatRange }: {
       style={{ left: label.x, top: label.top }}>{label.text}</span>)}
     <svg viewBox="0 0 640 174" preserveAspectRatio="none" focusable="false" style={{ height: CHART_HEIGHT }}>
       <defs>
-        <linearGradient id={`${id}-recorded`} x1="0" y1="0" x2="0.25" y2="1">
-          <stop offset="0" stopColor="var(--wave-contour)" />
-          <stop offset=".14" stopColor="var(--wave-record-top)" />
-          <stop offset=".48" stopColor="var(--wave-forecast)" stopOpacity=".7" />
+        <linearGradient id={`${id}-recorded`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="var(--wave-record-top)" />
+          <stop offset=".55" stopColor="var(--wave-record-mid, var(--wave-record-top))" />
           <stop offset="1" stopColor="var(--wave-record-bottom)" />
         </linearGradient>
+        <linearGradient id={`${id}-next`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="var(--wave-crest)" />
+          <stop offset=".4" stopColor="var(--wave-band-core)" stopOpacity=".9" />
+          <stop offset="1" stopColor="var(--wave-forecast)" stopOpacity=".5" />
+        </linearGradient>
+        <linearGradient id={`${id}-swell`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="var(--wave-crest)" stopOpacity=".85" />
+          <stop offset=".3" stopColor="var(--wave-mist)" stopOpacity=".5" />
+          <stop offset="1" stopColor="var(--wave-mist)" stopOpacity="0" />
+        </linearGradient>
+        <filter id={`${id}-soft`} x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="15 9" /></filter>
+        <filter id={`${id}-feather`} x="-200%" y="-20%" width="500%" height="140%"><feGaussianBlur stdDeviation="5 2" /></filter>
         <linearGradient id={`${id}-band`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="var(--wave-band-core)" stopOpacity="0" />
           <stop offset=".35" stopColor="var(--wave-band-core)" stopOpacity=".42" />
@@ -80,11 +105,6 @@ export default function SleepWaveChart({ model, now, formatRange }: {
           <stop offset=".5" stopColor="var(--wave-band-core)" stopOpacity=".24" />
           <stop offset="1" stopColor="var(--wave-band-core)" stopOpacity="0" />
         </radialGradient>
-        <linearGradient id={`${id}-mist`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="var(--wave-mist)" stopOpacity="0" />
-          <stop offset=".22" stopColor="var(--wave-mist)" stopOpacity=".6" />
-          <stop offset="1" stopColor="var(--wave-mist)" stopOpacity="0" />
-        </linearGradient>
         <linearGradient id={`${id}-active`} x1="0" y1="0" x2="0" y2="1">
           <stop stopColor="var(--wave-light)" /><stop offset=".25" stopColor="var(--wave-active)" /><stop offset="1" stopColor="var(--wave-record-bottom)" />
         </linearGradient>
@@ -98,12 +118,12 @@ export default function SleepWaveChart({ model, now, formatRange }: {
           <line x1="0" x2="0" y2="10" stroke="var(--wave-ink)" strokeOpacity=".24" strokeWidth="2" />
         </pattern>
       </defs>
-      <path className="sleep-wave-mist" d={MIST_BACK} fill={`url(#${id}-mist)`} />
+      <path className="sleep-wave-mist is-back" d={SWELL_BACK} fill={`url(#${id}-swell)`} />
       {model.forecasts.map((forecast, i) => {
         const x0 = forecast.start * 640, x1 = forecast.end * 640, mid = (x0 + x1) / 2;
         return <g key={i} data-wave-forecast="onset">
           <ellipse className="sleep-wave-band-glow" cx={mid} cy="150" rx={(x1 - x0) / 2 + 34} ry="80" fill={`url(#${id}-glow)`} clipPath={`url(#${id}-sky)`} />
-          <path className="sleep-wave-band" d={`M ${x0} 150 V 62 Q ${x0} 52 ${mid} 52 Q ${x1} 52 ${x1} 62 V 150 Z`} fill={`url(#${id}-band)`} />
+          <path className="sleep-wave-band" d={`M ${x0} 150 V 62 Q ${x0} 52 ${mid} 52 Q ${x1} 52 ${x1} 62 V 150 Z`} fill={`url(#${id}-band)`} filter={`url(#${id}-feather)`} />
           <path className="sleep-wave-forecast-edge" d={`M ${x0} 150 V 60 M ${x1} 150 V 60`} />
           <path className="sleep-wave-onset" d={`M ${forecast.likely * 640} 150 V 104`} />
         </g>;
@@ -115,25 +135,28 @@ export default function SleepWaveChart({ model, now, formatRange }: {
           {p.wave && <path className="sleep-wave-predicted" d={recordedWavePath(p.wave)} fill={`url(#${id}-predicted)`} />}
         </g>;
       })}
-      {model.predicted.filter(p => p.sequenceIndex === 1 && p.wave).map(p =>
-        <path key="next-wave" className="sleep-wave-predicted is-next" d={recordedWavePath(p.wave!)} fill={`url(#${id}-predicted)`} />)}
+      {nextWave && <path className="sleep-wave-halo is-next" d={recordedWavePath(nextWave)} filter={`url(#${id}-soft)`} />}
+      {nextWave && <path className="sleep-wave-predicted is-next" d={recordedWavePath(nextWave)} fill={`url(#${id}-next)`} />}
       <line className="sleep-wave-baseline" x1="0" x2="640" y1="150" y2="150" />
+      {recorded && <path className="sleep-wave-halo" d={recorded} filter={`url(#${id}-soft)`} />}
       {recorded && <path className="sleep-wave-recorded" d={recorded} fill={`url(#${id}-recorded)`} />}
       {model.active && <g data-wave-active="true">
         <path d={recordedWavePath(model.active)} fill={`url(#${id}-active)`} />
         <path d={recordedWavePath(model.active)} fill={`url(#${id}-stripes)`} />
       </g>}
-      <path className="sleep-wave-mist is-front" d={MIST_FRONT} fill={`url(#${id}-mist)`} />
+      <path className="sleep-wave-mist is-mid" d={SWELL_MID} fill={`url(#${id}-swell)`} />
+      <path className="sleep-wave-mist is-front" d={SWELL_FRONT} fill={`url(#${id}-swell)`} />
       <g className="sleep-wave-now-marker" style={{ transform: `translateX(${model.now * 640}px)` }}>
         <line y1="0" y2="150" />
-        <circle className="sleep-wave-now-halo" cy="150" r="10" />
+        <circle className="sleep-wave-now-halo" cy="150" r="16" fill={`url(#${id}-glow)`} />
         <circle cy="150" r="3.5" />
       </g>
     </svg>
     <div className="sleep-wave-axis">
-      {model.ticks.map((tick, index) => <span key={tick.instant} className={index === 0 ? "is-first" : index === model.ticks.length - 1 ? "is-last" : ""}
+      {model.ticks.map((tick, index) => sparse && index % 2 ? null : <span key={tick.instant}
+        className={compact ? "" : index === 0 ? "is-first" : index === model.ticks.length - 1 ? "is-last" : ""}
         style={{ left: `${tick.position * 100}%` }}>
-        {formatClock(tick.instant, lang)}
+        {compact ? tickLabels[index].slice(0, 2) : tickLabels[index]}
         {tick.showDate && <small>{new Intl.DateTimeFormat(LOCALES[lang], { day: "numeric", month: "short" }).format(tick.instant)}</small>}
         {tick.showOffset && <small>{new Intl.DateTimeFormat(LOCALES[lang], { timeZoneName: "shortOffset" }).formatToParts(tick.instant).find(p => p.type === "timeZoneName")?.value}</small>}
       </span>)}

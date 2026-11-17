@@ -87,14 +87,20 @@ export function buildSleepWaveModel({ sessions, active, prediction, now, forecas
   const domain = { startMs: from - padding, endMs: to + padding };
   const position = (instant: number) => wavePosition(instant, domain);
   const segment = ({ startMs, endMs }: WaveInterval): WaveSegment => ({ startMs, endMs, start: position(startMs), end: position(endMs) });
-  // Up to four elapsed-time ticks, with interior ticks rounded to local hours.
-  // Context-heavy date/offset labels use just two anchors to avoid collisions.
-  const tickInstants = [0, 1 / 3, 2 / 3, 1].map(fraction => {
+  // An ordinary single-day frame gets a tick every third local hour (06, 09 ...).
+  // Otherwise up to four elapsed-time ticks, with interior ticks rounded to
+  // local hours; date/offset labels use just two anchors to avoid collisions.
+  const crossesOffset = new Date(from).getTimezoneOffset() !== new Date(to).getTimezoneOffset();
+  const threeHourly: number[] = [];
+  if (!crossesOffset && sameDay(from, now) && sameDay(to, now)) {
+    const tick = new Date(from); tick.setHours(Math.ceil((tick.getHours() * 60 + tick.getMinutes()) / 180) * 3, 0, 0, 0);
+    for (; tick.getTime() <= to; tick.setHours(tick.getHours() + 3)) threeHourly.push(tick.getTime());
+  }
+  const tickInstants = threeHourly.length >= 3 ? threeHourly : [0, 1 / 3, 2 / 3, 1].map(fraction => {
     if (fraction === 0) return from;
     if (fraction === 1) return to;
     const date = new Date(from + fraction * (to - from)); date.setMinutes(0, 0, 0); return date.getTime();
   }).filter((instant, i, all) => instant >= from && all.indexOf(instant) === i);
-  const crossesOffset = new Date(from).getTimezoneOffset() !== new Date(to).getTimezoneOffset();
   const needsContext = crossesOffset || tickInstants.some(instant => !sameDay(instant, now));
   const readableTicks = needsContext ? [tickInstants[0], tickInstants[tickInstants.length - 1]] : tickInstants;
   const ticks = readableTicks.map(instant => ({ instant, position: position(instant),

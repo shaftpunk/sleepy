@@ -2,6 +2,7 @@
    the synthetic fixtures and blocked network of tests/mobile-layout.cjs (reused
    verbatim from that file, not duplicated). No app/API writes, no assertions.
    node tests/visual-capture.cjs <playwright module path> [--out=<dir>] [--only=<name,...>]
+     [--selector=<css>]    screenshot only that element (tall viewport, no fixed-nav overlap)
      [--reference=<png>]   also writes compare-*.png: reference | capture side by side
    Clock is pinned to 12:08 Europe/Oslo (the approved mockup's "Nå" time);
    --time=<ISO instant> overrides it (e.g. 2026-11-16T00:32:00Z for 01:32). */
@@ -18,6 +19,7 @@ const arg = name => process.argv.find(value => value.startsWith(`--${name}=`))?.
 const output = path.resolve(arg('out') || path.join(os.tmpdir(), 'sleepy-visual-capture'));
 const only = arg('only')?.split(',');
 const reference = arg('reference');
+const selector = arg('selector');
 fs.mkdirSync(output, { recursive: true });
 
 // name, route, query, full page
@@ -48,7 +50,7 @@ async function main() {
   try {
     for (let n = 0; n < 150; n++) { try { if ((await fetch(base)).ok) break; } catch { /* starting */ } await new Promise(r => setTimeout(r, 100)); }
     browser = await chromium.launch({ headless: true, ...(process.env.SLEEPY_CHROMIUM_PATH ? { executablePath: process.env.SLEEPY_CHROMIUM_PATH } : {}) });
-    const page = await browser.newPage({ timezoneId: 'Europe/Oslo', viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+    const page = await browser.newPage({ timezoneId: 'Europe/Oslo', viewport: { width: Number(arg('width')) || 390, height: selector ? 2400 : 844 }, deviceScaleFactor: 2 });
     await page.clock.install({ time: new Date(arg('time') || '2026-11-16T11:08:00Z') });
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
@@ -66,7 +68,8 @@ async function main() {
       await page.clock.runFor(1500);
       await page.waitForTimeout(500);
       const file = path.join(output, `${name}.png`);
-      await page.screenshot({ path: file, fullPage: full });
+      if (selector) await page.locator(selector).first().screenshot({ path: file });
+      else await page.screenshot({ path: file, fullPage: full });
       if (reference && !full) {
         const img = f => `data:image/png;base64,${fs.readFileSync(f, 'base64')}`;
         const compare = await browser.newPage({ viewport: { width: 1180, height: 900 } });
