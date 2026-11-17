@@ -13,6 +13,7 @@ const en = {
     recordNote: "A rhythm built from recorded sleep. No fixed schedule.",
     recordedToday: "Recorded sleep in today's timeline", activeSince: "Currently sleeping, started {{time}}",
     typicalAwake: "Typical awake time",
+    about: "About the Sleep Wave", preliminaryShort: "Preliminary",
     upcomingTitle: "Coming day's sleep rhythm", preliminary: "Preliminary – based on similar nights and mornings.",
     upcomingWake: "Possible wake-up", upcomingNap: "Possible nap {{n}}",
     upcomingLearning: "We need more recorded nights and mornings before estimating the coming day.",

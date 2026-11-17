@@ -5,7 +5,7 @@ import { formatClock } from "../../lib/format";
 
 // Geometry shared by the SVG (viewBox 0 0 640 174, baseline y=150) and the HTML
 // labels layered over it. Labels are positioned from the same timestamps.
-const LABEL_SPACE = 40, CHART_HEIGHT = 116;
+const LABEL_SPACE = 40, CHART_HEIGHT = 136;
 const toPx = (units: number) => LABEL_SPACE + units / 174 * CHART_HEIGHT;
 // Decorative rolling ground around the baseline: fixed shapes, never data. The
 // back swell sits behind every sleep shape; the front ones stay at or below

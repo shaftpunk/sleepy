@@ -203,6 +203,12 @@ async function main() {
         const ticks=await card.locator('.sleep-wave-axis > span').evaluateAll(nodes=>nodes.map(e=>{const r=e.getBoundingClientRect();return {left:r.left,right:r.right}}));
         for(let i=1;i<ticks.length;i++)assert.ok(ticks[i].left>=ticks[i-1].right-1,'axis labels overlap');
         await check('sleep-wave-ready',true);
+        // Secondary copy sits behind the info toggle; it stays in the DOM for screen readers.
+        const info=card.locator('.sleep-wave-info-button'),panel=card.locator('.sleep-wave-info');
+        assert.equal(await info.getAttribute('aria-expanded'),'false');assert.ok((await panel.textContent()).length>20,'info text available to assistive technology');
+        assert.ok(await panel.evaluate(e=>e.getBoundingClientRect().height<=1),'info panel visually hidden when closed');
+        await info.click();assert.equal(await info.getAttribute('aria-expanded'),'true');assert.ok(await panel.evaluate(e=>e.getBoundingClientRect().height>20));
+        await check('sleep-wave-info',true);await info.click();assert.equal(await info.getAttribute('aria-expanded'),'false');
         await page.emulateMedia({reducedMotion:'reduce'});
         assert.equal(await card.locator('.sleep-wave-now-marker').evaluate(e=>getComputedStyle(e).transitionDuration),'0s');
         await page.evaluate(()=>document.documentElement.style.fontSize='200%');

@@ -30,7 +30,7 @@
   isolation: isolate;
   overflow: hidden;
   min-width: 0;
-  padding: clamp(14px, 4vw, 20px) clamp(16px, 4.6vw, 24px) clamp(12px, 3.5vw, 16px);
+  padding: clamp(12px, 3.6vw, 18px) clamp(14px, 4.2vw, 22px) clamp(8px, 2.6vw, 12px);
   border: 1px solid var(--wave-border);
   border-radius: 30px;
   color: var(--wave-ink);
@@ -102,32 +102,32 @@
 
 /* Header and forecast typography: editorial serif for the title, forecast
    heading and forecast time; sans with tabular figures elsewhere. */
-.sleep-wave .sleep-wave-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 0; }
-.sleep-wave-header > div { min-width: 0; flex: 1 1 160px; }
+.sleep-wave .sleep-wave-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0; }
 .sleep-wave h2, .sleep-wave h3, .sleep-wave p { margin: 0; }
-.sleep-wave h2 { font-family: var(--font-editorial); font-style: italic; font-weight: 400; font-size: clamp(1.85rem, 7.5vw, 2.5rem); line-height: 1.08; letter-spacing: -.035em; overflow-wrap: anywhere; }
-.sleep-wave-header p { margin-top: 4px; font-family: var(--font-editorial); font-style: italic; font-size: .85rem; line-height: 1.45; color: var(--wave-muted); overflow-wrap: anywhere; }
-.sleep-wave-today { flex-shrink: 0; margin-top: 2px; padding: 6px 14px; border: 1px solid var(--wave-border); border-radius: 30px; font-size: .75rem; background: var(--wave-tile); box-shadow: inset 0 1px 0 var(--wave-border); }
-.sleep-wave-forecast { display: grid; align-content: center; gap: 2px; padding: 12px 0 2px; text-align: center; }
-.sleep-wave h3 { font-family: var(--font-editorial); font-size: 1.3rem; line-height: 1.35; font-weight: 400; }
+.sleep-wave h2 { font-family: var(--font-editorial); font-style: italic; font-weight: 400; font-size: clamp(1.45rem, 6vw, 1.85rem); line-height: 1.1; min-width: 0; letter-spacing: -.035em; overflow-wrap: anywhere; }
+.sleep-wave-today { flex-shrink: 0; padding: 4px 12px; border: 1px solid var(--wave-border); border-radius: 30px; font-size: .75rem; background: var(--wave-tile); box-shadow: inset 0 1px 0 var(--wave-border); }
+.sleep-wave-forecast { display: grid; align-content: center; gap: 0; padding: 4px 0 0; text-align: center; }
+/* The forecast heading is a quiet eyebrow; the time itself carries the card. */
+.sleep-wave h3 { color: var(--wave-muted); font-family: var(--font-wave-ui); font-size: .7rem; font-weight: 600; letter-spacing: .09em; line-height: 1.5; text-transform: uppercase; }
+.sleep-wave[data-wave-state="insufficient_data"] h3 { color: var(--wave-ink); font-family: var(--font-editorial); font-size: 1.1rem; font-weight: 400; letter-spacing: 0; text-transform: none; }
 .sleep-wave .sleep-wave-time {
   color: var(--wave-key);
   font-family: var(--font-editorial);
   font-weight: 600;
-  font-size: clamp(2.3rem, 10.5vw, 3.35rem);
-  line-height: 1.12;
+  font-size: clamp(2.05rem, 9.4vw, 2.9rem);
+  line-height: 1.08;
   font-variant-numeric: lining-nums tabular-nums;
   letter-spacing: -.025em;
   overflow-wrap: anywhere;
   text-shadow: 0 0 22px var(--wave-glow);
 }
-.sleep-wave .sleep-wave-caption { color: var(--wave-muted); font-family: var(--font-editorial); font-style: italic; font-size: 1rem; line-height: 1.45; }
-.sleep-wave .sleep-wave-state-copy { max-width: 29ch; margin: 3px auto 0; font-size: .85rem; line-height: 1.6; color: var(--wave-muted); }
+.sleep-wave .sleep-wave-state-copy { color: var(--wave-key); font-family: var(--font-editorial); font-size: clamp(1.35rem, 6vw, 1.7rem); line-height: 1.2; }
 .sleep-wave[data-wave-state="sleeping"] h3 { color: var(--wave-key); }
 
 /* Chart: label row (padding set inline), SVG, axis. */
-.sleep-wave-chart { position: relative; margin-top: 2px; }
-.sleep-wave-chart svg { display: block; width: 100%; height: 116px; overflow: visible; }
+/* Slight bleed into the card padding: more width for the waves. */
+.sleep-wave-chart { position: relative; margin: 0 -6px; }
+.sleep-wave-chart svg { display: block; width: 100%; height: 136px; overflow: visible; }
 .sleep-wave-baseline { stroke: var(--wave-rule); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .sleep-wave-mist.is-back { opacity: .8; }
 .sleep-wave-mist.is-mid { opacity: .7; }
@@ -176,72 +176,55 @@
 .sleep-wave-axis small { display: block; font-size: .85em; }
 .sleep-wave-axis:has(small) { height: max(56px, calc(4.5em + 8px)); }
 
-/* Summary tiles: value above label, like the approved design. dt stays first
-   in the DOM for assistive technology. */
+/* One compact row of facts: value above label. dt stays first in the DOM
+   for assistive technology. */
 .sleep-wave-events {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 5.6rem), 1fr));
-  gap: 8px;
-  margin: 8px 0 0;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 6px;
+  margin: 4px 0 0;
   padding: 0;
 }
 .sleep-wave-events > div {
-  display: flex; flex-direction: column; align-items: center; gap: 1px;
-  min-width: 0; padding: 10px 6px 9px;
-  border: 1px solid var(--wave-border); border-radius: 18px;
-  background: var(--wave-tile);
-  box-shadow: inset 0 1px 0 var(--wave-border), 0 6px 14px var(--wave-tile-shadow, #2a17241f);
-  text-align: center;
-}
-.sleep-wave-events > [data-tile="next"] {
-  background: var(--wave-tile-next);
-  border-color: var(--wave-light);
-  box-shadow: inset 0 1px 0 var(--wave-border), 0 0 22px var(--wave-tile-glow, #f6e2c838);
-}
-.sleep-wave-events dt { order: 2; margin: 0; color: var(--wave-muted); font-family: var(--font-editorial); font-style: italic; font-size: .75rem; line-height: 1.4; overflow-wrap: anywhere; }
-.sleep-wave-events dd { order: 1; margin: 0; color: var(--wave-key); font-size: .82rem; line-height: 1.45; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.sleep-wave-icon {
-  order: 0; flex: 0 0 18px; width: 18px; height: 18px; margin-bottom: 3px;
-  background: var(--wave-edge);
-  -webkit-mask: var(--icon) center / contain no-repeat; mask: var(--icon) center / contain no-repeat;
-}
-.sleep-wave-icon.is-last {
-  background: var(--wave-record-top);
-  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cdefs%3E%3Cmask id='m'%3E%3Ccircle cx='10' cy='10' r='8.5' fill='white'/%3E%3Cpath d='m6.3 10.2 2.5 2.5 4.9-5.1' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/mask%3E%3C/defs%3E%3Crect width='20' height='20' mask='url(%23m)'/%3E%3C/svg%3E");
-}
-.sleep-wave-icon.is-next {
-  background: var(--wave-forecast);
-  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M12.8 2.6A7.6 7.6 0 1 0 17.4 14 6 6 0 0 1 12.8 2.6Z'/%3E%3C/svg%3E");
-}
-.sleep-wave-icon.is-status {
-  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.4'%3E%3Ccircle cx='10' cy='10' r='7.6' stroke-dasharray='2.4 2.6'/%3E%3Ccircle cx='10' cy='10' r='1.8' fill='black' stroke='none'/%3E%3C/svg%3E");
-}
-.sleep-wave-icon.is-sun {
-  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Ccircle cx='10' cy='10' r='3.4'/%3E%3Cpath d='M10 1.8v2.2M10 16v2.2M1.8 10H4M16 10h2.2M4.2 4.2l1.6 1.6M14.2 14.2l1.6 1.6M4.2 15.8l1.6-1.6M14.2 5.8l1.6-1.6'/%3E%3C/svg%3E");
-}
-
-.sleep-wave .sleep-wave-awake-range {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px;
-  margin-top: 8px; padding: 10px 14px;
-  border: 1px solid var(--wave-border); border-radius: 16px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  min-width: 0; padding: 6px 4px 5px;
+  border: 1px solid var(--wave-border); border-radius: 14px;
   background: var(--wave-tile);
   box-shadow: inset 0 1px 0 var(--wave-border);
-  font-size: .85rem; line-height: 1.45;
+  text-align: center;
 }
-.sleep-wave-awake-range .sleep-wave-icon { margin: 0; }
-.sleep-wave-awake-range span:not(.sleep-wave-icon) { flex: 1 1 auto; color: var(--wave-ink); }
+.sleep-wave-events dt { order: 2; margin: 0; color: var(--wave-muted); font-family: var(--font-editorial); font-style: italic; font-size: .66rem; line-height: 1.35; overflow-wrap: anywhere; }
+.sleep-wave-events dd { order: 1; margin: 0; color: var(--wave-key); font-size: .78rem; line-height: 1.35; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.sleep-wave .sleep-wave-awake-range { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; }
+.sleep-wave-awake-range span { color: var(--wave-ink); }
 .sleep-wave-awake-range strong { color: var(--wave-key); font-weight: 600; font-variant-numeric: tabular-nums; }
 
-.sleep-wave-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; margin-top: 10px; color: var(--wave-muted); font-size: .65rem; line-height: 1.5; }
-.sleep-wave-legend > span { display: inline-flex; align-items: center; gap: 6px; }
-.sleep-wave-legend i { width: 10px; height: 10px; border-radius: 50%; background: var(--wave-record-top); }
+/* Footer: a one-line legend and the info toggle. */
+.sleep-wave-footer { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+.sleep-wave-legend { display: flex; flex: 1 1 auto; flex-wrap: wrap; justify-content: center; gap: 2px 12px; min-width: 0; color: var(--wave-muted); font-size: .62rem; line-height: 1.4; }
+.sleep-wave-legend > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.sleep-wave-legend i { width: 8px; height: 8px; border-radius: 50%; background: var(--wave-record-top); }
 .sleep-wave-legend .is-forecast { background: radial-gradient(circle, var(--wave-light), var(--wave-band-core)); box-shadow: 0 0 6px var(--wave-light); }
 .sleep-wave-legend .is-active { background: repeating-linear-gradient(45deg, var(--wave-active) 0 2px, transparent 2px 4px); }
-.sleep-wave .sleep-wave-note { margin-top: 6px; color: var(--wave-muted); font-size: .65rem; line-height: 1.55; text-align: center; }
-.sleep-wave-accessible-history { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.sleep-wave-info-button {
+  position: relative; flex: none; width: 44px; height: 44px; margin-right: -10px; padding: 0;
+  border: 0; border-radius: 50%; background: none; color: var(--wave-muted); cursor: pointer;
+}
+.sleep-wave-info-button::before {
+  content: "i"; position: absolute; inset: 11px; display: grid; place-items: center;
+  border: 1px solid var(--wave-border); border-radius: 50%; background: var(--wave-tile);
+  font-family: var(--font-editorial); font-size: .82rem; font-style: italic; font-weight: 600; line-height: 1;
+}
+.sleep-wave-info-button[aria-expanded="true"]::before { color: var(--wave-key); border-color: var(--wave-light); box-shadow: 0 0 10px var(--wave-glow); }
+.sleep-wave-info-button:focus-visible { outline: 2px solid var(--wave-light); outline-offset: -4px; }
+.sleep-wave .sleep-wave-info { display: grid; gap: 6px; margin: 2px 0 4px; padding: 10px 12px; border: 1px solid var(--wave-border); border-radius: 14px; background: var(--wave-tile); color: var(--wave-muted); font-size: .74rem; line-height: 1.5; }
+.sleep-wave .sleep-wave-note { color: var(--wave-muted); font-size: .74rem; line-height: 1.5; }
+/* Visually hidden, still read by screen readers. */
+.sleep-wave .sleep-wave-sr, .sleep-wave-accessible-history { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* Short status copy needs no forecast-sized reservation. */
-.sleep-wave:not([data-wave-state="ready"]) .sleep-wave-forecast { padding: 10px 0 0; }
+.sleep-wave:not([data-wave-state="ready"]) .sleep-wave-forecast { padding: 6px 0 0; }
 
 @media (prefers-reduced-motion: no-preference) {
   .sleep-wave-now-marker { transition: transform .3s ease; }
@@ -265,18 +248,18 @@
 .sleep-wave-legend .is-compressed { border-radius: 0; background: linear-gradient(108deg, transparent 22%, var(--wave-edge) 22% 38%, transparent 38% 60%, var(--wave-edge) 60% 76%, transparent 76%); }
 
 /* Preliminary coming-day forecast (night only): own date and axis. */
-.sleep-wave-upcoming { margin-top: 12px; padding: 12px 14px 10px; border: 1px dashed var(--wave-border); border-radius: 18px; background: var(--wave-tile); }
+.sleep-wave-upcoming { margin-top: 8px; padding: 8px 12px 8px; border: 1px dashed var(--wave-border); border-radius: 18px; background: var(--wave-tile); }
 .sleep-wave-upcoming-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; }
-.sleep-wave .sleep-wave-upcoming h3 { font-family: var(--font-editorial); font-style: italic; font-size: 1.1rem; line-height: 1.3; }
-.sleep-wave .sleep-wave-upcoming-sub, .sleep-wave .sleep-wave-upcoming-learning { margin-top: 2px; color: var(--wave-muted); font-size: .75rem; line-height: 1.5; }
+.sleep-wave .sleep-wave-upcoming h3 { color: var(--wave-ink); font-family: var(--font-editorial); font-style: italic; font-size: 1rem; font-weight: 400; letter-spacing: 0; line-height: 1.3; text-transform: none; }
+.sleep-wave .sleep-wave-upcoming-learning { margin-top: 2px; color: var(--wave-muted); font-size: .75rem; line-height: 1.5; }
 .sleep-wave-upcoming-chart { position: relative; margin-top: 8px; }
 .sleep-wave-upcoming-chart svg { display: block; width: 100%; height: 56px; overflow: visible; }
 .sleep-wave-upcoming-wake { fill: var(--wave-light); opacity: .45; }
 .sleep-wave-upcoming-chart .sleep-wave-axis > span:first-child { transform: none; }
 .sleep-wave-upcoming-chart .sleep-wave-axis > span:last-child { transform: translateX(-100%); }
-.sleep-wave .sleep-wave-upcoming-list { display: grid; gap: 4px; margin: 4px 0 0; padding: 0; list-style: none; font-size: .8rem; line-height: 1.45; }
-.sleep-wave-upcoming-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 10px; }
-.sleep-wave-upcoming-list span { color: var(--wave-muted); }
+.sleep-wave .sleep-wave-upcoming-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; margin: 4px 0 0; padding: 0; list-style: none; font-size: .78rem; line-height: 1.35; }
+.sleep-wave-upcoming-list li { display: grid; min-width: 0; }
+.sleep-wave-upcoming-list span { color: var(--wave-muted); font-size: .68rem; }
 .sleep-wave-upcoming-list strong { color: var(--wave-key); font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* Remaining-day forecasts become quieter with distance into the future. */

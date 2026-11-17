@@ -17,9 +17,9 @@ export default function SleepWaveUpcoming({ forecast }: { forecast: UpcomingDayF
   return <section className="sleep-wave-upcoming" aria-labelledby={titleId}>
     <div className="sleep-wave-upcoming-head">
       <h3 id={titleId}>{t("sleepWave.upcomingTitle")}</h3>
-      <span className="sleep-wave-today">{date}</span>
+      <span className="sleep-wave-today">{date} · {t("sleepWave.preliminaryShort")}</span>
     </div>
-    <p className="sleep-wave-upcoming-sub">{t("sleepWave.preliminary")}</p>
+    <p className="sleep-wave-sr">{t("sleepWave.preliminary")}</p>
     {model && forecast.morningWake ? <>
       <div className="sleep-wave-upcoming-chart" aria-hidden="true">
         <svg viewBox="0 0 640 174" preserveAspectRatio="none" focusable="false">
