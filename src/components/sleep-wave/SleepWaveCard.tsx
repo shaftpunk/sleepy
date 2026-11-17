@@ -12,7 +12,7 @@ import "./SleepWave.css";
 
 type Props = { sessions: SleepSession[]; active: ActiveSleep | null; prediction: NextSleepPrediction;
   forecast?: DailySleepForecast | null; upcoming?: UpcomingDayForecast | null; now: number; babyName?: string };
-export default function SleepWaveCard({ sessions, active, prediction, forecast = null, upcoming = null, now, babyName }: Props) {
+export default function SleepWaveCard({ sessions, active, prediction, forecast = null, upcoming = null, now }: Props) {
   const { t, lang } = useTranslation();
   const titleId = useId(), summaryId = useId(), infoId = useId();
   const [infoOpen, setInfoOpen] = useState(false);
@@ -43,19 +43,14 @@ export default function SleepWaveCard({ sessions, active, prediction, forecast =
   // always get the full explanation.
   return <section className="sleep-wave" data-wave-state={model.status} aria-labelledby={titleId} aria-describedby={summaryId}>
     <header className="sleep-wave-header">
-      <div><h2 id={titleId}>Sleep Wave</h2>
-        <p className="sleep-wave-subtitle">{babyName ? t("sleepWave.rhythmFor", { name: babyName }) : t("sleepWave.rhythm")}</p></div>
+      <div><h2 id={titleId}>Sleep Wave</h2></div>
       <span className="sleep-wave-today">{t("common.today")}</span>
     </header>
     <div className="sleep-wave-forecast">
       {window ? <>
         <h3>{t("home.nextSleepTitle")}</h3>
         <p className="sleep-wave-time">{range(window.startMs, window.endMs)}</p>
-        <p className="sleep-wave-caption">{t("sleepWave.expectedOnset")}</p>
-      </> : sleeping ? <>
-        <h3>{t("sleepWave.sleepingTitle")}</h3>
-        {model.active && <p className="sleep-wave-state-copy">{t("home.startedAt", { time: formatClock(model.active.startMs, lang) })}</p>}
-      </> : <>
+      </> : sleeping ? null : <>
         <h3>{t("sleepWave.learningTitle")}</h3>
       </>}
     </div>
@@ -86,6 +81,7 @@ export default function SleepWaveCard({ sessions, active, prediction, forecast =
       <p className="sleep-wave-note">{later.length || estimated ? t("sleepWave.forecastNote") : window ? t("sleepWave.onsetNote") : t("sleepWave.recordNote")}</p>
     </div>
     <div className="sleep-wave-accessible-history">
+      {sleeping && <p>{t("sleepWave.sleepingTitle")}</p>}
       <p>{t("sleepWave.recordedToday")}</p>
       {model.recorded.length ? <ul>{model.recorded.map((interval, i) => <li key={i}>{range(interval.startMs, interval.endMs)}</li>)}</ul>
         : <p>{t("common.notRegistered")}</p>}
