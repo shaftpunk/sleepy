@@ -4,6 +4,53 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const ts = require('typescript');
 const read = file => fs.readFileSync(file, 'utf8');
+const React = require('react');
+const { renderToStaticMarkup } = require('react-dom/server');
+
+function renderSettings(flag, tab = 'account') {
+  const exports = {};
+  let panelMounts = 0;
+  const state = { babies: [], currentBabyId: null, language: 'en', theme: 'light', visualTheme: 'default' };
+  const source = read('src/pages/Settings.tsx').replace(/import\.meta\.env/g, '__env');
+  const code = ts.transpileModule(source, { compilerOptions: {
+    module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX,
+  } }).outputText;
+  vm.runInNewContext(code, { exports, __env: { VITE_ENABLE_PURCHASE_TEST_PANEL: flag }, require(name) {
+    if (name === 'react') return { useState: initial => [initial === 'baby' ? tab : initial, () => {}] };
+    if (name === 'react/jsx-runtime') return require(name);
+    if (name === '../stores/appStore') return { useAppStore: select => select(state) };
+    if (name === '../auth/AuthProvider') return { useAuth: () => ({ user: { email: 'family@example.com' }, signOut() {} }) };
+    if (name === '../i18n') return { useTranslation: () => ({ t: key => key }) };
+    if (name === '../components/SleepyPlusTestPanel') return { __esModule: true, default: () => {
+      panelMounts++;
+      return React.createElement('section', { className: 'plus-test-panel' }, 'purchase-test-surface');
+    } };
+    if (name.startsWith('../components/')) return { __esModule: true, default: () => React.createElement('div', null, name) };
+    if (name === '../analytics/localDate' || name === '../services/householdService' || name.endsWith('.css')) return {};
+    throw Error(`Unexpected Settings dependency: ${name}`);
+  } });
+  return { html: renderToStaticMarkup(React.createElement(exports.default)), panelMounts };
+}
+
+for (const flag of [undefined, 'false', 'true', 'TRUE', '1', true, ' true ']) {
+  test(`Account purchase test panel requires exactly string true: ${String(flag)} (${typeof flag})`, () => {
+    const { html, panelMounts } = renderSettings(flag);
+    assert.equal(panelMounts, flag === 'true' ? 1 : 0);
+    assert.equal(html.includes('purchase-test-surface'), flag === 'true');
+    for (const control of ['family@example.com', 'settings.appearanceTitle', 'settings.visualThemeTitle',
+      'settings.languageTitle', 'settings.logoutButton', '../components/AppVersion']) assert.ok(html.includes(control), control);
+    assert.equal((html.match(/role="tab"/g) ?? []).length, 4);
+  });
+}
+
+test('purchase panel stays in Account and normal Settings tabs remain available', () => {
+  for (const [tab, control] of [['baby', 'AddChildSettings'], ['sleep', 'SoundMonitoringSettings'], ['notifications', 'NotificationSettings']]) {
+    const { html, panelMounts } = renderSettings('true', tab);
+    assert.equal(panelMounts, 0);
+    assert.ok(html.includes(`../components/${control}`));
+  }
+});
+
 function load(file, globals = {}) {
   const exports = {};
   vm.runInNewContext(ts.transpileModule(read(file), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText,

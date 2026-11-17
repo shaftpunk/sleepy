@@ -15,6 +15,9 @@ import AppVersion from "../components/AppVersion";
 import SleepyPlusTestPanel from "../components/SleepyPlusTestPanel";
 import "./Settings.css";
 
+const purchaseTestPanelEnabled =
+  import.meta.env.VITE_ENABLE_PURCHASE_TEST_PANEL === 'true';
+
 export default function Settings() {
   const { t } = useTranslation();
   const { signOut, user } = useAuth();
@@ -345,7 +348,7 @@ export default function Settings() {
         </div>
 
       </section>
-      <SleepyPlusTestPanel />
+      {purchaseTestPanelEnabled && <SleepyPlusTestPanel />}
       <section className="settings-card appearance-card">
         <div className="appearance-row">
           <div className="setting-copy">
