@@ -1,3 +1,4 @@
+import type { DailySleepForecast, ForecastQuality } from "./dailySleepForecast";
 import type { NextSleepPrediction } from "./nextSleep";
 import { sameDay, startOfLocalDay } from "./time";
 import type { ActiveSleep, SleepSession } from "./types";
@@ -14,6 +15,15 @@ export type SleepWaveModel = {
   now: number;
   ticks: { instant: number; position: number; showDate: boolean; showOffset: boolean }[];
   lastCompleted: WaveInterval | null;
+  /** Forecast-engine events, kept apart from recorded sleep. sequenceIndex 1
+      is the next sleep (its onset band is forecasts[0]); a wave is present
+      only when the engine supports a duration. */
+  predicted: PredictedWave[];
+};
+export type PredictedWave = {
+  sequenceIndex: number; quality: ForecastQuality;
+  onset: WaveSegment & { likely: number };
+  wave: WaveSegment | null;
 };
 
 export function wavePosition(instant: number, domain: WaveInterval): number {
@@ -42,8 +52,9 @@ export function recordedWavePath(segment: Pick<WaveSegment, "start" | "end">): s
 // hook. Display actual records, including long sleeps; don't apply prediction
 // plausibility cutoffs to the history visualization. A single compound SVG path
 // fills overlapping records once without inventing additional sleep duration.
-export function buildSleepWaveModel({ sessions, active, prediction, now }: {
+export function buildSleepWaveModel({ sessions, active, prediction, now, forecast = null }: {
   sessions: SleepSession[]; active: ActiveSleep | null; prediction: NextSleepPrediction; now: number;
+  forecast?: DailySleepForecast | null;
 }): SleepWaveModel {
   const dayStart = startOfLocalDay(now);
   const tomorrow = new Date(dayStart); tomorrow.setDate(tomorrow.getDate() + 1);
@@ -61,7 +72,15 @@ export function buildSleepWaveModel({ sessions, active, prediction, now }: {
   // current sleep, now, and the entire next onset window. No silent clipping.
   const morning = new Date(dayStart); morning.setHours(6);
   const evening = new Date(dayStart); evening.setHours(21);
-  const intervals = [...today, ...(activeInterval ? [activeInterval] : []), ...windows];
+  // Forecast events only accompany a shown next-onset window, never in the
+  // past, and in order; anything else is dropped rather than repositioned.
+  const predictedNaps = windows.length && forecast && (forecast.status === "ready" || forecast.status === "partial")
+    ? forecast.predictedNaps.filter((n, i, all) => n.onset.earliestMs >= now && n.onset.earliestMs <= n.onset.typicalMs
+      && n.onset.typicalMs <= n.onset.latestMs && (i === 0 || n.onset.typicalMs > all[i - 1].onset.typicalMs)
+      && (!n.wakeTime || n.wakeTime.typicalMs > n.onset.typicalMs)) : [];
+  const predictedSpans = predictedNaps.flatMap(n => [{ startMs: n.onset.earliestMs, endMs: n.onset.latestMs },
+    ...(n.wakeTime ? [{ startMs: n.onset.typicalMs, endMs: n.wakeTime.typicalMs }] : [])]);
+  const intervals = [...today, ...(activeInterval ? [activeInterval] : []), ...windows, ...predictedSpans];
   const from = Math.min(morning.getTime(), now, ...intervals.map(s => s.startMs));
   const to = Math.max(evening.getTime(), now, ...intervals.map(s => s.endMs));
   const padding = Math.max(10 * 60000, (to - from) * .025);
@@ -84,7 +103,10 @@ export function buildSleepWaveModel({ sessions, active, prediction, now }: {
   return { status: sleeping ? "sleeping" : windows.length ? "ready" : "insufficient_data", domain,
     recorded: today.map(segment), active: activeInterval ? segment(activeInterval) : null,
     forecasts: windows.map(w => ({ ...segment(w), likely: position(Math.max(w.startMs, Math.min(w.endMs, w.likelyMs ?? (w.startMs + w.endMs) / 2))) })),
-    now: position(now), ticks, lastCompleted };
+    now: position(now), ticks, lastCompleted,
+    predicted: predictedNaps.map(n => ({ sequenceIndex: n.sequenceIndex, quality: n.quality,
+      onset: { ...segment({ startMs: n.onset.earliestMs, endMs: n.onset.latestMs }), likely: position(n.onset.typicalMs) },
+      wave: n.wakeTime ? segment({ startMs: n.onset.typicalMs, endMs: n.wakeTime.typicalMs }) : null })) };
 }
 
 /** Display-only expansion; neighbors and domain edges take priority over minimum width. */

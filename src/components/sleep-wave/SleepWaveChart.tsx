@@ -11,7 +11,9 @@ const toPx = (units: number) => LABEL_SPACE + units / 174 * CHART_HEIGHT;
 const MIST_BACK = "M 0 152 C 90 142 170 158 270 149 S 450 140 540 150 S 615 156 640 148 L 640 174 L 0 174 Z";
 const MIST_FRONT = "M 0 156 C 110 150 200 162 320 154 S 500 148 640 157 L 640 174 L 0 174 Z";
 
-type Label = { key: string; text: string; x: number; top: number; width: number; kind: "forecast" | "recorded" };
+type Label = { key: string; text: string; x: number; top: number; width: number; kind: "forecast" | "later" | "recorded" };
+// Later forecast events fade with horizon; emphasis never grows further ahead.
+const laterOpacity = (sequenceIndex: number) => Math.max(.38, .78 - (sequenceIndex - 2) * .2);
 
 export default function SleepWaveChart({ model, now, formatRange }: {
   model: SleepWaveModel; now: number; formatRange: (startMs: number, endMs: number) => string;
@@ -38,6 +40,8 @@ export default function SleepWaveChart({ model, now, formatRange }: {
     const candidates: (Omit<Label, "x" | "width"> & { center: number })[] = [
       ...model.forecasts.map((f, i) => ({ key: `f${i}`, kind: "forecast" as const, text: formatRange(f.startMs, f.endMs),
         top: toPx(52) - 22, center: (f.start + f.end) / 2 })),
+      ...model.predicted.filter(p => p.sequenceIndex > 1).map(p => ({ key: `p${p.sequenceIndex}`, kind: "later" as const,
+        text: formatRange(p.onset.startMs, p.onset.endMs), top: toPx(p.wave ? recordedWaveCrest(p.wave) : 58) - 20, center: (p.onset.start + p.onset.end) / 2 })),
       ...displayed.map((s, i) => ({ key: `r${i}`, kind: "recorded" as const, text: formatRange(model.recorded[i].startMs, model.recorded[i].endMs),
         top: toPx(recordedWaveCrest(s)) - 20, center: (s.start + s.end) / 2 })).reverse(),
     ];
@@ -84,6 +88,11 @@ export default function SleepWaveChart({ model, now, formatRange }: {
         <linearGradient id={`${id}-active`} x1="0" y1="0" x2="0" y2="1">
           <stop stopColor="var(--wave-light)" /><stop offset=".25" stopColor="var(--wave-active)" /><stop offset="1" stopColor="var(--wave-record-bottom)" />
         </linearGradient>
+        <linearGradient id={`${id}-predicted`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="var(--wave-light)" stopOpacity=".55" />
+          <stop offset=".45" stopColor="var(--wave-band-core)" stopOpacity=".38" />
+          <stop offset="1" stopColor="var(--wave-band-core)" stopOpacity=".12" />
+        </linearGradient>
         <clipPath id={`${id}-sky`}><rect width="640" height="150" /></clipPath>
         <pattern id={`${id}-stripes`} width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
           <line x1="0" x2="0" y2="10" stroke="var(--wave-ink)" strokeOpacity=".24" strokeWidth="2" />
@@ -99,6 +108,15 @@ export default function SleepWaveChart({ model, now, formatRange }: {
           <path className="sleep-wave-onset" d={`M ${forecast.likely * 640} 150 V 104`} />
         </g>;
       })}
+      {model.predicted.filter(p => p.sequenceIndex > 1).map(p => {
+        const x0 = p.onset.start * 640, x1 = p.onset.end * 640;
+        return <g key={p.sequenceIndex} data-wave-predicted={p.sequenceIndex} className="sleep-wave-later" style={{ opacity: laterOpacity(p.sequenceIndex) }}>
+          <path className="sleep-wave-later-band" d={`M ${x0} 150 V 70 Q ${x0} 62 ${(x0 + x1) / 2} 62 Q ${x1} 62 ${x1} 70 V 150 Z`} fill={`url(#${id}-band)`} />
+          {p.wave && <path className="sleep-wave-predicted" d={recordedWavePath(p.wave)} fill={`url(#${id}-predicted)`} />}
+        </g>;
+      })}
+      {model.predicted.filter(p => p.sequenceIndex === 1 && p.wave).map(p =>
+        <path key="next-wave" className="sleep-wave-predicted is-next" d={recordedWavePath(p.wave!)} fill={`url(#${id}-predicted)`} />)}
       <line className="sleep-wave-baseline" x1="0" x2="640" y1="150" y2="150" />
       {recorded && <path className="sleep-wave-recorded" d={recorded} fill={`url(#${id}-recorded)`} />}
       {model.active && <g data-wave-active="true">

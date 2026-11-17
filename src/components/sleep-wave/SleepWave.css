@@ -222,3 +222,11 @@
   .sleep-wave { border-radius: 26px; }
   .sleep-wave-legend { gap: 6px 12px; }
 }
+
+/* Forecast-engine events: estimated, never solid like recorded sleep. */
+.sleep-wave-predicted { stroke: var(--wave-edge); stroke-width: 1; stroke-dasharray: 3 4; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.sleep-wave-predicted.is-next { filter: drop-shadow(0 0 5px var(--wave-glow)); }
+.sleep-wave-later-band { opacity: .55; }
+.sleep-wave-peak-label.is-later { color: var(--wave-muted); font-weight: 500; }
+.sleep-wave-legend .is-estimated { background: transparent; border: 1px dashed var(--wave-edge); }
+.sleep-wave-events > [data-tile="later"] dd { color: var(--wave-muted); }

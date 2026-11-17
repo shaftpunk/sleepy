@@ -13,6 +13,8 @@ const en = {
     recordNote: "A rhythm built from recorded sleep. No fixed schedule.",
     recordedToday: "Recorded sleep in today's timeline", activeSince: "Currently sleeping, started {{time}}",
     typicalAwake: "Typical awake time",
+    laterNap: "Possible later nap", estimatedSleep: "Estimated sleep", laterNapSummary: "Possible later nap, falling asleep {{range}}",
+    forecastNote: "Estimates are based on days with a similar rhythm. Later naps are less certain and update as the day unfolds.",
   },
   sleepStart: {
     minutesAgo: "{{minutes}} minutes ago",

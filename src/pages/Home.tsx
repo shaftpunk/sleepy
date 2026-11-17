@@ -44,6 +44,7 @@ import { useAnalyticsData } from "../hooks/useAnalyticsData";
 import { computeNextFeedSide, computeTodayTotals } from "../analytics/home";
 import SleepWaveCard from "../components/sleep-wave/SleepWaveCard";
 import { calculateNextSleep } from "../analytics/nextSleep";
+import { calculateDailySleepForecast } from "../analytics/dailySleepForecast";
 import { ageInDays } from "../analytics/localDate";
 import { getActiveSleepEstimate, sleepEstimateHistoryRevision, subscribeSleepEstimateHistory, type SleepEstimatePresentation } from "../services/sleepEstimateService";
 import ActiveSleepEstimate from "../components/ActiveSleepEstimate";
@@ -201,6 +202,13 @@ export default function Home() {
     sessions: analyticsSessions, active: analyticsActive, now: predictionMinute,
     ageDays: ageInDays(currentBaby?.birth_date, predictionMinute),
   }), [analyticsSessions, analyticsActive, predictionMinute, currentBaby?.birth_date]);
+  // Remaining-day forecast: same inputs and minute tick as Next Sleep, so it
+  // recalculates on every sleep start/stop, edit, delete, realtime update,
+  // resume, baby switch and date change those inputs already reflect.
+  const dailyForecast = useMemo(() => calculateDailySleepForecast({
+    sessions: analyticsSessions, active: analyticsActive, now: predictionMinute, nextSleep,
+    ageDays: ageInDays(currentBaby?.birth_date, predictionMinute),
+  }), [analyticsSessions, analyticsActive, predictionMinute, nextSleep, currentBaby?.birth_date]);
   const waveActive = useMemo(() => activeSleep?.baby_id === currentBabyId
     ? { id: activeSleep.id, startMs: Date.parse(activeSleep.starttime) } : analyticsActive,
   [activeSleep, currentBabyId, analyticsActive]);
@@ -491,7 +499,7 @@ export default function Home() {
         </section>
 
         <SleepWaveCard key={currentBabyId} sessions={analyticsSessions} active={waveActive}
-          prediction={nextSleep} now={now} babyName={currentBaby?.name} />
+          prediction={nextSleep} forecast={dailyForecast} now={now} babyName={currentBaby?.name} />
 
         <SoundMonitorPanel sleep={activeSleep} />
 

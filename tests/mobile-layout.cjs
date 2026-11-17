@@ -81,7 +81,11 @@ async function main() {
     browser = await chromium.launch({ headless: true, ...(process.env.SLEEPY_CHROMIUM_PATH ? { executablePath: process.env.SLEEPY_CHROMIUM_PATH } : {}) });
     const page = await browser.newPage({timezoneId:'Europe/Oslo'});
     if(process.argv.includes('--sleep-wave-only'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
-    if(process.argv.includes('--home-only')&&process.argv.includes('--quick'))await page.clock.install();
+    // Home fixtures are relative to "now", but Today stats count sessions that
+    // started after local midnight: on the real clock the quality assertion
+    // failed between 00:00 and ~01:03 Oslo. A fixed midday start (time still
+    // flows, so hold gestures behave normally) makes every run deterministic.
+    if(process.argv.includes('--home-only'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
     const errors = [], failures = [], screens = [];
     page.on('pageerror', e => { errors.push(e.message); if(process.argv.includes('--entitlements-only')||process.argv.includes('--home-only'))console.error(e.message); });
     await page.route('**/*', route => {

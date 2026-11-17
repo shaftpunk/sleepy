@@ -12,6 +12,8 @@ const no = {
     recordNote: "En rytme basert på registrert søvn. Ingen fast timeplan.",
     recordedToday: "Registrert søvn i dagens tidslinje", activeSince: "Sover nå, startet {{time}}",
     typicalAwake: "Vanlig våkentid",
+    laterNap: "Mulig senere lur", estimatedSleep: "Anslått søvn", laterNapSummary: "Mulig senere lur, innsovning {{range}}",
+    forecastNote: "Anslagene bygger på dager med lignende rytme. Senere lurer er mer usikre og oppdateres fortløpende.",
   },
   sleepStart: {
     minutesAgo: "{{minutes}} minutter siden",
