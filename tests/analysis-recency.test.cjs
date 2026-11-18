@@ -362,8 +362,126 @@ test('Data Basis renders the localized coverage legend and model availability', 
     const html = renderToStaticMarkup(React.createElement(Tab, props));
     assert.equal((html.match(/<li data-state=/g) ?? []).length, 30);
     assert.match(html, lang === 'en' ? /6 usable days at this time/ : /6 brukbare dager på dette tidspunktet/);
-    assert.match(html, lang === 'en' ? /Next Sleep on Home/ : /Neste søvn på Hjem/);
+    assert.match(html, lang === 'en' ? /Next Sleep/ : /Neste s.vn/);
     const empty = renderToStaticMarkup(React.createElement(Tab, { ...props, sessions: [] }));
     assert.match(empty, lang === 'en' ? /Not enough data/ : /Ikke nok data/);
   }
+});
+
+test('adaptive recency preserves unknown-age tiers and makes new evidence dominate for younger babies', () => {
+  assert.equal(history.getRecencyWeight(15, null), 0.5);
+  assert.ok(history.getRecencyWeight(15, 20) < history.getRecencyWeight(15, 300));
+  assert.equal(history.getRecencyWeight(7, 20), 1);
+  assert.equal(history.getRecencyWeight(31, 20), 0);
+  const sessions = [...range(5).flatMap(d => loggedDay(d, 40)), ...range(7, 8).flatMap(d => loggedDay(d, 100))];
+  assert.equal(profile(sessions, now).typicalTotalSleepPerDay, 160);
+  assert.equal(profile(sessions, now, null, 20).typicalTotalSleepPerDay, 100);
+  const { calculateSleepProbability } = load('src/analytics/sleepProbability.ts');
+  const result = calculateSleepProbability(sessions, '10:00', now, null, 20);
+  assert.equal(result.usableDays, 12);
+  assert.ok(Math.abs(result.weightedTotal - (5 + 7 * history.getRecencyWeight(8, 20))) < 1e-10);
+});
+
+test('profile learns a daytime main sleep cluster with fragmented nights and respects explicit labels', () => {
+  const sessions = range(5).flatMap(d => [
+    sleep(d, 8, 150, 'sleep'), sleep(d, 11, 180, 'sleep'),
+    sleep(d, 20, 40, 'sleep'), sleep(d, 23, 30, 'nap'),
+  ]);
+  const p = profile(sessions, now);
+  assert.equal(p.typicalBedtime, 8 * 60);
+  assert.equal(p.typicalWakeTime, 14 * 60);
+  assert.equal(p.typicalNapCountPerDay, 2);
+  const classify = load('src/analytics/recentSleepClassification.ts').classifyRecentSleep;
+  assert.equal(classify(sessions.slice(0, 4), now, null)[0].sleepTypeRaw, 'sleep');
+  const polyphasic = range(5).flatMap(d => [sleep(d, 1, 80, 'sleep'), sleep(d, 8, 80, 'sleep'), sleep(d, 16, 80, 'sleep')]);
+  assert.ok(classify(polyphasic, now, 20).every(s => s.sleepTypeRaw === 'sleep'));
+});
+
+test('historical replay scores real onset windows and abstains when history is sparse', () => {
+  const replay = load('src/analytics/sleepPredictionBacktest.ts').backtestSleepPredictions;
+  const regular = range(30).flatMap(d => [
+    sleep(d, 0, 360, 'night'), sleep(d, 8, 60), sleep(d, 11, 60), sleep(d, 14, 60), sleep(d, 18, 120),
+  ]);
+  assert.equal(replay(regular.slice(0, 1), now).forecasts, 0);
+  const report = replay(regular, now, '2026-04-01');
+  assert.ok(report.forecasts > 0);
+  assert.ok(report.byHorizon[0].windowCoverage > 0.9);
+  assert.ok(report.byHorizon[0].medianAbsoluteError <= 5);
+  const shifted = regular.map(row => row.startMs === at(1, 8) ? sleep(1, 10, 60) : row);
+  const missed = replay(shifted, now, '2026-04-01');
+  assert.equal(missed.byHorizon[0].evaluated, report.byHorizon[0].evaluated);
+  assert.ok(missed.byHorizon[0].windowCoverage < report.byHorizon[0].windowCoverage);
+  const future = sleep(0, 16, 45);
+  assert.equal(JSON.stringify(replay([...regular, future], now, '2026-04-01')), JSON.stringify(report));
+});
+
+test('recorded transition evidence requires a bracket, a covered span, and no rejected bridge', () => {
+  const { recordedIntervals, recordedTransitionCheck } = load('src/analytics/sleepHistory.ts');
+  const complete = [sleep(1, 1, 240), sleep(1, 8, 60), sleep(1, 13, 60)];
+  const from = complete[0].endMs, to = complete[1].startMs;
+  const check = records => recordedTransitionCheck(recordedIntervals(records, now), records, now);
+  assert.equal(check(complete)(from, to), true);
+  assert.equal(check(complete)(complete.at(-1).endMs, at(1, 18)), false);
+  assert.equal(check(complete.slice(0, 2))(from, to), false);
+  const missingNap = [sleep(1, 1, 240), sleep(1, 13, 60), sleep(1, 18, 60)];
+  assert.equal(check(missingNap)(from, missingNap[1].startMs), false);
+  const rejected = { ...sleep(1, 6, 30), durationMin: 0 };
+  assert.equal(check([...complete, rejected])(from, to), false);
+  const forecast = load('src/analytics/dailySleepForecast.ts');
+  const mornings = range(5).flatMap(d => [sleep(d + 1, 23, 360, 'night'), sleep(d, 9, 60), sleep(d, 14, 60)]);
+  const morningNow = at(0, 5, 30);
+  const today = load('src/analytics/time.ts').dayKeyOf(morningNow);
+  assert.ok(forecast.upcomingDayScenarios(mornings, null, morningNow, today).some(day => day.wakeClock === 300));
+  assert.ok(!forecast.upcomingDayScenarios(mornings, { id: 'open', startMs: at(1, 23) }, morningNow, today)
+    .some(day => day.wakeClock === 300));
+});
+
+test('night clusters require tighter circular timing on three or four nights', () => {
+  const classify = load('src/analytics/recentSleepClassification.ts').classifyRecentSleep;
+  const run = starts => {
+    const sessions = starts.flatMap(([hour, minute], index) => [
+      sleep(index + 2, hour, 220, 'sleep', minute),
+      sleep(index + 2, 19, 35, 'nap'),
+    ]).sort((a, b) => a.startMs - b.startMs);
+    return classify(sessions, now, null);
+  };
+  const nights = rows => rows.filter(row => row.sleepTypeRaw === 'night').length;
+  assert.equal(nights(run([[8, 0], [8, 20]])), 0);
+  assert.equal(nights(run([[8, 0], [8, 20], [8, 30]])), 3);
+  assert.equal(nights(run([[8, 0], [9, 0], [10, 0]])), 0);
+  assert.equal(nights(run([[8, 0], [8, 20], [8, 30], [8, 10], [8, 0]])), 5);
+  const late = run([[23, 20], [23, 40], [0, 0]]);
+  assert.equal(nights(late), 3);
+  assert.equal(late.filter(row => row.sleepTypeRaw === 'nap').length, 3);
+});
+
+test('prospective snapshots score a point and window without changing the production model', () => {
+  const { createPredictionSnapshot, evaluatePrediction } = load('src/analytics/predictionEvaluation.ts');
+  const { SLEEP_FORECAST_MODEL_VERSION } = load('src/analytics/forecastModelVersion.ts');
+  const snapshot = createPredictionSnapshot({
+    predictedAt: 0, predictedSleepStart: 60 * minute, windowStart: 45 * minute, windowEnd: 75 * minute,
+    horizon: 1, evidenceCount: 6,
+  });
+  assert.equal(snapshot.modelVersion, SLEEP_FORECAST_MODEL_VERSION);
+  for (const [actual, error, inside] of [[60, 0, true], [45, 15, true], [30, 30, false], [90, 30, false]]) {
+    const result = evaluatePrediction(snapshot, actual * minute);
+    assert.equal(result.absoluteErrorMinutes, error);
+    assert.equal(result.insideWindow, inside);
+  }
+  assert.equal(evaluatePrediction(snapshot, -1), null);
+  assert.equal(createPredictionSnapshot({ ...snapshot, horizon: 0 }), null);
+  const sessions = Object.freeze(range(20).flatMap(d => [
+    sleep(d, 0, 360, 'night'), sleep(d, 8, 60), sleep(d, 11, 60), sleep(d, 14, 60), sleep(d, 18, 120),
+  ]).map(Object.freeze));
+  const forecast = load('src/analytics/nextSleep.ts').calculateNextSleep;
+  const input = { sessions, now: at(0, 0), active: null, ageDays: null };
+  const before = JSON.stringify(forecast(input));
+  const replay = load('src/analytics/sleepPredictionBacktest.ts').backtestSleepPredictions;
+  const first = replay(sessions, now);
+  assert.equal(first.modelVersion, SLEEP_FORECAST_MODEL_VERSION);
+  assert.equal(JSON.stringify(first), JSON.stringify(replay(sessions, now)));
+  assert.equal(JSON.stringify(forecast(input)), before);
+  assert.doesNotMatch(fs.readFileSync('src/analytics/nextSleep.ts', 'utf8'), /sleepPredictionBacktest|predictionEvaluation/);
+  assert.doesNotMatch(fs.readFileSync('src/analytics/dailySleepForecast.ts', 'utf8'), /sleepPredictionBacktest|predictionEvaluation/);
+  assert.doesNotMatch(fs.readFileSync('src/hooks/useSleepForecasts.ts', 'utf8'), /sleepPredictionBacktest|predictionEvaluation/);
 });

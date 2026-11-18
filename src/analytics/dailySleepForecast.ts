@@ -1,5 +1,7 @@
 import type { NextSleepPrediction } from "./nextSleep";
-import { getRecencyWeight, recordedIntervals } from "./sleepProbability";
+import { ageConservatism, completedLocalDays, recordedIntervals, recordedTransitionCheck, RECORDED_TRANSITION_RULE } from "./sleepHistory";
+import { weightedPercentile } from "./weightedStats";
+import { sequenceContext, sequenceSimilarity } from "./sleepSequence";
 import { dayKeyOf, minutesSinceLocalMidnight, startOfLocalDay } from "./time";
 import type { ActiveSleep, SleepSession } from "./types";
 
@@ -57,6 +59,7 @@ export type DailySleepForecast = {
   };
 };
 
+// Product heuristics; research-informed but not clinically validated.
 export const FORECAST_RULES = {
   lookbackDays: 21,
   /** An episode at least this long is night-like and ends a daytime sequence. */
@@ -64,7 +67,7 @@ export const FORECAST_RULES = {
   /** Wakes this short inside a sleep are joined into one episode. */
   joinGapMinutes: 20,
   /** Longer gaps are missing logging, never confirmed wakefulness. */
-  maxWakeGapMinutes: 360,
+  maxWakeGapMinutes: RECORDED_TRANSITION_RULE.maxGapMinutes,
   minScenarioDays: 5,
   minEffectiveEvidence: 3,
   minEventDays: 3,
@@ -77,6 +80,20 @@ export const FORECAST_RULES = {
   earliestNapOnsetClock: 6 * 60,
   latestNapOnsetClock: 20 * 60,
   minSimilarity: 0.1,
+  clockSimilarityMinutes: 90,
+  unknownNapCountWeight: 0.8,
+  napCountDifferenceWeight: 0.6,
+  maxOnsetWidthMinutes: 150,
+  ageWidthReductionMinutes: 30,
+  laterWidthGrowthMinutes: 5,
+  baseTail: 0.2,
+  ageTailReduction: 0.1,
+  youngCaution: 0.5,
+  minimumDurationSpreadAllowance: 45,
+  relativeDurationSpreadAllowance: 1.2,
+  extraLaterEffectiveEvidence: 1,
+  highEvidence: 6,
+  mediumEvidence: 4,
   /** Next Sleep vs scenario median tolerance beyond its window. */
   agreementMarginMinutes: 30,
 } as const;
@@ -105,13 +122,7 @@ function episodes(sessions: SleepSession[], now: number): Episode[] {
   });
 }
 
-function weightedQuantile(items: Weighted[], q: number): number {
-  const sorted = [...items].sort((a, b) => a.value - b.value);
-  const target = sorted.reduce((sum, i) => sum + i.weight, 0) * q;
-  let total = 0;
-  for (const item of sorted) { total += item.weight; if (total >= target) return item.value; }
-  return sorted[sorted.length - 1].value;
-}
+const weightedQuantile = (items: Weighted[], q: number) => weightedPercentile(items, q)!;
 const effective = (items: { weight: number }[]) => {
   const sum = items.reduce((s, i) => s + i.weight, 0), squares = items.reduce((s, i) => s + i.weight ** 2, 0);
   return squares > 0 ? sum ** 2 / squares : 0;
@@ -125,32 +136,34 @@ const rank = { low: 0, medium: 1, high: 2 } as const;
 const minQuality = (a: ForecastQuality, b: ForecastQuality): ForecastQuality => rank[a] <= rank[b] ? a : b;
 
 /** Matched historical continuations for the current observation point. */
-export function historicalScenarios(sessions: SleepSession[], now: number): { scenarios: Scenario[]; last: Episode | null } {
+export function historicalScenarios(sessions: SleepSession[], now: number, ageDays: number | null = null): { scenarios: Scenario[]; last: Episode | null } {
   const all = episodes(sessions, now);
+  const hasCoverage = recordedTransitionCheck(all, sessions, now);
   const last = all[all.length - 1] ?? null;
   if (!last) return { scenarios: [], last };
   const awake = (now - last.endMs) / MINUTE;
   const clock = minutesSinceLocalMidnight(last.endMs);
   const best = new Map<string, Scenario>();
+  const calendar = new Map(completedLocalDays(now, FORECAST_RULES.lookbackDays, ageDays).map(day => [day.localDate, day.weight]));
+  const context = sequenceContext(all);
   all.forEach((anchor, index) => {
-    const daysAgo = Math.floor((now - anchor.endMs) / 86400000);
-    const recency = daysAgo >= 1 && daysAgo <= FORECAST_RULES.lookbackDays ? getRecencyWeight(daysAgo) : 0;
+    const recency = calendar.get(dayKeyOf(anchor.endMs)) ?? 0;
     const next = all[index + 1];
     if (!recency || anchor.night !== last.night || !next) return;
     const gap = (next.startMs - anchor.endMs) / MINUTE;
-    // Equivalent observation point: still awake after the same elapsed time.
-    if (gap > FORECAST_RULES.maxWakeGapMinutes || gap < awake) return;
-    const countFactor = last.napsSinceNight === null || anchor.napsSinceNight === null ? 0.8
-      : 0.6 ** Math.abs(last.napsSinceNight - anchor.napsSinceNight);
-    const weight = recency * Math.exp(-clockDistance(minutesSinceLocalMidnight(anchor.endMs), clock) / 90) * countFactor
-      * Math.exp(-Math.abs(Math.log(Math.max(1, anchor.minutes) / Math.max(1, last.minutes))) / 0.5);
+    // Match the elapsed point only within a supported transition between records.
+    if (!hasCoverage(anchor.endMs, next.startMs) || gap < awake) return;
+    const countFactor = last.napsSinceNight === null || anchor.napsSinceNight === null ? FORECAST_RULES.unknownNapCountWeight
+      : FORECAST_RULES.napCountDifferenceWeight ** Math.abs(last.napsSinceNight - anchor.napsSinceNight);
+    const weight = recency * Math.exp(-clockDistance(minutesSinceLocalMidnight(anchor.endMs), clock) / FORECAST_RULES.clockSimilarityMinutes) * countFactor
+      * sequenceSimilarity(context.at(-1)!, context[index]);
     if (weight < FORECAST_RULES.minSimilarity) return;
     const day = dayKeyOf(anchor.endMs);
     if ((best.get(day)?.weight ?? 0) >= weight) return;
     const naps: Scenario["naps"] = [];
     let ended: Scenario["ended"] = "incomplete", previousEnd = anchor.endMs;
     for (const event of all.slice(index + 1)) {
-      if ((event.startMs - previousEnd) / MINUTE > FORECAST_RULES.maxWakeGapMinutes) break;
+      if (!hasCoverage(previousEnd, event.startMs)) break;
       if (event.night) { ended = "night"; break; }
       naps.push({ onsetOffsetMin: (event.startMs - anchor.endMs) / MINUTE, durationMin: event.minutes });
       previousEnd = event.endMs;
@@ -172,15 +185,16 @@ export function calculateDailySleepForecast({ sessions, active, now, nextSleep, 
   if (nextSleep.status !== "ready" || !Number.isFinite(nextSleep.earliestStart) || !Number.isFinite(nextSleep.latestStart)
     || nextSleep.earliestStart! < now) return result("insufficient_data");
 
-  const young = ageDays === null || ageDays < 90;
-  const [lo, hi] = young ? [0.1, 0.9] : [0.2, 0.8];
+  const caution = ageDays === null ? 1 : ageConservatism(ageDays);
+  const young = caution >= FORECAST_RULES.youngCaution;
+  const lo = FORECAST_RULES.baseTail - FORECAST_RULES.ageTailReduction * caution, hi = 1 - lo;
   const first: PredictedNap = { id: "nap-1", sequenceIndex: 1, isNext: true, quality: nextSleep.confidence ?? "low",
     onset: { earliestMs: nextSleep.earliestStart!, typicalMs: nextSleep.likelyStart ?? nextSleep.earliestStart!, latestMs: nextSleep.latestStart! },
     evidenceCount: 0, effectiveEvidence: 0 };
   const naps: PredictedNap[] = [first];
   const stop = (reason: ForecastStopReason) => { diagnostics.stopReason = reason; return result(naps.length > 1 ? "ready" : "partial", naps); };
 
-  const { scenarios, last } = historicalScenarios(sessions, now);
+  const { scenarios, last } = historicalScenarios(sessions, now, ageDays);
   diagnostics.scenarioDays = days(scenarios);
   diagnostics.effectiveSampleSize = Math.round(effective(scenarios) * 10) / 10;
   if (!last || diagnostics.scenarioDays < FORECAST_RULES.minScenarioDays) return stop("insufficient-continuations");
@@ -203,7 +217,7 @@ export function calculateDailySleepForecast({ sessions, active, now, nextSleep, 
     const share = withNap.reduce((a, s) => a + s.weight, 0) / Math.max(1e-9, [...withNap, ...endedBefore].reduce((a, s) => a + s.weight, 0));
     const support = withNap.map(s => ({ weight: s.weight, day: s.day }));
     if (share < FORECAST_RULES.continueShare) return stop("night-likely");
-    if (effective(support) < FORECAST_RULES.minEffectiveEvidence || days(support) < FORECAST_RULES.minEventDays)
+    if (effective(support) < FORECAST_RULES.minEffectiveEvidence + (k > 1 ? FORECAST_RULES.extraLaterEffectiveEvidence * caution : 0) || days(support) < FORECAST_RULES.minEventDays)
       return stop("insufficient-continuations");
 
     const nap = k === 1 ? previous : null;
@@ -211,8 +225,8 @@ export function calculateDailySleepForecast({ sessions, active, now, nextSleep, 
     const typicalDuration = weightedQuantile(durations, 0.5);
     const duration: DurationInterval = { lowMin: Math.floor(weightedQuantile(durations, lo) / 5) * 5,
       typicalMin: Math.round(typicalDuration / 5) * 5, highMin: Math.ceil(weightedQuantile(durations, hi) / 5) * 5 };
-    const durationSupported = (duration.highMin - duration.lowMin) <= Math.max(45, 1.2 * typicalDuration);
-    const quality: ForecastQuality = effective(support) >= 6 && days(support) >= 6 ? "high" : effective(support) >= 4 ? "medium" : "low";
+    const durationSupported = (duration.highMin - duration.lowMin) <= Math.max(FORECAST_RULES.minimumDurationSpreadAllowance, FORECAST_RULES.relativeDurationSpreadAllowance * typicalDuration);
+    const quality: ForecastQuality = effective(support) >= FORECAST_RULES.highEvidence && days(support) >= FORECAST_RULES.highEvidence ? "high" : effective(support) >= FORECAST_RULES.mediumEvidence ? "medium" : "low";
 
     let current: PredictedNap;
     if (k === 1) current = { ...nap!, evidenceCount: days(support), effectiveEvidence: Math.round(effective(support) * 10) / 10 };
@@ -226,12 +240,13 @@ export function calculateDailySleepForecast({ sessions, active, now, nextSleep, 
       onset.typicalMs = Math.min(onset.latestMs, Math.max(onset.earliestMs, onset.typicalMs));
       // Uncertainty never shrinks further ahead, even if fewer, tighter
       // scenarios support a later event: widen symmetrically if needed.
-      const shortfall = (previous.onset.latestMs - previous.onset.earliestMs) - (onset.latestMs - onset.earliestMs);
+      const shortfall = (previous.onset.latestMs - previous.onset.earliestMs + FORECAST_RULES.laterWidthGrowthMinutes * MINUTE) - (onset.latestMs - onset.earliestMs);
       if (shortfall > 0) { onset.earliestMs = floor5(onset.earliestMs - shortfall / 2); onset.latestMs = ceil5(onset.latestMs + shortfall / 2); }
       const previousEnd = previous.wakeTime?.typicalMs ?? previous.onset.typicalMs;
+      if (onset.latestMs - onset.earliestMs > (FORECAST_RULES.maxOnsetWidthMinutes - FORECAST_RULES.ageWidthReductionMinutes * caution) * MINUTE) return stop("horizon");
       if (onset.earliestMs < now || onset.typicalMs <= previousEnd) return stop("incoherent");
-      const dayStart = startOfLocalDay(first.onset.typicalMs), onsetClock = minutesSinceLocalMidnight(onset.typicalMs);
-      if (onset.typicalMs >= dayStart + 24 * 3600000 || onsetClock >= FORECAST_RULES.latestNapOnsetClock
+      const onsetClock = minutesSinceLocalMidnight(onset.typicalMs);
+      if (dayKeyOf(onset.typicalMs) !== dayKeyOf(first.onset.typicalMs) || onsetClock >= FORECAST_RULES.latestNapOnsetClock
         || onsetClock < FORECAST_RULES.earliestNapOnsetClock) return stop("evening");
       // Horizon: never more certain than the event before it, capped by depth,
       // and always low for young babies whose rhythm is still forming.
@@ -333,31 +348,33 @@ export function nightContext(sessions: SleepSession[], active: ActiveSleep | nul
   return { night: true, targetDay: target() };
 }
 
-export function upcomingDayScenarios(sessions: SleepSession[], active: ActiveSleep | null, now: number, targetDay: string): DayScenario[] {
+export function upcomingDayScenarios(sessions: SleepSession[], active: ActiveSleep | null, now: number, targetDay: string, ageDays: number | null = null): DayScenario[] {
   const all = episodes(sessions, now);
+  const hasCoverage = recordedTransitionCheck(all, sessions, now);
   const targetIsToday = targetDay === dayKeyOf(now), nowClock = minutesSinceLocalMidnight(now);
   // Tonight's bedtime, when known: the active sleep, or the night-like
   // episode currently interrupted by a night waking.
   const interrupted = [...all].reverse().find(e => e.night && now - e.endMs < 8 * 3600000);
   const tonight = active?.startMs ?? interrupted?.startMs ?? null;
   const best = new Map<string, DayScenario>();
+  const calendar = new Map(completedLocalDays(now, undefined, ageDays).map(day => [day.localDate, day.weight]));
   all.forEach((anchor, index) => {
     if (!anchor.night) return;
     const day = dayKeyOf(anchor.endMs), wakeClock = minutesSinceLocalMidnight(anchor.endMs);
     if (day >= targetDay || !inWindow(wakeClock, NIGHT_CONTEXT.morningWakeFrom, NIGHT_CONTEXT.morningWakeUntil)) return;
     if (tonight !== null && anchor.startMs >= tonight) return; // tonight itself is not history
-    // Consistent with what is observed now: no morning wake-up has happened yet.
-    if (targetIsToday && wakeClock <= nowClock) return;
-    const recency = getRecencyWeight(Math.max(1, Math.floor((now - anchor.endMs) / 86400000)));
+    // Only an active sleep supplies evidence that the current sleep has not ended.
+    if (targetIsToday && active && active.startMs <= now && wakeClock <= nowClock) return;
+    const recency = calendar.get(day) ?? 0;
     if (!recency) return;
     const bedtime = tonight === null ? 1
-      : Math.exp(-clockDistance(minutesSinceLocalMidnight(anchor.startMs), minutesSinceLocalMidnight(tonight)) / 90);
+      : Math.exp(-clockDistance(minutesSinceLocalMidnight(anchor.startMs), minutesSinceLocalMidnight(tonight)) / FORECAST_RULES.clockSimilarityMinutes);
     const weight = recency * bedtime;
     if (weight < FORECAST_RULES.minSimilarity || (best.get(day)?.weight ?? 0) >= weight) return;
     const naps: DayScenario["naps"] = [];
     let ended: DayScenario["ended"] = "incomplete", previousEnd = anchor.endMs;
     for (const event of all.slice(index + 1)) {
-      if ((event.startMs - previousEnd) / MINUTE > FORECAST_RULES.maxWakeGapMinutes) break;
+      if (!hasCoverage(previousEnd, event.startMs)) break;
       if (event.night) { ended = "night"; break; }
       naps.push({ onsetClock: minutesSinceLocalMidnight(event.startMs), durationMin: event.minutes });
       previousEnd = event.endMs;
@@ -379,13 +396,14 @@ export function calculateUpcomingDayForecast({ sessions, active, now, ageDays = 
     return { ...base, status: "insufficient_data", morningWake: null, predictedNaps: [] };
   };
 
-  const scenarios = upcomingDayScenarios(sessions, active, now, targetDay);
+  const scenarios = upcomingDayScenarios(sessions, active, now, targetDay, ageDays);
   diagnostics.scenarioDays = days(scenarios);
   diagnostics.effectiveSampleSize = Math.round(effective(scenarios) * 10) / 10;
   if (diagnostics.scenarioDays < FORECAST_RULES.minScenarioDays || effective(scenarios) < FORECAST_RULES.minEffectiveEvidence)
     return insufficient("insufficient-continuations");
 
-  const young = ageDays === null || ageDays < 90;
+  const caution = ageDays === null ? 1 : ageConservatism(ageDays);
+  const young = caution >= FORECAST_RULES.youngCaution;
   // The morning wake-up is still unknown: use the wider P10–P90 band for every
   // preliminary window (backtested: P20–P80 covered only ~55% of nap onsets).
   const [lo, hi] = [0.1, 0.9];
@@ -415,7 +433,7 @@ export function calculateUpcomingDayForecast({ sessions, active, now, ageDays = 
     const onsets = withNap.map(s => ({ value: s.naps[k - 1].onsetClock, weight: s.weight, day: s.day }));
     const onset: ForecastInterval = atLeast({ earliestMs: floor5(onDay(targetDay, weightedQuantile(onsets, lo))),
       typicalMs: round5(onDay(targetDay, weightedQuantile(onsets, 0.5))), latestMs: ceil5(onDay(targetDay, weightedQuantile(onsets, hi))) },
-      Math.max(MIN_PRELIMINARY_WIDTH, previousWidth));
+      Math.max(MIN_PRELIMINARY_WIDTH, previousWidth + (k > 1 ? FORECAST_RULES.laterWidthGrowthMinutes * MINUTE : 0)));
     onset.earliestMs = Math.max(onset.earliestMs, morningWake.earliestMs);
     onset.typicalMs = Math.min(onset.latestMs, Math.max(onset.earliestMs, onset.typicalMs));
     const onsetClock = minutesSinceLocalMidnight(onset.typicalMs);
@@ -432,7 +450,7 @@ export function calculateUpcomingDayForecast({ sessions, active, now, ageDays = 
       typicalMin: Math.round(typical / 5) * 5, highMin: Math.ceil(weightedQuantile(durations, hi) / 5) * 5 };
     naps.push(nap);
     // A later nap depends on this one's unknown length: stop without support.
-    if ((duration.highMin - duration.lowMin) > Math.max(45, 1.2 * typical)) { diagnostics.stopReason = "duration-unknown"; break; }
+    if ((duration.highMin - duration.lowMin) > Math.max(FORECAST_RULES.minimumDurationSpreadAllowance, FORECAST_RULES.relativeDurationSpreadAllowance * typical)) { diagnostics.stopReason = "duration-unknown"; break; }
     nap.durationMinutes = duration;
     nap.wakeTime = { earliestMs: onset.earliestMs + duration.lowMin * MINUTE, typicalMs: onset.typicalMs + duration.typicalMin * MINUTE,
       latestMs: onset.latestMs + duration.highMin * MINUTE };
@@ -446,6 +464,8 @@ export function calculateUpcomingDayForecast({ sessions, active, now, ageDays = 
 /** Conditional continuations observed inside a daytime episode. No estimated
  * end is inserted into history: every wake and later onset stays paired. */
 function activeDaytimeForecast(sessions: SleepSession[], active: ActiveSleep, now: number, ageDays: number | null): DailySleepForecast {
+  const calendar = new Map(completedLocalDays(now, FORECAST_RULES.lookbackDays, ageDays).map(day => [day.localDate, day.weight]));
+  const caution = ageDays === null ? 1 : ageConservatism(ageDays);
   const diagnostics: DailySleepForecast["diagnostics"] = { scenarioDays: 0, effectiveSampleSize: 0, nextSleepAgreement: "not-evaluated", stopReason: null };
   const predictedNaps: PredictedNap[] = [];
   const finish = (reason: ForecastStopReason): DailySleepForecast => {
@@ -454,6 +474,7 @@ function activeDaytimeForecast(sessions: SleepSession[], active: ActiveSleep, no
   };
   if (!Number.isFinite(now) || !Number.isFinite(active.startMs) || active.startMs > now || nightContext(sessions, active, now).night) return finish(null);
   const all = episodes(sessions, now), previous = all[all.length - 1];
+  const hasCoverage = recordedTransitionCheck(all, sessions, now);
   if (previous && previous.endMs > active.startMs) return finish("incoherent");
   const joined = previous && active.startMs - previous.endMs <= FORECAST_RULES.joinGapMinutes * MINUTE;
   const start = joined ? previous.startMs : active.startMs;
@@ -463,14 +484,15 @@ function activeDaytimeForecast(sessions: SleepSession[], active: ActiveSleep, no
     ? previous.napsSinceNight + (joined ? 0 : 1) : null;
   const best = new Map<string, Scenario & { wake: number }>();
   all.forEach((anchor, index) => {
-    const day = dayKeyOf(anchor.startMs), ago = Math.floor((now - anchor.endMs) / 86400000);
-    if (anchor.night || anchor.minutes < elapsed || day >= dayKeyOf(start) || ago < 1 || ago > FORECAST_RULES.lookbackDays) return;
-    const weight = getRecencyWeight(ago) * Math.exp(-clockDistance(minutesSinceLocalMidnight(anchor.startMs), minutesSinceLocalMidnight(start)) / 90)
-      * (ordinal === null || anchor.napsSinceNight === null ? .8 : .6 ** Math.abs(ordinal - anchor.napsSinceNight));
+    const day = dayKeyOf(anchor.startMs);
+    const recency = calendar.get(day) ?? 0;
+    if (anchor.night || anchor.minutes < elapsed || day >= dayKeyOf(start) || !recency) return;
+    const weight = recency * Math.exp(-clockDistance(minutesSinceLocalMidnight(anchor.startMs), minutesSinceLocalMidnight(start)) / FORECAST_RULES.clockSimilarityMinutes)
+      * (ordinal === null || anchor.napsSinceNight === null ? FORECAST_RULES.unknownNapCountWeight : FORECAST_RULES.napCountDifferenceWeight ** Math.abs(ordinal - anchor.napsSinceNight));
     if (weight < FORECAST_RULES.minSimilarity || (best.get(day)?.weight ?? 0) >= weight) return;
     const naps: Scenario["naps"] = []; let ended: Scenario["ended"] = "incomplete", end = anchor.endMs;
     for (const event of all.slice(index + 1)) {
-      if ((event.startMs - end) / MINUTE > FORECAST_RULES.maxWakeGapMinutes) break;
+      if (!hasCoverage(end, event.startMs)) break;
       if (event.night) { ended = "night"; break; }
       if (dayKeyOf(event.startMs) !== day) break;
       naps.push({ onsetOffsetMin: (event.startMs - anchor.startMs) / MINUTE, durationMin: event.minutes }); end = event.endMs;
@@ -498,15 +520,16 @@ function activeDaytimeForecast(sessions: SleepSession[], active: ActiveSleep, no
       : s.naps[k - 1].onsetOffsetMin + s.naps[k - 1].durationMin), .1);
     if (gapLow <= FORECAST_RULES.joinGapMinutes || onset.earliestMs < now
       || (k === 0 ? onset.earliestMs < previousEnd : onset.typicalMs <= previousEnd)) return finish("incoherent");
+    if (onset.latestMs - onset.earliestMs > (FORECAST_RULES.maxOnsetWidthMinutes - FORECAST_RULES.ageWidthReductionMinutes * caution) * MINUTE) return finish("horizon");
     if (onset.latestMs >= midnight.getTime() || minutesSinceLocalMidnight(onset.latestMs) >= FORECAST_RULES.latestNapOnsetClock || minutesSinceLocalMidnight(onset.earliestMs) < FORECAST_RULES.earliestNapOnsetClock) return finish("evening");
     const lowMin = quantile(support, s => s.naps[k].durationMin, .1), highMin = quantile(support, s => s.naps[k].durationMin, .9), typicalMin = quantile(support, s => s.naps[k].durationMin, .5);
-    const nap: PredictedNap = { id: "active-nap-" + (k + 1), sequenceIndex: k + 1, isNext: false, onset, quality: ageDays === null || ageDays < 90 || k > 0 || effective(support) < 4 ? "low" : "medium", evidenceCount: days(support), effectiveEvidence: effective(support) };
+    const nap: PredictedNap = { id: "active-nap-" + (k + 1), sequenceIndex: k + 1, isNext: false, onset, quality: caution >= FORECAST_RULES.youngCaution || k > 0 || effective(support) < FORECAST_RULES.mediumEvidence ? "low" : "medium", evidenceCount: days(support), effectiveEvidence: effective(support) };
     predictedNaps.push(nap);
-    if (highMin - lowMin > Math.max(45, 1.2 * typicalMin)) return finish("duration-unknown");
+    if (highMin - lowMin > Math.max(FORECAST_RULES.minimumDurationSpreadAllowance, FORECAST_RULES.relativeDurationSpreadAllowance * typicalMin)) return finish("duration-unknown");
     nap.durationMinutes = { lowMin, typicalMin, highMin };
     nap.wakeTime = interval(s => s.naps[k].onsetOffsetMin + s.naps[k].durationMin);
     if (nap.wakeTime.typicalMs <= onset.typicalMs) { predictedNaps.pop(); return finish("incoherent"); }
-    previousEnd = nap.wakeTime.typicalMs; width = onset.latestMs - onset.earliestMs;
+    previousEnd = nap.wakeTime.typicalMs; width = onset.latestMs - onset.earliestMs + FORECAST_RULES.laterWidthGrowthMinutes * MINUTE;
   }
   return finish("horizon");
 }
