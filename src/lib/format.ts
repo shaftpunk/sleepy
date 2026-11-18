@@ -1,5 +1,6 @@
 export { median, sameDay, startOfLocalDay as startOfDay, two } from "../analytics/time";
 
+import { sameDay } from "../analytics/time";
 import { LOCALES, translate, type Language } from "../i18n";
 import type { FeedSide, FeedType } from "../services/feedService";
 
@@ -19,6 +20,20 @@ export function formatClock(ms: number, lang: Language): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(ms));
+}
+
+/** A sleep time range for display, in local time.
+    Same day as now: "18:59–19:23". Same earlier/later day: the date once,
+    "17. nov. 18:59–19:23". Across midnight: both dates, "17. nov. 23:30 – 18. nov. 00:15".
+    A DST offset change inside the range adds the offset to both clocks. */
+export function formatSleepRange(startMs: number, endMs: number, nowMs: number, lang: Language): string {
+  const offsetChanges = new Date(startMs).getTimezoneOffset() !== new Date(endMs).getTimezoneOffset();
+  const clock = (ms: number) => offsetChanges
+    ? new Intl.DateTimeFormat(LOCALES[lang], { hour: "2-digit", minute: "2-digit", timeZoneName: "shortOffset" }).format(ms)
+    : formatClock(ms, lang);
+  const date = (ms: number) => new Intl.DateTimeFormat(LOCALES[lang], { day: "numeric", month: "short" }).format(ms);
+  if (sameDay(startMs, endMs)) return `${sameDay(startMs, nowMs) ? "" : `${date(startMs)} `}${clock(startMs)}–${clock(endMs)}`;
+  return `${date(startMs)} ${clock(startMs)} – ${date(endMs)} ${clock(endMs)}`;
 }
 
 export function relativeDayLabel(ms: number, lang: Language): string {

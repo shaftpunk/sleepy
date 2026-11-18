@@ -6,7 +6,8 @@ import { formatClock } from "../../lib/format";
 // Geometry shared by the SVG (viewBox 0 0 640 174, baseline y=150) and the HTML
 // labels layered over it. Labels are positioned from the same timestamps.
 const LABEL_SPACE = 40, CHART_HEIGHT = 136;
-const toPx = (units: number) => LABEL_SPACE + units / 174 * CHART_HEIGHT;
+// Lowest sky line used when nothing tall is drawn: keeps ground and some sky.
+const SKY_FLOOR_Y = 96;
 // Decorative rolling ground around the baseline: fixed shapes, never data. The
 // back swell sits behind every sleep shape; the front ones stay at or below
 // the baseline so they never hide recorded sleep.
@@ -40,6 +41,19 @@ export default function SleepWaveChart({ model, now, formatRange }: {
   }, []);
   const displayed = recordedDisplaySegments(model.recorded, width, model.active ? [model.active] : []);
   const recorded = displayed.map(recordedWavePath).join(" ");
+  const nextWave = model.predicted.find(p => p.isNext && p.wave)?.wave;
+  // Empty sky above the tallest shape is cropped (viewBox and height shrink
+  // together, so scale and positions are unchanged). Short-data days get a
+  // shorter chart; glows keep their room above the highest crest.
+  const tops = [...displayed, ...(model.active ? [model.active] : []), ...(nextWave ? [nextWave] : [])].map(recordedWaveCrest)
+    .concat(model.forecasts.length ? [52] : [], model.predicted.filter(p => !p.isNext).map(p => p.wave ? recordedWaveCrest(p.wave) : 62));
+  const skyTop = Math.max(0, Math.min(SKY_FLOOR_Y, ...tops) - 26);
+  const chartHeight = CHART_HEIGHT * (174 - skyTop) / 174;
+  const toPx = (units: number) => LABEL_SPACE + (units - skyTop) / 174 * CHART_HEIGHT;
+  const bloom = (s: { start: number; end: number }) => {
+    const crest = recordedWaveCrest(s);
+    return { cx: (s.start + s.end) / 2 * 640, cy: crest + 12, rx: Math.max((s.end - s.start) * 640 * 1.1, 26), ry: 26 };
+  };
 
   // Time labels above the forecast band and recorded peaks (most recent first),
   // dropped rather than overlapped when space is short. Text is the true range.
@@ -83,15 +97,13 @@ export default function SleepWaveChart({ model, now, formatRange }: {
   const tickLabels = model.ticks.map(tick => formatClock(tick.instant, lang));
   const compact = tickLabels.length > 4 && tickLabels.every(label => /^[0-9]{2}[:.]00$/.test(label));
   const sparse = tickLabels.length > 4 && !compact;
-  const nextWave = model.predicted.find(p => p.isNext && p.wave)?.wave;
-
   return <div ref={chartRef} className="sleep-wave-chart" aria-hidden="true" style={{ paddingTop: LABEL_SPACE }}>
     <div className="sleep-wave-now-label" style={{ left: `${model.now * 100}%` }}>
       <span>{t("sleepWave.now")}</span><time>{formatClock(now, lang)}</time>
     </div>
     {labels.map(label => <span key={label.key} className={`sleep-wave-peak-label is-${label.kind}`}
       style={{ left: label.x, top: label.top }}>{label.text}</span>)}
-    <svg viewBox="0 0 640 174" preserveAspectRatio="none" focusable="false" style={{ height: CHART_HEIGHT }}>
+    <svg viewBox={`0 ${skyTop} 640 ${174 - skyTop}`} preserveAspectRatio="none" focusable="false" style={{ height: chartHeight }}>
       <defs>
         <linearGradient id={`${id}-recorded`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="var(--wave-record-light, var(--wave-record-top))" />
@@ -109,7 +121,13 @@ export default function SleepWaveChart({ model, now, formatRange }: {
           <stop offset=".3" stopColor="var(--wave-mist)" stopOpacity=".5" />
           <stop offset="1" stopColor="var(--wave-mist)" stopOpacity="0" />
         </linearGradient>
-        <clipPath id={`${id}-sky`}><rect width="640" height="150" /></clipPath>
+        <clipPath id={`${id}-sky`}><rect y={skyTop} width="640" height={150 - skyTop} /></clipPath>
+        <clipPath id={`${id}-frame`}><rect y={skyTop} width="640" height={174 - skyTop} /></clipPath>
+        <radialGradient id={`${id}-bloom`}>
+          <stop offset="0" stopColor="var(--wave-halo-tint)" stopOpacity=".5" />
+          <stop offset=".55" stopColor="var(--wave-halo-tint)" stopOpacity=".16" />
+          <stop offset="1" stopColor="var(--wave-halo-tint)" stopOpacity="0" />
+        </radialGradient>
         <radialGradient id={`${id}-night`}>
           <stop offset="0" stopColor="var(--wave-night)" stopOpacity=".6" />
           <stop offset=".55" stopColor="var(--wave-night)" stopOpacity=".3" />
@@ -153,7 +171,7 @@ export default function SleepWaveChart({ model, now, formatRange }: {
         <ellipse className="sleep-wave-night-shade" clipPath={`url(#${id}-sky)`} cx={model.compressed.end * 320} cy="150" rx={model.compressed.end * 520} ry="118" fill={`url(#${id}-night)`} />
         <path className="sleep-wave-night-break" d={`M ${model.compressed.end * 640 - 7} 158 l 6 -16 M ${model.compressed.end * 640 + 1} 158 l 6 -16`} />
       </g>}
-      <g className="sleep-wave-cloudscape" fill={`url(#${id}-swell)`}>
+      <g className="sleep-wave-cloudscape" fill={`url(#${id}-swell)`} clipPath={`url(#${id}-frame)`}>
         <path opacity=".28" d="M0 80 C45 62 65 92 112 96 S180 127 260 126 S365 92 430 97 S555 52 640 76 V174 H0Z" />
         <path opacity=".38" d="M0 110 C62 93 96 105 151 128 S246 146 322 135 S427 104 495 117 S578 108 640 103 V174 H0Z" />
       </g>
@@ -164,6 +182,9 @@ export default function SleepWaveChart({ model, now, formatRange }: {
         {nextWave && <path className="is-next" d={hill(nextWave, recordedWaveCrest(nextWave))} />}
         {model.predicted.filter(p => !p.isNext && p.wave).map(p => <path key={p.sequenceIndex} className="is-later"
           style={{ opacity: laterOpacity(p.sequenceIndex) * .6 }} d={hill(p.wave!, recordedWaveCrest(p.wave!))} fill={`url(#${id}-hillfill)`} />)}
+      </g>
+      <g className="sleep-wave-blooms" fill={`url(#${id}-bloom)`} clipPath={`url(#${id}-sky)`}>
+        {[...displayed, ...(model.active ? [model.active] : []), ...(nextWave ? [nextWave] : [])].map((s, i) => <ellipse key={i} {...bloom(s)} />)}
       </g>
       {model.forecasts.map((forecast, i) => {
         const x0 = forecast.start * 640, x1 = forecast.end * 640, mid = (x0 + x1) / 2;
@@ -194,8 +215,8 @@ export default function SleepWaveChart({ model, now, formatRange }: {
       <path className="sleep-wave-mist is-mid" d={SWELL_MID} fill={`url(#${id}-swell)`} />
       <path className="sleep-wave-mist is-front" d={SWELL_FRONT} fill={`url(#${id}-swell)`} />
       <g className="sleep-wave-now-marker" style={{ transform: `translateX(${model.now * 640}px)` }}>
-        <path d="M-4 0 L4 0 L7 150 L-7 150Z" fill={`url(#${id}-beam)`} opacity=".14" />
-        <line y1="0" y2="150" style={{ stroke: `url(#${id}-beam)` }} />
+        <path d={`M-4 ${skyTop} L4 ${skyTop} L7 150 L-7 150Z`} fill={`url(#${id}-beam)`} opacity=".14" />
+        <line y1={skyTop} y2="150" style={{ stroke: `url(#${id}-beam)` }} />
         <circle className="sleep-wave-now-halo" cy="150" r="16" fill={`url(#${id}-glow)`} />
         <circle cy="150" r="3.5" />
       </g>

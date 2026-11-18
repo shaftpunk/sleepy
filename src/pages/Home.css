@@ -130,5 +130,12 @@
 :root[data-visual-theme="default"] [data-theme] .home-page .home-sleep-actions { grid-template-columns: minmax(0, 1fr) 44px; align-items: center; gap: 8px; margin-top: 5px; }
 :root[data-visual-theme="default"] [data-theme] .home-page .home-change-time { width: 44px; height: 44px; min-height: 44px; padding: 0; margin: 0; justify-content: center; border: 0; background: transparent; box-shadow: none; font-size: 0; gap: 0; }
 :root[data-visual-theme="default"] [data-theme] .home-page .home-change-time::before { width: 19px; height: 19px; }
+/* A quiet circular surface marks the 44 px target without competing with the CTA. */
+:root[data-visual-theme="default"] [data-theme] .home-page .home-change-time {
+  border: 1px solid var(--control-border); border-radius: 50%;
+  background: var(--control-bg); box-shadow: inset 0 1px 0 var(--surface-highlight);
+}
+:root[data-visual-theme="default"] [data-theme] .home-page .home-change-time:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+:root[data-visual-theme="default"] [data-theme] .home-page .home-change-time:active:not(:disabled) { background: var(--control-active); }
 :root[data-visual-theme="default"] [data-theme] .home-page .home-hold-hint.sr-only { margin: 0; }
 :root[data-visual-theme="default"] [data-theme] .home-page .home-live-state + .sleep-wave { margin-top: -6px; }

@@ -91,3 +91,25 @@ test('three active predictions remain accessible and onset-only events never rec
  assert.equal(m.predicted.length,3);assert.equal(m.predicted[2].wave,null);assert.ok(m.domain.endMs>=at(18,30));
  for(const lang of ['no','en']){const html=render(lang,input);assert.equal((html.match(/data-wave-predicted=/g)||[]).length,3);assert.equal((html.match(/class="sleep-wave-predicted"/g)||[]).length,2);for(const h of ['14:00','16:00','18:00'])assert.ok(html.includes(h));}
 });
+
+const fmt=loader({'../i18n':{LOCALES:{en:'en-GB',no:'nb-NO'},translate:(l,k)=>k}})('src/lib/format.ts');
+test('sleep ranges: no date on today, one date on another single day, both dates across midnight',()=>{
+ const n=new Date(2026,10,18,9).getTime(),d=(day,h,m)=>new Date(2026,10,day,h,m).getTime();
+ assert.equal(fmt.formatSleepRange(d(18,6,59),d(18,7,23),n,'no'),'06:59–07:23');
+ assert.equal(fmt.formatSleepRange(d(17,18,59),d(17,19,23),n,'no'),'17. nov. 18:59–19:23');
+ assert.equal(fmt.formatSleepRange(d(17,23,30),d(18,0,15),n,'no'),'17. nov. 23:30 – 18. nov. 00:15');
+ assert.equal(fmt.formatSleepRange(d(17,23,30),d(18,0,15),n,'en'),'17 Nov 23:30 – 18 Nov 00:15');
+ const dst=fmt.formatSleepRange(Date.parse('2026-10-25T01:30:00+02:00'),Date.parse('2026-10-25T03:30:00+01:00'),Date.parse('2026-10-25T12:00:00+01:00'),'en');
+ assert.ok(dst.includes('GMT+2')&&dst.includes('GMT+1'),dst);
+});
+test('live timer from Home replaces the status tile; awake shows the awake duration under the forecast',()=>{
+ const active={id:'a',startMs:at(11,30)};
+ for(const lang of ['no','en']){
+  const sleeping=render(lang,{...props,active,prediction:{status:'sleeping',sampleSize:0},live:{sleeping:true,duration:'38 min',caption:'Startet 11:30'}});
+  assert.ok(sleeping.includes('data-wave-live="sleeping"'));assert.ok(sleeping.includes('38 min'));assert.ok(sleeping.includes('Startet 11:30'));
+  assert.ok(!sleeping.includes('data-tile="status"'));assert.ok(sleeping.includes('data-tile="last"'));
+  const awake=render(lang,{...props,live:{sleeping:false,duration:'2 t 3 min',caption:null}});
+  assert.ok(awake.includes('data-wave-live="awake"'));assert.ok(awake.includes('2 t 3 min'));assert.ok(awake.includes('data-tile="next"'));
+  assert.ok(!render(lang,props).includes('data-wave-live'));
+ }
+});

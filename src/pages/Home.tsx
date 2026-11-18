@@ -359,6 +359,11 @@ export default function Home() {
     return () => { window.clearInterval(interval); document.removeEventListener("visibilitychange", update); document.removeEventListener("resume", update); };
   }, []);
 
+  // The live timer (sleeping for / awake for), shown in Sleep Wave on the
+  // premium skin and above it on Alive/Retro. Same clock and rule for both.
+  const liveDuration = activeSleep || lastSleep?.endtime
+    ? formatHomeDuration(Math.floor(Math.max(0, now - Date.parse(activeSleep?.starttime ?? lastSleep!.endtime!)) / 60000), lang)
+    : null;
   const [sleepActionError, setSleepActionError] = useState<string | null>(null);
   const historyRevision = useSyncExternalStore(subscribeSleepEstimateHistory, sleepEstimateHistoryRevision, sleepEstimateHistoryRevision);
   const [wakeEstimate, setWakeEstimate] = useState<{ sleep: SleepRecord; presentation: SleepEstimatePresentation } | null>(null);
@@ -458,6 +463,8 @@ export default function Home() {
             </div>
           )}
 
+          {/* Premium: the live timer lives in Sleep Wave (one sleep surface). */}
+          {!isPremium && <>
           <p className="sleep-label">
             {activeSleep
               ? t("home.sleepingFor")
@@ -465,9 +472,7 @@ export default function Home() {
           </p>
 
           <div className="sleep-timer">
-            {loading ? t("common.loading") : activeSleep || lastSleep?.endtime
-              ? formatHomeDuration(Math.floor(Math.max(0, now - Date.parse(activeSleep?.starttime ?? lastSleep!.endtime!)) / 60000), lang)
-              : t("common.notRegistered")}
+            {loading ? t("common.loading") : liveDuration ?? t("common.notRegistered")}
           </div>
 
           <p className="sleep-subtitle">
@@ -477,6 +482,7 @@ export default function Home() {
                 ? t("home.wokeUpAt", { time: formatClock(new Date(lastSleep.endtime).getTime(), lang) })
                 : t("home.readyForNextNap")}
           </p>
+          </>}
 
           {activeSleep && <div className="home-sleep-insight">
             {activeSleep && activeSleep.baby_id === currentBabyId && wakeEstimate?.sleep === activeSleep &&
@@ -491,7 +497,9 @@ export default function Home() {
 
         <SleepWaveCard key={currentBabyId} sessions={analyticsSessions} active={waveActive}
           prediction={nextSleep} forecast={dayForecast} upcoming={upcomingForecast}
-          now={now} babyName={currentBaby?.name} />
+          now={now} babyName={currentBaby?.name}
+          live={isPremium && !loading ? { sleeping: Boolean(activeSleep), duration: liveDuration,
+            caption: activeSleep ? t("home.startedAt", { time: formatClock(new Date(activeSleep.starttime).getTime(), lang) }) : null } : null} />
 
         <SoundMonitorPanel sleep={activeSleep} />
 

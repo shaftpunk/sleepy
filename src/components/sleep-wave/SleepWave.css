@@ -135,6 +135,11 @@
 }
 .sleep-wave .sleep-wave-state-copy { color: var(--wave-key); font-family: var(--font-editorial); font-size: clamp(1.35rem, 6vw, 1.7rem); line-height: 1.2; }
 .sleep-wave[data-wave-state="sleeping"] h3 { color: var(--wave-muted); font-size: 1.05rem; }
+/* Live sleep timer, set into the sky above the waves like the forecast time. */
+.sleep-wave-live { display: grid; justify-items: center; }
+.sleep-wave .sleep-wave-live h3 { color: var(--wave-muted); font-size: .95rem; line-height: 1.2; }
+.sleep-wave .sleep-wave-time.is-live { font-size: clamp(2rem, 9vw, 2.65rem); line-height: 1.02; }
+.sleep-wave .sleep-wave-live .sleep-wave-caption { margin-top: 1px; font-size: .86rem; line-height: 1.25; }
 
 /* Chart: label row (padding set inline), SVG, axis. */
 /* Slight bleed into the card padding: more width for the waves. */
@@ -332,5 +337,8 @@
 .sleep-wave-mist.is-front { opacity: .72; }
 .sleep-wave-now-label { box-shadow: 0 8px 18px -10px var(--wave-light); }
 .sleep-wave-hills { opacity: .86; }
+/* Bloom around wave peaks (not the baseline): static radial light, no filter. */
+.sleep-wave-blooms { opacity: .7; pointer-events: none; }
+[data-theme="light"] .sleep-wave-blooms { opacity: .55; }
 .sleep-wave-cloudscape { opacity: .8; }
 [data-theme="light"] .sleep-wave-cloudscape { opacity: .65; }

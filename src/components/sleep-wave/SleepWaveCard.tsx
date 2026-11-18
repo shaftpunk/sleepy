@@ -2,17 +2,20 @@ import { useId, useMemo, useState } from "react";
 import type { DailySleepForecast, UpcomingDayForecast } from "../../analytics/dailySleepForecast";
 import type { NextSleepPrediction } from "../../analytics/nextSleep";
 import { buildSleepWaveModel, waveModelNow } from "../../analytics/sleepWaveModel";
-import { sameDay } from "../../analytics/time";
 import type { ActiveSleep, SleepSession } from "../../analytics/types";
-import { LOCALES, useTranslation } from "../../i18n";
-import { formatClock, formatDuration } from "../../lib/format";
+import { useTranslation } from "../../i18n";
+import { formatClock, formatDuration, formatSleepRange } from "../../lib/format";
 import SleepWaveChart from "./SleepWaveChart";
 import SleepWaveUpcoming from "./SleepWaveUpcoming";
 import "./SleepWave.css";
 
+/** Home's live timer, already formatted by Home (same clock and rules). When
+    given, the card shows it; otherwise Home shows its own timer. */
+export type SleepWaveLive = { sleeping: boolean; duration: string | null; caption: string | null };
 type Props = { sessions: SleepSession[]; active: ActiveSleep | null; prediction: NextSleepPrediction;
-  forecast?: DailySleepForecast | null; upcoming?: UpcomingDayForecast | null; now: number; babyName?: string };
-export default function SleepWaveCard({ sessions, active, prediction, forecast = null, upcoming = null, now }: Props) {
+  forecast?: DailySleepForecast | null; upcoming?: UpcomingDayForecast | null; now: number; babyName?: string;
+  live?: SleepWaveLive | null };
+export default function SleepWaveCard({ sessions, active, prediction, forecast = null, upcoming = null, now, live = null }: Props) {
   const { t, lang } = useTranslation();
   const titleId = useId(), summaryId = useId(), infoId = useId();
   const [infoOpen, setInfoOpen] = useState(false);
@@ -21,15 +24,7 @@ export default function SleepWaveCard({ sessions, active, prediction, forecast =
   const chartNow = useMemo(() => waveModelNow(sessions, active, now), [sessions, active, now]);
   const model = useMemo(() => buildSleepWaveModel({ sessions, active, prediction, forecast, now: chartNow }), [sessions, active, prediction, forecast, chartNow]);
   const window = model.forecasts[0];
-  const range = (start: number, end: number) => {
-    const changesOffset = new Date(start).getTimezoneOffset() !== new Date(end).getTimezoneOffset();
-    const clock = (instant: number) => changesOffset
-      ? new Intl.DateTimeFormat(LOCALES[lang], { hour: "2-digit", minute: "2-digit", timeZoneName: "shortOffset" }).format(instant)
-      : formatClock(instant, lang);
-    const label = (instant: number) => sameDay(instant, now) ? clock(instant)
-      : `${new Intl.DateTimeFormat(LOCALES[lang], { day: "numeric", month: "short" }).format(instant)} ${clock(instant)}`;
-    return `${label(start)}–${label(end)}`;
-  };
+  const range = (start: number, end: number) => formatSleepRange(start, end, now, lang);
   const last = model.lastCompleted;
   const sleeping = model.status === "sleeping";
   const later = model.predicted.filter(p => !p.isNext);
@@ -47,18 +42,23 @@ export default function SleepWaveCard({ sessions, active, prediction, forecast =
       <span className="sleep-wave-today">{t("common.today")}</span>
     </header>
     <div className="sleep-wave-forecast">
-      {window ? <>
+      {live?.sleeping ? <div className="sleep-wave-live" data-wave-live="sleeping">
+        <h3>{t("sleepWave.sleepingTitle")}</h3>
+        <p className="sleep-wave-time is-live">{live.duration}</p>
+        {live.caption && <p className="sleep-wave-caption">{live.caption}</p>}
+      </div> : window ? <>
         <h3>{t("home.nextSleepTitle")}</h3>
         <p className="sleep-wave-time">{range(window.startMs, window.endMs)}</p>
+        {live?.duration && <p className="sleep-wave-caption" data-wave-live="awake">{t("home.awakeFor")} {live.duration}</p>}
       </> : sleeping ? null : <>
         <h3>{t("sleepWave.learningTitle")}</h3>
+        {live?.duration && <p className="sleep-wave-caption" data-wave-live="awake">{t("home.awakeFor")} {live.duration}</p>}
       </>}
     </div>
     <SleepWaveChart model={model} now={chartNow} formatRange={range} />
     <dl className="sleep-wave-events" id={summaryId}>
       <div data-tile="last">{icon("last")}<dt>{t("sleepWave.lastSleep")}</dt><dd>{last ? range(last.startMs, last.endMs) : t("common.notRegistered")}</dd></div>
-      {window ? <div data-tile="next">{icon("next")}<dt>{t("sleepWave.nextOnset")}</dt><dd>{range(window.startMs, window.endMs)}</dd></div>
-        : <div data-tile="status">{icon(sleeping ? "next" : "status")}<dt>{t("sleepWave.status")}</dt><dd>{sleeping ? t("common.sleeping") : t("common.notRegistered")}</dd></div>}
+      {window && <div data-tile="next">{icon("next")}<dt>{t("sleepWave.nextOnset")}</dt><dd>{range(window.startMs, window.endMs)}</dd></div>}
       {later[0] && <div data-tile="later">{icon("status")}<dt>{t("sleepWave.laterNap")}</dt><dd>{range(later[0].onset.startMs, later[0].onset.endMs)}</dd></div>}
     </dl>
     {window && awakeRange && <p className="sleep-wave-awake-range">{icon("sun")}<span>{t("sleepWave.typicalAwake")}</span>
@@ -81,7 +81,7 @@ export default function SleepWaveCard({ sessions, active, prediction, forecast =
       <p className="sleep-wave-note">{later.length || estimated ? t("sleepWave.forecastNote") : window ? t("sleepWave.onsetNote") : t("sleepWave.recordNote")}</p>
     </div>
     <div className="sleep-wave-accessible-history">
-      {sleeping && <p>{t("sleepWave.sleepingTitle")}</p>}
+      {sleeping && !live?.sleeping && <p>{t("sleepWave.sleepingTitle")}</p>}
       <p>{t("sleepWave.recordedToday")}</p>
       {model.recorded.length ? <ul>{model.recorded.map((interval, i) => <li key={i}>{range(interval.startMs, interval.endMs)}</li>)}</ul>
         : <p>{t("common.notRegistered")}</p>}

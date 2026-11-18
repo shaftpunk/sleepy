@@ -314,7 +314,7 @@ async function main() {
       if(process.argv.includes('--home-only')){
         const action=page.locator('.home-sleep-actions > .sleep-action'),change=page.locator('.home-change-time');
         const ready=async(extra='')=>{await visit('/','home-fixture&home-actions&'+extra);await page.waitForFunction(()=>{const e=document.querySelector('.home-sleep-actions > .sleep-action');return e&&!e.disabled;});};
-        await ready();assert.ok((await page.locator('.sleep-timer').textContent()).includes('18'));
+        await ready();assert.ok((await page.locator('.sleep-wave [data-wave-live]').textContent()).includes('18'),'live timer shown in Sleep Wave');assert.equal(await page.locator('.home-live-state .sleep-timer').count(),0);
         assert.equal(await page.locator('.sleep-wave').count(),1);
         assert.match(await page.locator('.today-stats > div').last().textContent(),lang==='en'?/4\.8/:/4,8/);
         await check('home-awake',true);
