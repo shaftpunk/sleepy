@@ -34,6 +34,23 @@ export default function InsightTab({ sessions, now, active = null }: Props) {
       <section className="analysis-card">
         <div className="analysis-card-heading">
           <div>
+            <p className="card-label">{t("analysis.insight.patternsLabel")}</p>
+            <h2>{t("analysis.insight.insightTitle")}</h2>
+          </div>
+        </div>
+
+        {insights.length === 0 ? <p className="muted">{t("analysis.insights.fallbackNoData")}</p> : <div className="insight-list">
+          {insights.map((insight) => (
+            <p className="insight-row" key={insight.id} data-insight={insight.id}>
+              {insightText(insight, t, lang)}
+            </p>
+          ))}
+        </div>}
+      </section>
+
+      <section className="analysis-card">
+        <div className="analysis-card-heading">
+          <div>
             <p className="card-label">{t("analysis.insight.ratingsLabel")}</p>
             <h2>{t("analysis.insight.qualityDistribution")}</h2>
           </div>
@@ -62,23 +79,6 @@ export default function InsightTab({ sessions, now, active = null }: Props) {
             </div>
           ))}
         </div>
-      </section>
-
-      <section className="analysis-card">
-        <div className="analysis-card-heading">
-          <div>
-            <p className="card-label">{t("analysis.insight.patternsLabel")}</p>
-            <h2>{t("analysis.insight.insightTitle")}</h2>
-          </div>
-        </div>
-
-        {insights.length === 0 ? <p className="muted">{t("analysis.insights.fallbackNoData")}</p> : <div className="insight-list">
-          {insights.map((insight) => (
-            <p className="insight-row" key={insight.id}>
-              {insightText(insight, t, lang)}
-            </p>
-          ))}
-        </div>}
       </section>
     </div>
   );

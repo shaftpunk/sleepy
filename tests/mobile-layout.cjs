@@ -99,7 +99,7 @@ async function main() {
       return route.continue();
     });
     const requestedWidth=process.argv.find(value=>value.startsWith('--width='))?.split('=')[1];
-    const sizes = (process.argv.includes('--quick') ? [[320,568]] : (process.argv.includes('--sleep-wave-only')||process.argv.includes('--history-only')?[[320,568],[360,780],[375,667],[390,844],[430,932]]:[[320,568],[375,667],[390,844],[430,932]]))
+    const sizes = (process.argv.includes('--quick') ? [[320,568]] : (process.argv.includes('--sleep-wave-only')||process.argv.includes('--history-only')||process.argv.includes('--analysis-only')?[[320,568],[360,780],[375,667],[390,844],[430,932]]:[[320,568],[375,667],[390,844],[430,932]]))
       .filter(([width])=>!requestedWidth||width===Number(requestedWidth));
     const themes = process.argv.includes('--quick') ? ['dark'] : ['dark','light'];
     let context = '', query = '';
@@ -505,6 +505,12 @@ async function main() {
         await clock.fill('11:45');await clock.press('Tab');
         await check('analysis-probability',true);
         await probability.locator('summary').click();await check('analysis-probability-method',true);
+        await page.locator('.analysis-tab').nth(3).click();
+        const insightRows = page.locator('[data-insight]');
+        assert.ok((await insightRows.count()) > 0);
+        assert.ok((await insightRows.evaluateAll(rows => rows.map(row => row.dataset.insight))).every(id =>
+          ['typical-rhythm', 'median-wake-window', 'typical-naps', 'night-share', 'typical-longest-stretch', 'weekly-sleep-change'].includes(id)));
+        await check('analysis-insights-populated',true);
         await visit('/analysis','empty');await page.waitForSelector('.sleep-probability-card');
         assert.equal(await page.locator('.sleep-probability-estimate').count(),0);
         assert.match(await page.locator('.sleep-probability-count').innerText(),/0.*0/);
@@ -512,7 +518,15 @@ async function main() {
         assert.equal(await page.locator('.sleep-rhythm-pattern').count(),0);
         await check('analysis-probability-empty',true);
         await visit('/analysis');await page.waitForSelector('.analysis-tab-content');
-        for(let i=0;i<5;i++){await page.locator('.analysis-tab').nth(i).click();await check('analysis-'+i,true);}
+        for(let i=0;i<6;i++){await page.locator('.analysis-tab').nth(i).click();await check('analysis-'+i,true);}
+        const basis = page.locator('.data-basis');
+        assert.equal(await basis.locator('.data-basis-days li').count(),30);
+        const basisClock = basis.locator('input[type="time"]');
+        await basisClock.fill('23:45');
+        assert.equal(await basisClock.inputValue(),'23:45');
+        await page.evaluate(()=>document.documentElement.style.fontSize='200%');
+        await check('analysis-basis-large-text',true);
+        await page.evaluate(()=>document.documentElement.style.fontSize='');
         console.log(context+' analysis checked');continue;
       }
       await visit();await check('home',true);
@@ -529,7 +543,7 @@ async function main() {
         if(view==='sleep'){await page.waitForSelector('.sound-activity-event');await page.locator('.sound-activity-event').first().click();await check('sound-event-detail');await page.locator('.sound-activity-list summary').click();await check('sound-event-list');}
       }
       await visit('/analysis');await page.waitForSelector('.analysis-tab-content');
-      for(let i=0;i<5;i++){await page.locator('.analysis-tab').nth(i).click();await check('analysis-'+i,true);}
+      for(let i=0;i<6;i++){await page.locator('.analysis-tab').nth(i).click();await check('analysis-'+i,true);}
       await visit('/settings');await page.waitForSelector('.family-settings select');await check('settings-baby',true);
       await page.locator('.add-child-heading button').click();await check('add-child');
       await page.locator('.family-settings > .primary-button').click();await page.waitForSelector('.invitation-code');await check('invitation-code');

@@ -289,17 +289,81 @@ test('Insights curate sparse evidence and reuse the weekly comparison only for s
   assert.ok(!ids(insight.generateInsights(smallChange, now)).includes('weekly-sleep-change'));
 });
 
-test('Insights card renders current patterns and a separate empty state in English and Norwegian', () => {
+test('Insights tab leads with all six curated rows in English and Norwegian', () => {
   const React = require('react');
   const { renderToStaticMarkup } = require('react-dom/server');
   const Tab = load('src/pages/analysis/InsightTab.tsx').default;
-  const sessions = range(6).flatMap(d => loggedDay(d));
+  const rows = html => Array.from(html.matchAll(/data-insight="([^"]+)"/g), match => match[1]);
+  const sessions = range(14).flatMap(d => [
+    sleep(d, 1, 300, 'night'), sleep(d, 9, 40), sleep(d, 14, 40),
+    sleep(d, 20, d <= 7 ? 120 : 60, 'night'),
+  ]);
   for (const lang of ['en', 'no']) {
     uiLanguage = lang;
     const html = renderToStaticMarkup(React.createElement(Tab, { sessions, now }));
-    assert.match(html, lang === 'en' ? /Usually one nap/ : /Vanligvis .n lur/);
+    assert.deepEqual(rows(html), ['typical-rhythm', 'median-wake-window', 'typical-naps',
+      'night-share', 'typical-longest-stretch', 'weekly-sleep-change']);
+    assert.ok(html.indexOf('data-insight=') < html.indexOf('class="bar-list"'));
+    const phrases = lang === 'en'
+      ? [/Usually falls asleep/, /Typically awake/, /Usually 2 naps/, /of recorded sleep is at night/, /longest sleep stretch on a typical/, /more sleep per logged day/]
+      : [/Sovner vanligvis/, /Er vanligvis v.ken/, /Vanligvis 2 lurer/, /registrerte s.vnen om natten/, /lengste s.vn.kten p. en typisk/, /mer s.vn per registrerte dag/];
+    for (const phrase of phrases) assert.match(html, phrase);
     assert.ok(!html.includes('{{'));
+    const sparse = renderToStaticMarkup(React.createElement(Tab, { sessions: sessions.slice(0, 4), now }));
+    assert.ok(rows(sparse).length < 6);
     const empty = renderToStaticMarkup(React.createElement(Tab, { sessions: [], now }));
-    assert.ok(!empty.includes('class="insight-row"'));
+    assert.deepEqual(rows(empty), []);
+  }
+});
+
+test('Data Basis matches profile coverage and clock-specific Probability eligibility', () => {
+  const summarize = load('src/analytics/dataBasis.ts').summarizeDataBasis;
+  const probability = load('src/analytics/sleepProbability.ts');
+  const empty = summarize([], null, now, '10:00');
+  assert.equal(empty.days.length, 30);
+  assert.ok(empty.days.every(day => day.state === 'empty'));
+  assert.equal(empty.profileReady, false);
+  assert.equal(empty.insightsReady, false);
+  assert.equal(empty.probabilityDaysNeeded, probability.MIN_SLEEP_PROBABILITY_DAYS);
+  const sparse = summarize([sleep(1, 14, 40)], null, now, '10:00');
+  assert.equal(sparse.days.at(-1).state, 'partial');
+  assert.equal(sparse.usableSessions, 1);
+  assert.equal(sparse.profileReady, false);
+  const sessions = [...range(30).flatMap(d => loggedDay(d)), sleep(31, 14, 40), sleep(0, 7, 30)];
+  const active = { id: 'active', startMs: at(1, 23) };
+  const summary = summarize(sessions, active, now, '10:00');
+  assert.equal(summary.recordedSessions, 60);
+  assert.equal(summary.usableSessions, 60);
+  assert.equal(summary.usableDays, profile(sessions, now, active).usableDayCount);
+  assert.equal(summary.days.at(-1).state, 'partial');
+  assert.equal(summary.probability.usableDays, probability.calculateSleepProbability(sessions, '10:00', now, active).usableDays);
+  assert.equal(summary.probabilityDaysNeeded, 0);
+  assert.equal(summary.profileReady, true);
+  assert.equal(summary.insightsReady, true);
+  assert.equal(summarize(sessions, null, now, '23:00').probabilityDaysNeeded, probability.MIN_SLEEP_PROBABILITY_DAYS);
+});
+
+test('Data Basis follows completed local days through the autumn clock change', () => {
+  const anchor = new Date(2026, 9, 26, 12).getTime();
+  const summary = load('src/analytics/dataBasis.ts').summarizeDataBasis(loggedDay(1, 40, anchor), null, anchor, '02:30');
+  const yesterday = summary.days.at(-1);
+  assert.equal(yesterday.endMs - yesterday.startMs, 25 * 3600000);
+  assert.equal(yesterday.state, 'usable');
+  assert.equal(summary.probability.usableDays, 0);
+});
+
+test('Data Basis renders the localized coverage legend and model availability', () => {
+  const React = require('react');
+  const { renderToStaticMarkup } = require('react-dom/server');
+  const Tab = load('src/pages/analysis/DataBasisTab.tsx').default;
+  for (const lang of ['en', 'no']) {
+    uiLanguage = lang;
+    const props = { sessions: range(6).flatMap(d => loggedDay(d)), active: null, now, birthDate: null };
+    const html = renderToStaticMarkup(React.createElement(Tab, props));
+    assert.equal((html.match(/<li data-state=/g) ?? []).length, 30);
+    assert.match(html, lang === 'en' ? /6 usable days at this time/ : /6 brukbare dager på dette tidspunktet/);
+    assert.match(html, lang === 'en' ? /Next Sleep on Home/ : /Neste søvn på Hjem/);
+    const empty = renderToStaticMarkup(React.createElement(Tab, { ...props, sessions: [] }));
+    assert.match(empty, lang === 'en' ? /Not enough data/ : /Ikke nok data/);
   }
 });
