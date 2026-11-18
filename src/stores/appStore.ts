@@ -52,10 +52,9 @@ const savedTheme =
 const savedBabyId =
   localStorage.getItem("sleepy_current_baby_id");
 
-// Norwegian is the default for a fresh install and for any existing user
-// with no saved preference.
+// Default to English until a language is chosen in Settings.
 const savedLanguage =
-  (localStorage.getItem("sleepy_language") as Language) || "no";
+  (localStorage.getItem("sleepy_language") as Language) || "en";
 
 // Sleepy Premium ("default") is the look for fresh installs and anyone who has
 // never picked a skin. The key is written only by setVisualTheme (an explicit
