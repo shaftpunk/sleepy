@@ -8,6 +8,7 @@ import OverviewTab from "./analysis/OverviewTab";
 import DayTab from "./analysis/DayTab";
 import MonthTab from "./analysis/MonthTab";
 import InsightTab from "./analysis/InsightTab";
+import DataBasisTab from "./analysis/DataBasisTab";
 import FeedTab from "./analysis/FeedTab";
 
 import "./Analysis.css";
@@ -17,7 +18,8 @@ type TabKey =
   | "day"
   | "month"
   | "insight"
-  | "feed";
+  | "feed"
+  | "basis";
 
 export default function Analysis() {
   const { t } = useTranslation();
@@ -73,6 +75,7 @@ export default function Analysis() {
     { key: "month", label: t("analysis.tabMonth") },
     { key: "insight", label: t("analysis.tabInsight") },
     { key: "feed", label: t("common.feeding") },
+    { key: "basis", label: t("analysis.dataBasis.tab") },
   ];
 
   return (
@@ -126,6 +129,7 @@ export default function Analysis() {
 
           {tab === "day" && (
             <DayTab
+              active={active}
               sessions={sessions}
               now={now}
             />
@@ -140,9 +144,14 @@ export default function Analysis() {
 
           {tab === "insight" && (
             <InsightTab
+              active={active}
               sessions={sessions}
               now={now}
             />
+          )}
+
+          {tab === "basis" && (
+            <DataBasisTab sessions={sessions} active={active} now={now} birthDate={currentBaby?.birth_date ?? null} />
           )}
 
           {tab === "feed" && (

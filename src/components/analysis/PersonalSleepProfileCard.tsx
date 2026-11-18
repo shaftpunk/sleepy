@@ -1,14 +1,16 @@
+import { hasDisplayableSleepProfile } from "../../analytics/recentSleepProfile";
 import { computePersonalSleepProfile } from "../../analytics/personalSleepProfile";
 import { minutesToClockLabel } from "../../analytics/time";
 import { formatDuration } from "../../lib/format";
 import { useTranslation, type TranslationKey } from "../../i18n";
 import type { SleepGuideline } from "../../analytics/sleepGuidelines";
-import type { SleepSession } from "../../analytics/types";
+import type { ActiveSleep, SleepSession } from "../../analytics/types";
 
 type Props = {
   sessions: SleepSession[];
   guideline: SleepGuideline | null;
   now: number;
+  active?: ActiveSleep | null;
 };
 
 const CONFIDENCE_KEYS: Record<string, TranslationKey> = {
@@ -17,11 +19,11 @@ const CONFIDENCE_KEYS: Record<string, TranslationKey> = {
   high: "common.confidenceHigh",
 };
 
-export default function PersonalSleepProfileCard({ sessions, guideline, now }: Props) {
+export default function PersonalSleepProfileCard({ sessions, guideline, now, active = null }: Props) {
   const { t, lang } = useTranslation();
 
-  const profile = computePersonalSleepProfile(sessions, now);
-  const hasData = profile.averageTotalSleepPerDay != null;
+  const profile = computePersonalSleepProfile(sessions, now, active);
+  const hasData = hasDisplayableSleepProfile(profile);
 
   return (
     <section className="analysis-card">
@@ -48,14 +50,14 @@ export default function PersonalSleepProfileCard({ sessions, guideline, now }: P
           <div className="mini-stats">
             <div>
               <span>{t("analysis.personalProfile.avgSleepPerDay")}</span>
-              <strong>{formatDuration(profile.averageTotalSleepPerDay ?? 0, lang)}</strong>
+              <strong>{profile.typicalTotalSleepPerDay != null ? formatDuration(profile.typicalTotalSleepPerDay, lang) : "-"}</strong>
             </div>
 
             <div>
               <span>{t("analysis.personalProfile.avgNapsPerDay")}</span>
               <strong>
-                {profile.averageNapCountPerDay != null
-                  ? profile.averageNapCountPerDay.toFixed(1)
+                {profile.typicalNapCountPerDay != null
+                  ? profile.typicalNapCountPerDay.toFixed(1)
                   : "-"}
               </strong>
             </div>

@@ -427,3 +427,84 @@
 .sleep-rhythm-pattern-key { background: repeating-linear-gradient(135deg, var(--rhythm-pattern) 0 1px, transparent 1px 4px); opacity: .6; }
 .sleep-rhythm-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 [data-theme="light"] .sleep-rhythm { --rhythm-solid: #8f74df; --rhythm-pattern: #8f74df; --rhythm-guide: rgba(73, 48, 104, .17); }
+/* Analysis surfaces stay local to this route, including after lazy navigation. */
+.analysis-page {
+  --ui-text: #f9f0ed; --ui-muted: #d9c0cf; --ui-border: #d9b4c730;
+  --ui-surface: #382738; --ui-control: #d9b4c714; --ui-focus: #e4c1cd;
+  color: var(--ui-text);
+}
+[data-theme="light"] .analysis-page {
+  --ui-text: #38273c; --ui-muted: #694e63; --ui-border: #79556930;
+  --ui-surface: #faf1ed; --ui-control: #7955690d; --ui-focus: #76556d;
+}
+[data-theme]:has(> .app-shell > .analysis-page) { background: #2c202e; }
+[data-theme="light"]:has(> .app-shell > .analysis-page) { background: #f5e8e7; }
+.analysis-page .page-header h1 { font-family: ui-serif, Georgia, serif; font-weight: 400; }
+.analysis-page :is(.page-description, .card-label, .muted) { color: var(--ui-muted); }
+.analysis-page .analysis-card { background: var(--ui-surface); border-color: var(--ui-border); box-shadow: none; padding: 16px; }
+.analysis-page .analysis-card h2 { font-size: 1.1rem; line-height: 1.4; }
+.analysis-page .analysis-tab-bar { background: var(--ui-control); border-color: var(--ui-border); }
+.analysis-page .analysis-tab { color: var(--ui-muted); }
+.analysis-page .analysis-tab.active { background: #76556d; color: #faf3ee; }
+.analysis-page .analysis-overview > .stats-grid { display: flex; flex-wrap: wrap; gap: 0; border-bottom: 1px solid var(--ui-border); padding-bottom: 12px; }
+.analysis-page .analysis-overview > .stats-grid > * { flex: 1 1 90px; background: transparent; border: 0; box-shadow: none; padding: 8px; border-radius: 0; }
+.analysis-page .analysis-overview .overview-average { font-weight: 500; font-variant-numeric: tabular-nums; }
+.analysis-page .analysis-overview .mini-stats > div { background: transparent; border: 0; padding: 8px 0; }
+.analysis-details { border-top: 1px solid var(--ui-border); }
+.analysis-details > summary { min-height: 48px; padding: 14px 0; color: var(--ui-text); cursor: pointer; font-size: .95rem; }
+.analysis-page .analysis-details .analysis-card { background: transparent; border: 0; padding-inline: 0; }
+.analysis-page .empty-card { min-height: 0; padding: 14px; background: transparent; color: var(--ui-muted); }
+.analysis-page .sleep-probability-card > .muted { font-size: .8rem; line-height: 1.5; }
+.analysis-page .sleep-probability-card details { font-size: .8rem; color: var(--ui-muted); }
+.analysis-page .sleep-probability-card [role="status"] p { margin-block: 8px; }
+.analysis-page .analysis-overview > .stats-grid > * { display: flex; flex-direction: column; justify-content: flex-start; gap: 6px; min-height: 0; }
+.analysis-page .analysis-overview > .stats-grid strong { margin: 0; }
+.analysis-page .analysis-overview > .stats-grid span { line-height: 1.5; }
+
+.data-basis :is(h2, h3, p) { margin: 0 0 8px; }
+.data-basis h3 { font-size: 1rem; }
+.data-basis .mini-stats { margin-block: 12px; }
+.data-basis dt { font-size: .85rem; }
+.data-basis dd { margin: 4px 0 0; font-weight: 700; }
+.data-basis-days {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 4px;
+  margin: 10px 0;
+  padding: 0;
+  list-style: none;
+}
+.data-basis-days li, .data-basis-legend i {
+  position: relative;
+  min-height: 12px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+}
+.data-basis [data-state="usable"] { background: #76556d; }
+.data-basis [data-state="partial"] { background: repeating-linear-gradient(135deg, transparent 0 3px, #9b7594 3px 5px); }
+.data-basis-days .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.data-basis-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 10px; font-size: .85rem; }
+.data-basis-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.data-basis-legend i { width: 12px; }
+.data-basis-models { list-style: none; padding: 0; margin: 0; }
+.data-basis-models li { padding-block: 10px; }
+.data-basis-models li + li { border-top: 1px solid var(--ui-border); }
+.data-basis-model-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; margin-bottom: 6px; }
+.data-basis-model-heading .status-chip { white-space: normal; }
+.data-basis input[type="time"] { min-height: 44px; max-width: 100%; color: inherit; background: var(--ui-control); border: 1px solid var(--ui-border); border-radius: 8px; padding-inline: 8px; }
+
+/* Keep the six tabs visible, including when text is enlarged. */
+.analysis-page .analysis-tab-bar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.analysis-page .analysis-tab {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.data-basis { overflow-wrap: anywhere; }
+.app-shell:has(.data-basis) {
+  padding-bottom: calc(max(110px, 5rem) + env(safe-area-inset-bottom, 0px));
+}
+.app-shell:has(.data-basis) + .bottom-nav a { overflow-wrap: anywhere; }

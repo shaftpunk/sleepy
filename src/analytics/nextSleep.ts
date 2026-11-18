@@ -4,6 +4,8 @@ import { minutesSinceLocalMidnight } from "./time";
 import type { ActiveSleep, SleepSession } from "./types";
 import { MAX_PLAUSIBLE_SESSION_MINUTES } from "./personalSleepProfile";
 
+export const NEXT_SLEEP_LOOKBACK_DAYS = 21;
+
 export type NextSleepPrediction = {
   status: "ready" | "insufficient_data" | "sleeping";
   earliestStart?: number; likelyStart?: number; latestStart?: number;
@@ -41,7 +43,7 @@ export function calculateNextSleep({ sessions, active, now, ageDays = null }: {
   const clock = minutesSinceLocalMidnight(last.endMs);
   const samples: Sample[] = computeWakeWindows(merged).windows.flatMap(w => {
     const daysAgo = Math.floor((now - w.endTs) / 86400000);
-    if (daysAgo < 0 || daysAgo > 21 || w.minutes < 15 || w.minutes > 360) return [];
+    if (daysAgo < 0 || daysAgo > NEXT_SLEEP_LOOKBACK_DAYS || w.minutes < 15 || w.minutes > 360) return [];
     // Invalid intervening records are evidence of incomplete logging, not
     // permission to bridge the surrounding valid sessions into a wake period.
     if (sessions.some(s => s.startMs < w.endTs && s.endMs > w.startTs &&
