@@ -1,21 +1,23 @@
-import { computeNightVsDayBreakdown, computeQualityDistribution, generateInsights } from "../../analytics/insights";
+import { recordedAnalysisPeriod, computeNightVsDayBreakdown, computeQualityDistribution, generateInsights } from "../../analytics/insights";
 import { formatDuration, stars } from "../../lib/format";
 import { useTranslation } from "../../i18n";
 import BarList, { type BarRow } from "../../components/analysis/BarList";
 import { insightText } from "./insightText";
-import type { SleepSession } from "../../analytics/types";
+import type { ActiveSleep, SleepSession } from "../../analytics/types";
 
 type Props = {
   sessions: SleepSession[];
   now: number;
+  active?: ActiveSleep | null;
 };
 
-export default function InsightTab({ sessions, now }: Props) {
+export default function InsightTab({ sessions, now, active = null }: Props) {
   const { t, lang } = useTranslation();
 
-  const quality = computeQualityDistribution(sessions);
-  const nightVsDay = computeNightVsDayBreakdown(sessions);
-  const insights = generateInsights(sessions, now);
+  const recorded = recordedAnalysisPeriod(sessions, now);
+  const quality = computeQualityDistribution(recorded);
+  const nightVsDay = computeNightVsDayBreakdown(sessions, now);
+  const insights = generateInsights(sessions, now, active);
 
   const qualityRows: BarRow[] = quality
     .filter((row) => row.count > 0)
@@ -70,13 +72,13 @@ export default function InsightTab({ sessions, now }: Props) {
           </div>
         </div>
 
-        <div className="insight-list">
-          {insights.map((insight, i) => (
-            <p className="insight-row" key={`${insight.id}-${i}`}>
+        {insights.length === 0 ? <p className="muted">{t("analysis.insights.fallbackNoData")}</p> : <div className="insight-list">
+          {insights.map((insight) => (
+            <p className="insight-row" key={insight.id}>
               {insightText(insight, t, lang)}
             </p>
           ))}
-        </div>
+        </div>}
       </section>
     </div>
   );
