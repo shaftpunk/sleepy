@@ -1,4 +1,6 @@
-import { dayKeyOf, lastNLocalDayKeys, median } from "./time";
+import { recencyWeightAt } from "./sleepHistory";
+import { weightedMedian, type WeightedValue } from "./weightedStats";
+import { dayKeyOf, lastNLocalDayKeys } from "./time";
 import type { FeedEvent } from "./types";
 
 const MAX_FEED_GAP_MIN = 720; // 12h — same "data hole" pattern as wake windows
@@ -29,25 +31,25 @@ export type TypicalFeedInterval = {
 
 // Gaps are start-to-start (unlike sleep's end-to-start wake windows) since
 // a feed's own duration isn't relevant to "how often does feeding happen".
-export function computeTypicalFeedInterval(feeds: FeedEvent[]): TypicalFeedInterval {
-  const sorted = [...feeds].sort((a, b) => a.startMs - b.startMs);
+export function computeTypicalFeedInterval(feeds: FeedEvent[], now: number): TypicalFeedInterval {
+  const sorted = feeds.filter(f => Number.isFinite(f.startMs) && recencyWeightAt(f.startMs, now) > 0).sort((a, b) => a.startMs - b.startMs);
 
-  const gaps: number[] = [];
+  const gaps: WeightedValue[] = [];
   let excludedCount = 0;
 
   for (let i = 1; i < sorted.length; i++) {
     const gapMin = (sorted[i].startMs - sorted[i - 1].startMs) / 60000;
 
-    if (gapMin > MAX_FEED_GAP_MIN) {
+    if (gapMin <= 0 || gapMin > MAX_FEED_GAP_MIN) {
       excludedCount++;
       continue;
     }
 
-    gaps.push(gapMin);
+    gaps.push({ value: gapMin, weight: recencyWeightAt(sorted[i - 1].startMs, now) });
   }
 
   return {
-    medianMinutes: gaps.length ? median(gaps) : null,
+    medianMinutes: weightedMedian(gaps),
     excludedCount,
   };
 }

@@ -55,21 +55,12 @@ export type FeedEvent = {
 export type ResolvedSleepType = "night" | "nap";
 
 export type InsightId =
-  | "busiest-window"
   | "typical-rhythm"
-  | "bedtime-consistency"
-  | "best-day-last-7"
-  | "night-share"
-  | "avg-duration-comparison"
-  | "quality-average"
-  | "quality-trend"
-  | "nap-consistency"
   | "median-wake-window"
-  | "wake-window-trend"
-  | "missing-data"
-  | "long-sleep-milestone"
-  | "daily-share"
-  | "fallback-no-data";
+  | "typical-naps"
+  | "night-share"
+  | "typical-longest-stretch"
+  | "weekly-sleep-change";
 
 export type Insight = {
   id: InsightId;

@@ -5,7 +5,7 @@ import {
   computeFeedsPerDayLast7,
   computeTypicalFeedInterval,
 } from "../../analytics/feed";
-import { dayKeyOf } from "../../analytics/time";
+import { lastNLocalDayKeys, dayKeyOf } from "../../analytics/time";
 import { formatDuration } from "../../lib/format";
 import { LOCALES, useTranslation, type Language } from "../../i18n";
 import BarList, { type BarRow, type BarRowTone } from "../../components/analysis/BarList";
@@ -40,8 +40,11 @@ export default function FeedTab({ feeds, now }: Props) {
     pumped: t("common.feedTypePumped"),
   };
 
+  const interval = computeTypicalFeedInterval(feeds, now);
+  // Counts and type shares describe recorded feeds in the last 30 local days.
+  const periodKeys = new Set(lastNLocalDayKeys(now, 30));
+  feeds = feeds.filter(f => f.startMs <= now && periodKeys.has(dayKeyOf(f.startMs)));
   const feedsPerDayAvg = computeFeedsPerDayAvg(feeds, now);
-  const interval = computeTypicalFeedInterval(feeds);
   const atNightPct = computeAtNightFeedPct(feeds);
   const perDay = computeFeedsPerDayLast7(feeds, now);
   const distribution = computeFeedDistribution(feeds);

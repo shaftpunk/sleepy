@@ -1,4 +1,4 @@
-import { computePersonalSleepProfile } from "../../analytics/personalSleepProfile";
+import { computeForecastSleepProfile } from "../../analytics/personalSleepProfile";
 import { computeSleepPrediction, type PredictionBasisEntry } from "../../analytics/sleepPrediction";
 import { formatClock, formatDuration } from "../../lib/format";
 import { useTranslation, type TranslationKey } from "../../i18n";
@@ -38,7 +38,7 @@ function basisText(
 export default function NextSleepPredictionCard({ sessions, active, now, ageDays }: Props) {
   const { t, lang } = useTranslation();
 
-  const profile = computePersonalSleepProfile(sessions, now);
+  const profile = computeForecastSleepProfile(sessions, now);
   const result = computeSleepPrediction({ sessions, active, now, ageDays, profile });
 
   if (result.status === "sleeping") {

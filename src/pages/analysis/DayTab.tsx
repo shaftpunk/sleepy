@@ -3,11 +3,12 @@ import { dayKeyOf, two } from "../../analytics/time";
 import { formatDuration } from "../../lib/format";
 import { LOCALES, useTranslation, type Language } from "../../i18n";
 import BarList, { type BarRow, type BarRowTone } from "../../components/analysis/BarList";
-import type { SleepSession } from "../../analytics/types";
+import type { ActiveSleep, SleepSession } from "../../analytics/types";
 
 type Props = {
   sessions: SleepSession[];
   now: number;
+  active?: ActiveSleep | null;
 };
 
 function dayBarLabel(dayKey: string, now: number, lang: Language, todayLabel: string): string {
@@ -26,7 +27,7 @@ function toneForDayBar(totalMinutes: number, pctOfMax: number): BarRowTone {
   return "warning";
 }
 
-export default function DayTab({ sessions, now }: Props) {
+export default function DayTab({ sessions, now, active = null }: Props) {
   const { t, lang } = useTranslation();
 
   const windowGroupLabels: Record<string, string> = {
@@ -37,8 +38,8 @@ export default function DayTab({ sessions, now }: Props) {
   };
 
   const perDay = computeSleepPerDayLast7(sessions, now);
-  const buckets = computeHourlyDistribution(sessions, now);
-  const wakeThroughDay = computeWakeWindowsThroughDay(sessions);
+  const buckets = computeHourlyDistribution(sessions, now, active);
+  const wakeThroughDay = computeWakeWindowsThroughDay(sessions, now, active);
 
   const todayLabel = t("common.today");
 

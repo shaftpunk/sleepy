@@ -1,7 +1,9 @@
 import { dayKeyOf, lastNLocalDayKeys, splitMinutesByLocalDay } from "./time";
-import { computeBucketDistribution, DEFAULT_BUCKET_WINDOW_DAYS, type BucketDistribution } from "./buckets";
-import { computeWakeWindows, groupWakeWindows, type WakeWindowGroup } from "./wakeWindows";
-import type { SleepSession } from "./types";
+import type { BucketDistribution } from "./buckets";
+import { recentSleepEvidence, weightedWakeMedian } from "./recentSleepProfile";
+import { recentBucketDistribution } from "./recentPatterns";
+import { type WakeWindowGroup } from "./wakeWindows";
+import type { ActiveSleep, SleepSession } from "./types";
 
 export type DayBar = {
   dayKey: string;
@@ -53,10 +55,10 @@ export function computeSleepPerDayLast7(
 // both surfaces stay numerically consistent.
 export function computeHourlyDistribution(
   sessions: SleepSession[],
-  now: number
+  now: number,
+  active: ActiveSleep | null = null
 ): BucketDistribution {
-  const windowStart = now - DEFAULT_BUCKET_WINDOW_DAYS * 24 * 60 * 60 * 1000;
-  return computeBucketDistribution(sessions, windowStart, now);
+  return recentBucketDistribution(sessions, now, active);
 }
 
 export type WakeWindowsThroughDay = {
@@ -64,12 +66,13 @@ export type WakeWindowsThroughDay = {
   excludedGapCount: number;
 };
 
-export function computeWakeWindowsThroughDay(
-  sessions: SleepSession[]
-): WakeWindowsThroughDay {
-  const result = computeWakeWindows(sessions);
+export function computeWakeWindowsThroughDay(sessions: SleepSession[], now: number, active: ActiveSleep | null = null): WakeWindowsThroughDay {
+  const result = recentSleepEvidence(sessions, now, active);
   return {
-    groups: groupWakeWindows(result.windows),
+    groups: (["1st", "2nd", "3rd", "4th+"] as const).map((label, i) => {
+      const selected = result.windows.filter(w => Math.min(w.index, 3) === i);
+      return { label, count: selected.length, medianMinutes: weightedWakeMedian(selected, now) };
+    }),
     excludedGapCount: result.excludedGapCount,
   };
 }

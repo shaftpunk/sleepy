@@ -30,10 +30,11 @@ export default function SleepProbabilityCard({ sessions, active, now }: {
           percentage: new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 0 }).format(result.weightedPercentage / 100),
         })}</p>}
     </div>
-    <p className="muted">{t("sleepProbability.recency")}</p>
+
     <p className="muted">{t("sleepProbability.disclaimer")}</p>
     <details>
       <summary>{t("sleepProbability.usableTitle")}</summary>
+      <p className="muted">{t("sleepProbability.recency")}</p>
       <p className="muted">{t("sleepProbability.usableRule")}</p>
     </details>
   </section>;

@@ -1,23 +1,15 @@
+// Forecast compatibility: retain the existing 14-day estimator input unchanged.
+// Analysis callers use computePersonalSleepProfile from recentSleepProfile.
+import { cleanPersonalSleepSessions, confidenceForHistoryDays, MIN_DAYS_FOR_LOW_CONFIDENCE } from "./sleepEvidence";
+export { cleanPersonalSleepSessions, confidenceForHistoryDays, MAX_PLAUSIBLE_SESSION_MINUTES, MIN_DAYS_FOR_LOW_CONFIDENCE, MIN_DAYS_FOR_MEDIUM_CONFIDENCE, MIN_DAYS_FOR_HIGH_CONFIDENCE } from "./sleepEvidence";
 import { circularMeanTimeOfDay, dayKeyOf, median, minutesSinceLocalMidnight } from "./time";
 import { resolveSleepType } from "./sleepType";
 import { computeWakeWindows, type WakeWindow } from "./wakeWindows";
-import { computeWindowAverage } from "./overview";
+import { lastNLocalDayKeys, splitMinutesByLocalDay } from "./time";
 import type { SleepSession } from "./types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const PERSONAL_SLEEP_LOOKBACK_DAYS = 14;
-
-// A single session longer than this is treated as clearly broken data (e.g.
-// a forgotten "stop sleep") rather than a real, if unusual, long sleep.
-// Exported so sleepPrediction.ts can apply the same validity guard to the
-// single "last sleep session" it reads.
-export const MAX_PLAUSIBLE_SESSION_MINUTES = 720; // 12h
-
-// Gradual availability thresholds, shared with the prediction model's
-// history-weight tiers (src/analytics/sleepPrediction.ts).
-export const MIN_DAYS_FOR_LOW_CONFIDENCE = 3;
-export const MIN_DAYS_FOR_MEDIUM_CONFIDENCE = 7;
-export const MIN_DAYS_FOR_HIGH_CONFIDENCE = 14;
 
 // A personal wake window needs at least this many samples in a time-of-day
 // bucket before it's considered a reliable, reportable pattern.
@@ -63,28 +55,6 @@ function emptyProfile(historyDays: number, completedSessionCount: number): Perso
   };
 }
 
-// Drops sessions with an implausible/broken duration and any session that
-// overlaps one already kept (sorted ascending, first-seen wins) — a small,
-// deliberately simple duplicate/overlap guard rather than a general interval
-// merge, since real duplicate registrations are the main case this protects
-// against.
-export function cleanPersonalSleepSessions(sessions: SleepSession[]): SleepSession[] {
-  const valid = sessions.filter(
-    (s) => s.durationMin > 0 && s.durationMin <= MAX_PLAUSIBLE_SESSION_MINUTES
-  );
-
-  const sorted = [...valid].sort((a, b) => a.startMs - b.startMs);
-  const cleaned: SleepSession[] = [];
-
-  for (const s of sorted) {
-    const last = cleaned[cleaned.length - 1];
-    if (last && s.startMs < last.endMs) continue; // overlaps the previous kept session
-    cleaned.push(s);
-  }
-
-  return cleaned;
-}
-
 function timeOfDayBucket(hour: number): "morning" | "midday" | "evening" {
   if (hour < 12) return "morning";
   if (hour < 17) return "midday";
@@ -102,17 +72,12 @@ function medianForBucket(
     : null;
 }
 
-export function confidenceForHistoryDays(historyDays: number): ProfileConfidence {
-  if (historyDays >= MIN_DAYS_FOR_HIGH_CONFIDENCE) return "high";
-  if (historyDays >= MIN_DAYS_FOR_MEDIUM_CONFIDENCE) return "medium";
-  return "low";
-}
 
 // Looks back up to `lookbackDays` (default 14, the widest tier in the
 // gradual-availability model) and reports how many of those days actually
 // had data — that count, not the requested window, is what drives
 // `confidence` and the caller's empty-state decision.
-export function computePersonalSleepProfile(
+export function computeForecastSleepProfile(
   sessions: SleepSession[],
   now: number,
   lookbackDays = PERSONAL_SLEEP_LOOKBACK_DAYS
@@ -127,7 +92,13 @@ export function computePersonalSleepProfile(
     return emptyProfile(historyDays, cleaned.length);
   }
 
-  const { avgMinutes: averageTotalSleepPerDay } = computeWindowAverage(cleaned, now, lookbackDays);
+  // Preserve legacy forecast inputs; Analysis uses the recent profile.
+  const keys = new Set(lastNLocalDayKeys(now, lookbackDays));
+  const totals = new Map<string, number>();
+  for (const s of cleaned) for (const f of splitMinutesByLocalDay(s.startMs, s.endMs)) {
+    if (keys.has(f.dayKey)) totals.set(f.dayKey, (totals.get(f.dayKey) ?? 0) + f.minutes);
+  }
+  const averageTotalSleepPerDay = totals.size ? [...totals.values()].reduce((a, b) => a + b, 0) / totals.size : null;
 
   const napSessions = cleaned.filter((s) => resolveSleepType(s) === "nap");
   const nightSessions = cleaned.filter((s) => resolveSleepType(s) === "night");
@@ -180,3 +151,5 @@ export function computePersonalSleepProfile(
 // Exported for sleepPrediction.ts, which needs the same time-of-day bucketing
 // to pick the right personal wake window for "right now".
 export { timeOfDayBucket };
+
+export { computePersonalSleepProfile } from "./recentSleepProfile";

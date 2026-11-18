@@ -21,25 +21,17 @@ type Props = {
 export default function OverviewTab({ sessions, active, birthDate, now }: Props) {
   const { t, lang } = useTranslation();
 
-  const sevenDayAvg = computeWindowAverage(sessions, now, 7);
-  const trend = computeWeeklyTrend(sessions, now);
-  const kpis = computeKpis(sessions, now);
-  const rhythm = computeRhythmCard(sessions);
+  const sevenDayAvg = computeWindowAverage(sessions, now, 7, active);
+  const trend = computeWeeklyTrend(sessions, now, active);
+  const kpis = computeKpis(sessions, now, active);
+  const rhythm = computeRhythmCard(sessions, now, active);
 
   const ageDays = ageInDays(birthDate, now);
   const guidelineLookup = getGuidelineForAgeDays(ageDays);
   const guideline = guidelineLookup.status === "found" ? guidelineLookup.guideline : null;
 
   return (
-    <div className="analysis-tab-content">
-      <AgeSleepGuideCard birthDate={birthDate} sessions={sessions} active={active} now={now} />
-
-      <PersonalSleepProfileCard sessions={sessions} guideline={guideline} now={now} />
-
-      <NextSleepPredictionCard sessions={sessions} active={active} now={now} ageDays={ageDays} />
-
-      <SleepProbabilityCard sessions={sessions} active={active} now={now} />
-
+    <div className="analysis-tab-content analysis-overview">
       <section className="analysis-card">
         <div className="analysis-card-heading">
           <div>
@@ -93,6 +85,8 @@ export default function OverviewTab({ sessions, active, birthDate, now }: Props)
         />
       </section>
 
+      <SleepProbabilityCard sessions={sessions} active={active} now={now} />
+
       <section className="analysis-card">
         <div className="analysis-card-heading">
           <div>
@@ -126,6 +120,18 @@ export default function OverviewTab({ sessions, active, birthDate, now }: Props)
           </div>
         </div>
       </section>
+      <details className="analysis-details">
+        <summary>{t("analysis.personalProfile.title")}</summary>
+        <PersonalSleepProfileCard sessions={sessions} guideline={guideline} now={now} active={active} />
+      </details>
+      <details className="analysis-details">
+        <summary>{t("home.nextSleepTitle")}</summary>
+        <NextSleepPredictionCard sessions={sessions} active={active} now={now} ageDays={ageDays} />
+      </details>
+      <details className="analysis-details">
+        <summary>{t("analysis.ageGuide.title")}</summary>
+        <AgeSleepGuideCard birthDate={birthDate} sessions={sessions} active={active} now={now} />
+      </details>
     </div>
   );
 }

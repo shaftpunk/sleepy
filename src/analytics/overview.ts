@@ -1,46 +1,23 @@
-import {
-  circularMeanTimeOfDay,
-  dayKeyOf,
-  lastNLocalDayKeys,
-  median,
-  minutesSinceLocalMidnight,
-  splitMinutesByLocalDay,
-} from "./time";
-import { resolveSleepType } from "./sleepType";
-import { computeWakeWindows } from "./wakeWindows";
-import type { SleepSession } from "./types";
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
+import { computePersonalSleepProfile } from "./recentSleepProfile";
+import { completedLocalDays, usableCompletedDays } from "./sleepHistory";
+import { MAX_PLAUSIBLE_SESSION_MINUTES } from "./sleepEvidence";
+import type { ActiveSleep, SleepSession } from "./types";
+import { dayKeyOf } from "./time";
 export type WindowAverage = {
   avgMinutes: number | null;
   daysWithData: number;
 };
 
-// Mean of daily totals across the `days` local calendar days ending at
-// `referenceNow`, counting only days that had recorded sleep.
+// Unweighted descriptive average of usable completed local days.
 export function computeWindowAverage(
   sessions: SleepSession[],
   referenceNow: number,
-  days: number
+  days: number,
+  active: ActiveSleep | null = null
 ): WindowAverage {
-  const keys = new Set(lastNLocalDayKeys(referenceNow, days));
-  const totals = new Map<string, number>();
-
-  for (const s of sessions) {
-    for (const frag of splitMinutesByLocalDay(s.startMs, s.endMs)) {
-      if (!keys.has(frag.dayKey)) continue;
-      totals.set(frag.dayKey, (totals.get(frag.dayKey) ?? 0) + frag.minutes);
-    }
-  }
-
-  const daysWithData = totals.size;
-  const sum = [...totals.values()].reduce((a, b) => a + b, 0);
-
-  return {
-    avgMinutes: daysWithData ? sum / daysWithData : null,
-    daysWithData,
-  };
+  const selected = usableCompletedDays(sessions, referenceNow, active).filter(d => d.daysAgo <= days);
+  return { avgMinutes: selected.length ? selected.reduce((sum, d) => sum + d.fragments.reduce((n, f) => n + (f.endMs - f.startMs) / 60000, 0), 0) / selected.length : null,
+    daysWithData: selected.length };
 }
 
 export type WeeklyTrend =
@@ -49,10 +26,16 @@ export type WeeklyTrend =
 
 export function computeWeeklyTrend(
   sessions: SleepSession[],
-  now: number
+  now: number,
+  active: ActiveSleep | null = null
 ): WeeklyTrend {
-  const current = computeWindowAverage(sessions, now, 7);
-  const previous = computeWindowAverage(sessions, now - 7 * DAY_MS, 7);
+  // Equal-weight completed weeks preserve the meaning of a period comparison.
+  const days = usableCompletedDays(sessions, now, active);
+  const mean = (from: number, to: number) => {
+    const selected = days.filter(d => d.daysAgo >= from && d.daysAgo <= to);
+    return { avgMinutes: selected.length >= 3 ? selected.reduce((sum, d) => sum + d.fragments.reduce((n, f) => n + (f.endMs - f.startMs) / 60000, 0), 0) / selected.length : null };
+  };
+  const current = mean(1, 7), previous = mean(8, 14);
 
   if (current.avgMinutes == null || previous.avgMinutes == null) {
     return { direction: "insufficient-history" };
@@ -71,23 +54,13 @@ export type OverviewKpis = {
   napsPerDay: number | null;
 };
 
-export function computeKpis(sessions: SleepSession[], now: number): OverviewKpis {
-  const longestMinutes = sessions.reduce((max, s) => Math.max(max, s.durationMin), 0);
-
-  const totalMinutes = sessions.reduce((sum, s) => sum + s.durationMin, 0);
-  const nightMinutes = sessions
-    .filter((s) => resolveSleepType(s) === "night")
-    .reduce((sum, s) => sum + s.durationMin, 0);
-
-  const atNightPct = totalMinutes > 0 ? (nightMinutes / totalMinutes) * 100 : null;
-
-  const last7Keys = new Set(lastNLocalDayKeys(now, 7));
-  const last7Sessions = sessions.filter((s) => last7Keys.has(dayKeyOf(s.startMs)));
-  const daysWithData = new Set(last7Sessions.map((s) => dayKeyOf(s.startMs))).size;
-
-  const napsPerDay = daysWithData > 0 ? last7Sessions.length / daysWithData : null;
-
-  return { longestMinutes, atNightPct, napsPerDay };
+export function computeKpis(sessions: SleepSession[], now: number, active: ActiveSleep | null = null): OverviewKpis {
+  const profile = computePersonalSleepProfile(sessions, now, active);
+  const keys = new Set(completedLocalDays(now).map(d => d.localDate));
+  // Explicit factual record for the completed 30-day period, not a typical stretch.
+  const longestMinutes = sessions.filter(s => keys.has(dayKeyOf(s.startMs)) && s.endMs <= now && s.durationMin > 0 && s.durationMin <= MAX_PLAUSIBLE_SESSION_MINUTES)
+    .reduce((max, s) => Math.max(max, s.durationMin), 0);
+  return { longestMinutes, atNightPct: profile.atNightPct, napsPerDay: profile.typicalNapCountPerDay };
 }
 
 export type RhythmCard = {
@@ -96,23 +69,7 @@ export type RhythmCard = {
   medianWakeWindowMinutes: number | null;
 };
 
-export function computeRhythmCard(sessions: SleepSession[]): RhythmCard {
-  const nightSessions = sessions.filter((s) => resolveSleepType(s) === "night");
-
-  const bedtimeMin =
-    nightSessions.length >= 2
-      ? circularMeanTimeOfDay(nightSessions.map((s) => minutesSinceLocalMidnight(s.startMs)))
-      : null;
-
-  const wakeMin =
-    nightSessions.length >= 2
-      ? circularMeanTimeOfDay(nightSessions.map((s) => minutesSinceLocalMidnight(s.endMs)))
-      : null;
-
-  const windows = computeWakeWindows(sessions).windows;
-  const medianWakeWindowMinutes = windows.length
-    ? median(windows.map((w) => w.minutes))
-    : null;
-
-  return { bedtimeMin, wakeMin, medianWakeWindowMinutes };
+export function computeRhythmCard(sessions: SleepSession[], now: number, active: ActiveSleep | null = null): RhythmCard {
+  const profile = computePersonalSleepProfile(sessions, now, active);
+  return { bedtimeMin: profile.typicalBedtime, wakeMin: profile.typicalWakeTime, medianWakeWindowMinutes: profile.medianWakeWindow };
 }
