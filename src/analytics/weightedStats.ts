@@ -38,3 +38,11 @@ export function weightedClockDeviation(samples: WeightedValue[], pivot: number):
   const variance = weightedMean(samples.map(s => ({ value: clockDistance(s.value, pivot) ** 2, weight: s.weight })));
   return variance == null ? null : Math.sqrt(variance);
 }
+
+// Median distance from the weighted center, in the original units.
+export function weightedMedianAbsoluteDeviation(samples: WeightedValue[]): number | null {
+  const center = weightedMedian(samples);
+  return center === null ? null : weightedMedian(samples.map(sample => ({
+    value: Math.abs(sample.value - center), weight: sample.weight,
+  })));
+}
