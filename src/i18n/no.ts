@@ -304,6 +304,7 @@ const no = {
       more: "Det trengs {{count}} brukbare dager til på dette tidspunktet.",
       nextHome: "Neste søvn",
       next: "Sammenligner siste oppvåkning og dagens registrerte søvnforløp med lignende dager, opptil {{days}} hele dager tilbake. Nyere treff teller mest, og mer variasjon gir et bredere anslag.",
+      nextOverview: "Estimatet i Oversikt bruker siste oppvåkning, aldersveiledning når den finnes, og typiske våkenvinduer fra opptil {{days}} dager. Mer personlig historikk kan gi disse vinduene større vekt.",
       dailyTitle: "Dagens søvnprognose",
       daily: "Ser etter lignende søvnforløp inntil {{days}} dager tilbake og legger mer vekt på nyere og mer sammenlignbare dager. Senere lurer er mer usikre og vises bare når det finnes nok grunnlag.",
       upcoming: "Om natten ser Sleepy opptil {{days}} dager tilbake og legger vekt på nyere morgener og lignende leggetider. Prognosen kan endre seg etter morgenens oppvåkning.",

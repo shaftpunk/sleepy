@@ -305,6 +305,7 @@ const en = {
       more: "{{count}} more usable days at this time are needed.",
       nextHome: "Next Sleep",
       next: "Compares the latest wake-up and today's recorded sleep sequence with similar days, up to {{days}} completed days back. Recent matches matter most, and more variation widens the estimate.",
+      nextOverview: "The Overview estimate uses the last wake-up, age guidance when available, and typical wake windows from up to {{days}} days. More personal history can give those windows more influence.",
       dailyTitle: "Daily Sleep Forecast",
       daily: "Looks for similar sleep sequences through day {{days}} of recent history, favoring newer and more similar days. Later naps are less certain and appear only when supported.",
       upcoming: "At night, Sleepy looks back up to {{days}} days and favors recent mornings and similar bedtimes to estimate the coming day. The estimate may change after the morning wake-up.",
