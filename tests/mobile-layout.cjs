@@ -51,7 +51,8 @@ function mock(url) {
     if(p.has('next-sleep-fixture')&&!p.has('empty')){sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,d)=>Array.from({length:6},(_,i)=>{const end=now-(d+1)*86400000-i*4*3600000;return {id:String(end),baby_id:'baby',starttime:iso(end-3600000),endtime:iso(end),durationminutes:60,sleep_type:'sleep',rate:'4',deleted_at:null}})).flat(),{id:'last',baby_id:'baby',starttime:iso(now-2*3600000),endtime:iso(now-3600000),durationminutes:60,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.sort((a,b)=>Date.parse(b.endtime)-Date.parse(a.endtime));}
     if(p.has('wave-fixture')&&!p.has('empty')){const at=(d,h,m=0)=>{const date=new Date(now);date.setDate(date.getDate()-d);date.setHours(h,m,0,0);return date.getTime()};const row=(start,end)=>({id:String(start),baby_id:'baby',starttime:iso(start),endtime:iso(end),durationminutes:(end-start)/60000,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,i)=>{const d=i+1;return [row(at(d+1,22),at(d,6)),row(at(d,9,15),at(d,10,5)),row(at(d,12,55),at(d,13,35)),row(at(d,16,10),at(d,16,50)),row(at(d,p.has('multi')?18:20),at(d,p.has('multi')?19:21))]}).flat(),...(p.has('multi')?[]:[row(at(0,9,15),at(0,10,5))]),...(p.has('night')?[row(at(1,20,9),at(0,6,53))]:[]));sleeps.sort((a,b)=>Date.parse(b.endtime)-Date.parse(a.endtime));}
     if(p.has('home-fixture')&&!p.has('empty')){sleeps.splice(0,sleeps.length,...Array.from({length:24},(_,i)=>({...sleeps[0],id:'history-'+i,baby_id:'baby',starttime:iso(now-(63+i*120)*60000),endtime:iso(now-(18+i*120)*60000),durationminutes:45,sleep_type:'sleep',rate:'4.8',deleted_at:null})));}
-    export const getActiveSleep=async()=>window.__homeActive!==undefined?window.__homeActive:p.has('active')?{...sleeps[0],id:'active',starttime:p.has('wave-fixture')?iso(now-42*60000):p.has('home-fixture')?iso(now-42*60000):sleeps[0].starttime,endtime:null}:null,
+    if(p.has('last-slept-fixture')&&sleeps[0])Object.assign(sleeps[0],{starttime:iso(now-223*60000),endtime:iso(now-151*60000),durationminutes:72});
+    export const getActiveSleep=async()=>window.__homeActive!==undefined?window.__homeActive:p.has('active')?{...sleeps[0],id:'active',baby_id:'baby',sleep_type:'sleep',starttime:p.has('wave-fixture')||p.has('home-fixture')||p.has('last-slept-fixture')?iso(now-42*60000):sleeps[0].starttime,endtime:null}:null,
     getLastCompletedSleep=async()=>window.__homeLast||(p.has('hold-room')?{...sleeps[0],endtime:iso(now-2*3600000)}:sleeps[0])||null,getRecentSleeps=async()=>sleeps.slice(0,8),getAllSleeps=async()=>sleeps,getSleepsFromDate=async()=>sleeps,getSleepsOverlappingPeriod=async()=>window.__waveRows??sleeps;
     export async function startSleep(babyId,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'start',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));return window.__homeActive={...sleeps[0],id:'started',baby_id:babyId,starttime:iso(Date.now()-minutes*60000),endtime:null};}
     export async function stopSleep(id,start,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'stop',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));window.__homeActive=null;return window.__homeLast={...sleeps[0],id,starttime:start,endtime:iso(Date.now()-minutes*60000)};}
@@ -80,12 +81,13 @@ async function main() {
     for (let n = 0; n < 100; n++) { try { if ((await fetch(base)).ok) break; } catch { /* starting */ } await new Promise(r => setTimeout(r, 100)); }
     browser = await chromium.launch({ headless: true, ...(process.env.SLEEPY_CHROMIUM_PATH ? { executablePath: process.env.SLEEPY_CHROMIUM_PATH } : {}) });
     const page = await browser.newPage({timezoneId:'Europe/Oslo'});
-    if(process.argv.includes('--sleep-wave-only'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
+    if(process.argv.includes('--sleep-wave-only')||process.argv.includes('--analysis-only'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
     // Home fixtures are relative to "now", but Today stats count sessions that
     // started after local midnight: on the real clock the quality assertion
     // failed between 00:00 and ~01:03 Oslo. A fixed midday start (time still
     // flows, so hold gestures behave normally) makes every run deterministic.
     if(process.argv.includes('--home-only')||process.argv.includes('--history-only'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
+    if(process.argv.includes('--last-slept-only'))await page.clock.setFixedTime(new Date('2026-11-16T11:08:00Z'));
     const errors = [], failures = [], screens = [];
     page.on('pageerror', e => { errors.push(e.message); if(process.argv.includes('--entitlements-only')||process.argv.includes('--home-only'))console.error(e.message); });
     await page.route('**/*', route => {
@@ -189,6 +191,66 @@ async function main() {
       const skin=(process.argv.find(value=>value.startsWith('--skin='))||'--skin=default').split('=')[1];
       context=`${width}x${height}-${theme}-${lang}-${skin}`;query=`theme=${theme}&lang=${lang}&skin=${skin}&long`;
       await page.setViewportSize({width,height});
+      if (process.argv.includes('--last-slept-only')) {
+        const card = page.locator('section[aria-labelledby="home-last-slept"]');
+        const register = card.getByRole('button', { name: lang === 'en' ? 'Register' : 'Registrer' });
+        const visitHome = async (state = '') => {
+          await visit('/', 'last-slept-fixture&' + state);
+          await page.locator('.home-sleep-actions > button:enabled').first().waitFor();
+        };
+        const expectCompletedSleep = async () => {
+          assert.equal(await card.locator('.card-label').textContent(), lang === 'en' ? 'Last slept' : 'Sist sovet');
+          assert.equal(await card.locator('h2').textContent(), lang === 'en' ? '2h 31m ago' : '2t 31m siden');
+          assert.deepEqual(await card.locator('.muted').allTextContents(), [
+            lang === 'en' ? 'Slept 1h 12m' : 'Sov 1t 12m', '08:25\u201309:37',
+          ]);
+        };
+        await visitHome();
+        await expectCompletedSleep();
+        assert.equal(await page.locator('.sleep-strip').count(), 0);
+        const layout = await card.evaluate(sleep => {
+          const today = sleep.previousElementSibling;
+          const feed = sleep.nextElementSibling;
+          const rect = element => element.getBoundingClientRect();
+          const style = getComputedStyle(sleep);
+          return {
+            adjacent: today.matches('.home-today') && feed.matches('.feed-card'),
+            todayGap: rect(sleep).top - rect(today).bottom,
+            feedGap: rect(feed).top - rect(sleep).bottom,
+            pageGap: parseFloat(getComputedStyle(sleep.parentElement).rowGap),
+            equalStyles: ['padding', 'border', 'borderRadius', 'background', 'flexDirection']
+              .every(property => style[property] === getComputedStyle(feed)[property]),
+            aligned: ['', 'div', 'button'].every(selector => {
+              const a = rect(selector ? sleep.querySelector(selector) : sleep);
+              const b = rect(selector ? feed.querySelector(selector) : feed);
+              return a.left === b.left && a.right === b.right;
+            }),
+          };
+        });
+        assert.ok(layout.adjacent && layout.equalStyles && layout.aligned, JSON.stringify(layout));
+        assert.equal(layout.todayGap, layout.pageGap);
+        assert.equal(layout.feedGap, layout.pageGap);
+        await check('last-slept', true);
+
+        await visitHome('active');
+        assert.ok((await page.locator('.sleep-wave [data-wave-live]').textContent()).includes('42'));
+        await expectCompletedSleep();
+        await check('last-slept-active');
+
+        await visitHome('empty&active');
+        assert.equal(await card.locator('h2').textContent(), lang === 'en' ? 'No sleep recorded yet' : 'Ingen s\u00f8vn registrert enn\u00e5');
+        assert.equal(await card.locator('.muted').count(), 0);
+        await check('last-slept-empty');
+        await register.click();
+        const dialog = page.getByRole('dialog', { name: lang === 'en' ? 'Add sleep' : 'Legg til s\u00f8vn' });
+        await dialog.waitFor();
+        assert.equal(await dialog.locator('input[type="datetime-local"]').count(), 2);
+        await check('last-slept-register');
+        await page.keyboard.press('Escape');
+        await dialog.waitFor({ state: 'hidden' });
+        console.log(context + ' Last slept checked');
+        continue;
+      }
       if(process.argv.includes('--sleep-wave-only')){
         const card=page.locator('.sleep-wave');
         await visit('/','wave-fixture');await page.waitForSelector('.sleep-wave-time');
@@ -488,10 +550,10 @@ async function main() {
         const probability=page.locator('.sleep-probability-card'),clock=probability.locator('input[type="time"]');
         assert.equal(await clock.inputValue(),'10:00');
         assert.match(await probability.locator('.sleep-probability-count').innerText(),/9.*12/);
-        assert.match(await probability.locator('.sleep-probability-estimate').innerText(),/79/);
+        assert.match(await probability.locator('.sleep-probability-estimate').innerText(),/81/);
         await clock.fill('11:45');await clock.press('Tab');
         assert.match(await probability.locator('.sleep-probability-count').innerText(),/3.*12/);
-        assert.match(await probability.locator('.sleep-probability-estimate').innerText(),/21/);
+        assert.match(await probability.locator('.sleep-probability-estimate').innerText(),/19/);
         const tracks=probability.locator('.sleep-rhythm-track');assert.equal(await tracks.count(),7);
         assert.ok(await probability.locator('.sleep-rhythm-recorded').count()>0);
         assert.ok(await probability.locator('.sleep-rhythm-pattern').count()>0);

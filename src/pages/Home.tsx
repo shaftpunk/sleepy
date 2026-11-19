@@ -34,10 +34,10 @@ import {
 } from "../services/feedRealtime";
 
 import FeedModal from "../components/FeedModal";
+import SleepModal from "../components/SleepModal";
 import FamilyMessageModal from "../components/FamilyMessageModal";
 import SoundMonitorPanel from "../components/SoundMonitorPanel";
 import FeedHistory from "../components/FeedHistory";
-import SleepStrip from "../components/SleepStrip";
 import BabySprite from "../themes/retro/BabySprite";
 
 import { useAnalyticsData } from "../hooks/useAnalyticsData";
@@ -46,7 +46,7 @@ import SleepWaveCard from "../components/sleep-wave/SleepWaveCard";
 import { useSleepForecasts } from "../hooks/useSleepForecasts";
 import { getActiveSleepEstimate, sleepEstimateHistoryRevision, subscribeSleepEstimateHistory, type SleepEstimatePresentation } from "../services/sleepEstimateService";
 import ActiveSleepEstimate from "../components/ActiveSleepEstimate";
-import { feedTypeLabel, formatClock, formatDuration, sideLabel } from "../lib/format";
+import { feedTypeLabel, formatClock, formatDuration, formatSleepRange, sideLabel } from "../lib/format";
 import { useTranslation } from "../i18n";
 import "./SleepButton.css";
 import SleepPrimaryAction from "../components/SleepPrimaryAction";
@@ -156,6 +156,7 @@ export default function Home() {
   ] =
     useState(false);
 
+  const [sleepModalOpen, setSleepModalOpen] = useState(false);
   const [familyMessageOpen, setFamilyMessageOpen] = useState(false);
 
   const [
@@ -359,6 +360,9 @@ export default function Home() {
     return () => { window.clearInterval(interval); document.removeEventListener("visibilitychange", update); document.removeEventListener("resume", update); };
   }, []);
 
+  const completedSleep = lastSleep?.baby_id === currentBabyId ? lastSleep : null;
+  const completedSleepEnd = completedSleep?.endtime;
+
   // The live timer (sleeping for / awake for), shown in Sleep Wave on the
   // premium skin and above it on Alive/Retro. Same clock and rule for both.
   const liveDuration = activeSleep || lastSleep?.endtime
@@ -524,10 +528,30 @@ export default function Home() {
 
         </section>
 
-        <SleepStrip
-          sessions={analyticsSessions}
-          active={analyticsActive}
-        />
+        <section className="feed-card" aria-labelledby="home-last-slept">
+          <div>
+            <p className="card-label" id="home-last-slept">{t("home.lastSlept")}</p>
+
+            {completedSleep && completedSleepEnd ? (
+              <>
+                <h2>{relativeTime(completedSleepEnd)}</h2>
+                <p className="muted">{t("home.sleptDuration", {
+                  duration: formatDuration(
+                    completedSleep.durationminutes ?? (Date.parse(completedSleepEnd) - Date.parse(completedSleep.starttime)) / 60000,
+                    lang,
+                  ),
+                })}</p>
+                <p className="muted">{formatSleepRange(Date.parse(completedSleep.starttime), Date.parse(completedSleepEnd), now, lang)}</p>
+              </>
+            ) : (
+              <h2>{loading ? t("common.loading") : t("home.noCompletedSleep")}</h2>
+            )}
+          </div>
+
+          <button type="button" className="secondary-button" onClick={() => setSleepModalOpen(true)}>
+            {t("common.register")}
+          </button>
+        </section>
 
         <section className="feed-card">
           <div>
@@ -690,6 +714,10 @@ export default function Home() {
           />
         </section>
       </main>
+
+      {sleepModalOpen && (
+        <SleepModal onClose={() => setSleepModalOpen(false)} onSaved={loadSleepData} />
+      )}
 
       {feedModalOpen && (
         <FeedModal
