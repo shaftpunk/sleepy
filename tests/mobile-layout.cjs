@@ -13,7 +13,7 @@ const root = path.resolve(__dirname, '..'), base = `http://127.0.0.1:${port}`;
 const output = path.join(os.tmpdir(), 'sleepy-mobile-layout');
 fs.mkdirSync(output, { recursive: true });
 const fixture = `import React from '/node_modules/.vite/deps/react.js';import DOM from '/node_modules/.vite/deps/react-dom_client.js';
-import App from '/src/App.tsx';import Auth from '/src/pages/Auth.tsx';import Onboarding from '/src/pages/Onboarding.tsx';
+import SleepWave from '/src/components/sleep-wave/SleepWaveCard.tsx';import App from '/src/App.tsx';import Auth from '/src/pages/Auth.tsx';import Onboarding from '/src/pages/Onboarding.tsx';
 import AuthGate from '/src/components/AuthGate.tsx';import Splash from '/src/components/SplashScreen.tsx';
 import FeedModal from '/src/components/FeedModal.tsx';import SleepModal from '/src/components/SleepModal.tsx';
 import Split from '/src/components/SleepSplitModal.tsx';import Message from '/src/components/FamilyMessageModal.tsx';
@@ -29,7 +29,10 @@ useAppStore.setState({language:p.get('lang')||'no',theme,visualTheme:p.get('skin
 useSoundStore.setState({enabled:!!p.get('sound'),sensitivity:'medium'});
 if(p.has('wave-fixture'))window.__waveStore=useAppStore;
 const sleep={id:'sleep',baby_id:'baby',starttime:new Date(Date.now()-12*3600000).toISOString(),endtime:new Date(Date.now()-2*3600000).toISOString(),durationminutes:600,rate:'5',deleted_at:null,note:'Testnotat / a synthetic note'};
-const done=()=>{};const views={auth:React.createElement(Auth),onboarding:React.createElement(Onboarding,{onComplete:async()=>{}}),
+const onset=new Date();onset.setHours(14,25,0,0);const peak=onset.getTime(),onsetNow=peak-3600000;
+const onsetView=React.createElement('main',{className:'home-page'},React.createElement(SleepWave,{sessions:[],active:null,now:onsetNow,
+  prediction:{status:'ready',earliestStart:peak-1800000,latestStart:peak+1800000,sampleSize:12,peak:{peakTime:peak,windowStart:peak-900000,windowEnd:peak+900000}}}));
+const done=()=>{};const views={onset:onsetView,auth:React.createElement(Auth),onboarding:React.createElement(Onboarding,{onComplete:async()=>{}}),
 gate:React.createElement(AuthGate,null,'Ready'),splash:React.createElement(Splash),
 feed:React.createElement(FeedModal,{onClose:done,onSaved:done}),sleep:React.createElement(SleepModal,{sleep,onClose:done,onSaved:done}),
 newSleep:React.createElement(SleepModal,{onClose:done,onSaved:done}),split:React.createElement(Split,{sleep,onClose:done,onSaved:done}),
@@ -244,6 +247,15 @@ async function main() {
       const skin=(process.argv.find(value=>value.startsWith('--skin='))||'--skin=default').split('=')[1];
       context=`${width}x${height}-${theme}-${lang}-${skin}`;query=`theme=${theme}&lang=${lang}&skin=${skin}&long`;
       await page.setViewportSize({width,height});
+      if (process.argv.includes('--onset-display')) {
+        await visit('/','view=onset');
+        const card=page.locator('.sleep-wave');
+        assert.equal(await card.locator('.sleep-wave-time').innerText(),'14:25');
+        assert.match(await card.locator('.sleep-wave-caption').innerText(),/14:10.*14:40/);
+        assert.ok(await card.evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+        await check('onset-display');
+        continue;
+      }
       if (process.argv.includes('--today-summary')) {
         await visit('/','home-fixture');
         const today=page.locator('.today-stats');

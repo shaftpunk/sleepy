@@ -1,3 +1,4 @@
+import PredictionReminderLifecycle from "./components/PredictionReminderLifecycle";
 import { lazy, Suspense, useEffect, useState } from "react";
 import {
   BrowserRouter,
@@ -74,6 +75,7 @@ function App() {
       <BrowserRouter>
         <NativePushNavigation />
         <NativeSoundLifecycle />
+        <PredictionReminderLifecycle />
         <SleepLiveActivityLifecycle />
         <div className="app-shell">
           <HouseholdContextSelector />

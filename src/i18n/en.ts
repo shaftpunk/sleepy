@@ -98,6 +98,13 @@ const en = {
     time: "Time",
     error: "Could not save diaper change",
   },
+  onsetReminder: {
+    setting: "Notify me before likely sleep",
+    timing: "10 minutes before",
+    permission: "Allow notifications in iOS Settings.",
+    title: "{{name}} may be getting sleepy",
+    body: "Most likely sleep time is around {{time}}.",
+  },
   common: {
     appName: "Sleepy",
     save: "Save",

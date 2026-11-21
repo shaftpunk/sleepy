@@ -1,3 +1,4 @@
+import { estimateOnsetPeak, type OnsetPeak } from "./onsetPeak";
 import { recordedIntervals, completedLocalDays, ageConservatism, recordedTransitionCheck, RECORDED_TRANSITION_RULE } from "./sleepHistory";
 import { sequenceContext, sequenceSimilarity } from "./sleepSequence";
 import { weightedMedianAbsoluteDeviation, weightedPercentile } from "./weightedStats";
@@ -22,12 +23,13 @@ const NEXT_SLEEP_RULES = {
 export type NextSleepPrediction = {
   status: "ready" | "insufficient_data" | "sleeping";
   earliestStart?: number; likelyStart?: number; latestStart?: number;
+  peak?: OnsetPeak;
   awakeMinutes?: number;
   typicalAwakeMinutes?: { min: number; max: number };
   confidence?: "low" | "medium" | "high";
   sampleSize: number;
 };
-type Sample = { minutes: number; weight: number; dayKey: string; startTs: number };
+type Sample = { minutes: number; weight: number; dayKey: string; startTs: number; similarity: number };
 const quantile = (samples: Sample[], fraction: number) =>
   weightedPercentile(samples.map(s => ({ value: s.minutes, weight: s.weight })), fraction)!;
 
@@ -57,7 +59,8 @@ export function calculateNextSleep({ sessions, active, now, ageDays = null }: {
     const difference = Math.abs(minutesSinceLocalMidnight(w.startTs) - clock);
     const distance = Math.min(difference, 1440 - difference);
     if (distance > NEXT_SLEEP_RULES.maxClockDistanceMinutes) return [];
-    return [{ ...w, weight: day.weight * (1 - distance / NEXT_SLEEP_RULES.clockScaleMinutes) * sequenceSimilarity(context.at(-1)!, contextByEnd.get(w.startTs)!) }];
+    const similarity = sequenceSimilarity(context.at(-1)!, contextByEnd.get(w.startTs)!);
+    return [{ ...w, similarity, weight: day.weight * (1 - distance / NEXT_SLEEP_RULES.clockScaleMinutes) * similarity }];
   });
   const days = new Set(samples.map(s => s.dayKey)).size;
   const recentDays = new Set(samples.filter(s => (calendar.get(s.dayKey)?.daysAgo ?? Infinity) <= NEXT_SLEEP_RULES.recentDays).map(s => s.dayKey)).size;
@@ -84,7 +87,8 @@ export function calculateNextSleep({ sessions, active, now, ageDays = null }: {
     caution < NEXT_SLEEP_RULES.maxCautionForHigherConfidence && days >= band.days &&
     recentDays >= band.recentDays && variability < band.relativeSpread;
   const confidence = meets(NEXT_SLEEP_RULES.high) ? "high" : meets(NEXT_SLEEP_RULES.medium) ? "medium" : "low";
-  return { status: "ready", earliestStart, latestStart,
+  const peak = confidence === "low" ? undefined : estimateOnsetPeak(remaining, last.endMs, now, earliestStart, latestStart, caution, deviation);
+  return { ...(peak && { peak }), status: "ready", earliestStart, latestStart,
     likelyStart: Math.min(latestStart, Math.max(earliestStart, roundUp(quantile(remaining, .5)))),
     awakeMinutes: Math.floor(awake), typicalAwakeMinutes: { min: Math.floor(min / 5) * 5, max: Math.ceil(max / 5) * 5 },
     confidence, sampleSize: samples.length };

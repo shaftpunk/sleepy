@@ -163,3 +163,33 @@ function runActiveBacktest({ seeds=[1,2,3,4,5], evalDays=12 }={}) {
 }
 module.exports.runActiveBacktest=runActiveBacktest;
 if(require.main===module)console.log(JSON.stringify({active:runActiveBacktest()},null,2));
+
+function runOnsetReplay() {
+  const errors = [], oldErrors = [];
+  let ready = 0, covered = 0, oldCovered = 0;
+  for (const profile of ['conditional','transition','newborn']) {
+    for (const seed of [1,2,3,4,5]) {
+      const { sessions, dayPlans, profile: p } = generate(profile, {seed});
+      for (const plan of dayPlans.slice(-13,-1)) {
+        for (const cp of [plan.wakeAt + 20*MINUTE, ...plan.naps.map(n => n.endMs + 10*MINUTE)]) {
+          const actual = sessions.find(s => s.startMs > cp);
+          if (!actual || sessions.some(s => s.startMs <= cp && s.endMs > cp)) continue;
+          const r = calculateNextSleep({sessions:sessions.filter(s=>s.endMs<=cp),active:null,now:cp,ageDays:p.ageDays});
+          if (r.status !== 'ready') continue;
+          ready++;
+          if (!r.peak) continue;
+          const onset = actual.startMs;
+          errors.push(Math.abs(r.peak.peakTime-onset)/MINUTE);
+          oldErrors.push(Math.abs(r.likelyStart-onset)/MINUTE);
+          covered += Number(r.peak.windowStart<=onset && onset<=r.peak.windowEnd);
+          oldCovered += Number(r.earliestStart<=onset && onset<=r.latestStart);
+        }
+      }
+    }
+  }
+  const summary=(values,coverage)=>({median:median(values),mean:values.reduce((a,b)=>a+b,0)/values.length,
+    within10:values.filter(x=>x<=10).length,within15:values.filter(x=>x<=15).length,
+    within30:values.filter(x=>x<=30).length,covered:coverage});
+  return {ready,peaks:errors.length,old:summary(oldErrors,oldCovered),peak:summary(errors,covered)};
+}
+module.exports.runOnsetReplay=runOnsetReplay;

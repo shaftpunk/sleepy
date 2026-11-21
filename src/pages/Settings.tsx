@@ -1,3 +1,4 @@
+import { ReminderSetting } from "../components/PredictionReminderLifecycle";
 import { useState } from "react";
 
 import { useAppStore } from "../stores/appStore";
@@ -314,6 +315,7 @@ export default function Settings() {
         bbyid={currentBbyId}
       >
 
+      {user && currentBabyId && <ReminderSetting key={user.id+currentBabyId} user={user.id} baby={currentBabyId} />}
       {currentBabyId && selectedBaby && (
         <SleepEventNotificationSettings
           key={currentBabyId}

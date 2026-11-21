@@ -97,6 +97,13 @@ const no = {
     time: "Tid",
     error: "Kunne ikke registrere bleieskift",
   },
+  onsetReminder: {
+    setting: "Varsle meg før forventet søvn",
+    timing: "10 minutter før",
+    permission: "Tillat varsler i iOS-innstillingene.",
+    title: "{{name}} kan begynne å bli trøtt",
+    body: "Mest sannsynlige søvntid er rundt {{time}}.",
+  },
   common: {
     appName: "Sleepy",
     save: "Lagre",

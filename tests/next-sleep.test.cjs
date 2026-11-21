@@ -20,3 +20,34 @@ test('midnight and both DST transitions use elapsed instants',()=>{for(const anc
 test('expired windows abstain instead of returning past times',()=>{assert.equal(run(history(),{now:now+7*3600000}).status,'insufficient_data');const r=run(history(),{now:now+65*minute});assert.ok(r.status==='insufficient_data'||r.earliestStart>=now+65*minute);});
 test('young or unknown age widens uncertainty without inventing data',()=>{const a=run(),b=run(history(),{ageDays:30});assert.ok(b.latestStart-b.earliestStart>a.latestStart-a.earliestStart);assert.equal(b.confidence,'low');assert.equal(run([],{ageDays:30}).status,'insufficient_data');});
 test('invalid newer sleep prevents using an obsolete wake-up',()=>{assert.equal(run([...history(),session(now-14*3600000,now)]).status,'insufficient_data');});
+
+test('same clock and awake duration respond to different preceding sleep durations', () => {
+  const s = history(now, d => d % 2 ? 90 : 165).map(row => {
+    const end = new Date(row.endMs);
+    if (row.endMs >= now - 120 * minute || end.getHours() !== 8 || end.getMinutes() !== 0) return row;
+    const date = new Date(now);
+    const age = date.getDate() - end.getDate();
+    return session(row.endMs - (age % 2 ? 30 : 120) * minute, row.endMs);
+  }).slice(0, -1);
+  const wake = now - 60 * minute;
+  const short = run([...s, session(wake - 30 * minute, wake)]);
+  const long = run([...s, session(wake - 120 * minute, wake)]);
+  assert.equal(short.status, 'ready');
+  assert.equal(long.status, 'ready');
+  assert.equal(short.awakeMinutes, long.awakeMinutes);
+  assert.ok(long.likelyStart > short.likelyStart);
+});
+
+test('onset mode requires a single supported cluster of comparable future transitions', () => {
+  const {estimateOnsetPeak}=load('src/analytics/onsetPeak.ts');
+  const sample=minutes=>minutes.map((n,i)=>({minutes:n,weight:1,dayKey:String(i),similarity:1}));
+  const anchor=now, lower=anchor+50*minute, upper=anchor+160*minute;
+  const peak=rows=>estimateOnsetPeak(rows,anchor,anchor,lower,upper,.2,3);
+  const stable=sample([89,90,90,91,92,93,94,107]);
+  const r=peak(stable);
+  assert.ok(Math.abs(r.peakTime-(anchor+90*minute))<=5*minute);
+  assert.ok(r.windowStart<r.peakTime && r.windowEnd>r.peakTime && r.windowEnd-r.windowStart<upper-lower);
+  assert.equal(peak(stable.slice(0,3)),undefined);
+  assert.equal(peak(stable.map(s=>({...s,similarity:.2}))),undefined);
+  assert.equal(peak(sample([80,80,80,80,140,140,140,140])),undefined);
+});

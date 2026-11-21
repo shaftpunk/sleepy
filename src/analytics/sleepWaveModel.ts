@@ -84,7 +84,7 @@ export function buildSleepWaveModel({ sessions, active, prediction, now, forecas
   const windows: WaveForecast[] = !sleeping && prediction.status === "ready" &&
     Number.isFinite(prediction.earliestStart) && Number.isFinite(prediction.latestStart) &&
     prediction.earliestStart! >= now && prediction.latestStart! > prediction.earliestStart!
-    ? [{ startMs: prediction.earliestStart!, endMs: prediction.latestStart!, likelyMs: prediction.likelyStart }] : [];
+    ? [{ startMs: prediction.peak?.windowStart ?? prediction.earliestStart!, endMs: prediction.peak?.windowEnd ?? prediction.latestStart!, likelyMs: prediction.peak?.peakTime ?? prediction.likelyStart }] : [];
   // Practical daytime frame, expanded to include full overnight records,
   // current sleep, now, and the entire next onset window. No silent clipping.
   const morning = new Date(dayStart); morning.setHours(6);

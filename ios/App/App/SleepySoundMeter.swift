@@ -362,5 +362,6 @@ class SleepyBridgeViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(SleepySoundMeterPlugin())
         bridge?.registerPluginInstance(SleepyLiveActivityPlugin())
         bridge?.registerPluginInstance(SleepyFeedbackPlugin())
+        bridge?.registerPluginInstance(SleepyPredictionReminderPlugin())
     }
 }

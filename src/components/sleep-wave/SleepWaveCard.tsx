@@ -48,8 +48,9 @@ export default function SleepWaveCard({ sessions, active, prediction, forecast =
         {live.caption && <p className="sleep-wave-caption">{onEditStart ? <button className="home-edit" onClick={onEditStart}>{live.caption} <span aria-hidden="true">&#9998;</span></button> : live.caption}</p>}
       </div> : window ? <>
         <h3>{t("home.nextSleepTitle")}</h3>
-        <p className="sleep-wave-time">{range(window.startMs, window.endMs)}</p>
-        {live?.duration && <p className="sleep-wave-caption" data-wave-live="awake">{t("home.awakeFor")} {live.duration}</p>}
+        <p className="sleep-wave-time">{prediction.peak ? formatClock(prediction.peak.peakTime, lang) : range(window.startMs, window.endMs)}</p>
+        {prediction.peak && <p className="sleep-wave-caption">{range(prediction.peak.windowStart, prediction.peak.windowEnd)}</p>}
+        {!prediction.peak && live?.duration && <p className="sleep-wave-caption" data-wave-live="awake">{t("home.awakeFor")} {live.duration}</p>}
       </> : sleeping ? null : <>
         <h3>{t("sleepWave.learningTitle")}</h3>
         {live?.duration && <p className="sleep-wave-caption" data-wave-live="awake">{t("home.awakeFor")} {live.duration}</p>}
