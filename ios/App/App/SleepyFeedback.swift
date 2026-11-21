@@ -22,7 +22,7 @@ public class SleepyPredictionReminderPlugin: CAPPlugin, CAPBridgedPlugin, Notifi
     public let identifier = "SleepyPredictionReminderPlugin"
     public let jsName = "SleepyPredictionReminder"
     private let requestID = "sleepy.next-onset"
-    public let pluginMethods = [
+    public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "schedule", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "cancel", returnType: CAPPluginReturnPromise)
     ]
