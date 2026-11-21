@@ -139,3 +139,20 @@
 :root[data-visual-theme="default"] [data-theme] .home-page .home-change-time:active:not(:disabled) { background: var(--control-active); }
 :root[data-visual-theme="default"] [data-theme] .home-page .home-hold-hint.sr-only { margin: 0; }
 :root[data-visual-theme="default"] [data-theme] .home-page .home-live-state + .sleep-wave { margin-top: -6px; }
+
+.home-page .home-today .today-stats { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+.home-page .today-stats a { display: flex; flex-direction: column-reverse; align-items: center; justify-content: center; min-height: 44px; color: var(--text-primary,var(--ui-text)); text-decoration: none; }
+.home-page .today-stats a + a { border-inline-start: 1px solid var(--ui-border); }
+.home-page .home-edit { background: transparent; color: inherit; font: inherit; border: 0; padding: .25em 0; cursor: pointer; }
+.home-page :is(.today-stats a,.home-edit):is(:hover,:active) { text-decoration: underline; }
+.home-page :is(.today-stats a,.home-edit):focus-visible { outline: 2px solid var(--focus-ring,currentColor); }
+:root [data-theme] .home-page :is(.card-label,.muted,.today-stats a span,.sleep-wave-caption,.sleep-wave-events dt,.sleep-wave-legend,.sleep-wave-today) { color: var(--text-secondary,var(--ui-text)); font-size: max(.8125rem,13px); }
+.home-page :is(.feed-card,.family-message-card) { flex-wrap: wrap; }
+.home-page :is(.feed-card,.family-message-card) > div { flex: 1 1 9rem; min-width: 0; }
+.home-page :is(.feed-card,.family-message-card,.sleep-wave,.home-header) { overflow-wrap: anywhere; }
+.home-page .sleep-wave-events dd { white-space: normal; overflow-wrap: anywhere; }
+.home-page .home-edit { min-height: 44px; max-width: 100%; }
+.home-page [aria-labelledby="home-last-slept"] { position: relative; }
+.home-page [aria-labelledby="home-last-slept"] .home-edit::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.home-page [aria-labelledby="home-last-slept"] .secondary-button { position: relative; }
+.home-page .sleep-wave-legend > span { white-space: normal; min-width: 0; }

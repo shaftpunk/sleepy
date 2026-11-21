@@ -156,6 +156,7 @@ export default function Home() {
   ] =
     useState(false);
 
+  const [editingSleep,setEditingSleep] = useState<SleepRecord | null>(null);
   const [sleepModalOpen, setSleepModalOpen] = useState(false);
   const [familyMessageOpen, setFamilyMessageOpen] = useState(false);
 
@@ -481,7 +482,7 @@ export default function Home() {
 
           <p className="sleep-subtitle">
             {activeSleep
-              ? t("home.startedAt", { time: formatClock(new Date(activeSleep.starttime).getTime(), lang) })
+              ? <button className="home-edit" onClick={() => setEditingSleep(activeSleep)}>{t("home.startedAt", { time: formatClock(new Date(activeSleep.starttime).getTime(), lang) })} <span aria-hidden="true">&#9998;</span></button>
               : lastSleep?.endtime
                 ? t("home.wokeUpAt", { time: formatClock(new Date(lastSleep.endtime).getTime(), lang) })
                 : t("home.readyForNextNap")}
@@ -502,7 +503,7 @@ export default function Home() {
         <SleepWaveCard key={currentBabyId} sessions={analyticsSessions} active={waveActive}
           prediction={nextSleep} forecast={dayForecast} upcoming={upcomingForecast}
           now={now} babyName={currentBaby?.name}
-          live={isPremium && !loading ? { sleeping: Boolean(activeSleep), duration: liveDuration,
+          onEditStart={() => setEditingSleep(activeSleep)} live={isPremium && !loading ? { sleeping: Boolean(activeSleep), duration: liveDuration,
             caption: activeSleep ? t("home.startedAt", { time: formatClock(new Date(activeSleep.starttime).getTime(), lang) }) : null } : null} />
 
         <SoundMonitorPanel sleep={activeSleep} />
@@ -510,20 +511,8 @@ export default function Home() {
         <section className="home-today" aria-labelledby="home-today-title">
         <h2 className="card-label" id="home-today-title">{t("common.today")}</h2>
         <section className="today-stats">
-          <div>
-            <span>{t("common.sleep")}</span>
-            <strong>{formatHomeDuration(todayStats.totalMinutes, lang)}</strong>
-          </div>
-
-          <div>
-            <span>{t("home.sessions")}</span>
-            <strong>{todayStats.sessionCount}</strong>
-          </div>
-
-          <div>
-            <span>{t("home.avgQuality")}</span>
-            <strong>{todayStats.avgRating == null || todayStats.avgRating <= 0 ? "-" : <><span aria-hidden="true">★ </span>{new Intl.NumberFormat(lang === "no" ? "nb" : "en", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(todayStats.avgRating)}</>}</strong>
-          </div>
+          <Link to="/history?today=sleep"><span>{t("common.sleep")}</span><strong>{formatHomeDuration(todayStats.totalMinutes, lang)}</strong></Link>
+          <Link to="/history?today=sessions"><span>{t("home.sessions")}</span><strong>{todayStats.sessionCount}</strong></Link>
         </section>
 
         </section>
@@ -534,7 +523,7 @@ export default function Home() {
 
             {completedSleep && completedSleepEnd ? (
               <>
-                <h2>{relativeTime(completedSleepEnd)}</h2>
+                <h2><button type="button" className="home-edit" aria-label={t("sleep.editTitle")} onClick={() => setEditingSleep(completedSleep)}>{relativeTime(completedSleepEnd)} <span aria-hidden="true">&#9998;</span></button></h2>
                 <p className="muted">{t("home.sleptDuration", {
                   duration: formatDuration(
                     completedSleep.durationminutes ?? (Date.parse(completedSleepEnd) - Date.parse(completedSleep.starttime)) / 60000,
@@ -715,8 +704,8 @@ export default function Home() {
         </section>
       </main>
 
-      {sleepModalOpen && (
-        <SleepModal onClose={() => setSleepModalOpen(false)} onSaved={loadSleepData} />
+      {(sleepModalOpen || (editingSleep && editingSleep.baby_id === currentBabyId)) && (
+        <SleepModal sleep={editingSleep} onClose={() => { setSleepModalOpen(false); setEditingSleep(null); }} onSaved={loadSleepData} />
       )}
 
       {feedModalOpen && (

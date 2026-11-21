@@ -109,7 +109,7 @@ test('live timer from Home replaces the status tile; awake shows the awake durat
   assert.ok(sleeping.includes('data-wave-live="sleeping"'));assert.ok(sleeping.includes('38 min'));assert.ok(sleeping.includes('Startet 11:30'));
   assert.ok(!sleeping.includes('data-tile="status"'));assert.ok(sleeping.includes('data-tile="last"'));
   const awake=render(lang,{...props,live:{sleeping:false,duration:'2 t 3 min',caption:null}});
-  assert.ok(awake.includes('data-wave-live="awake"'));assert.ok(awake.includes('2 t 3 min'));assert.ok(awake.includes('data-tile="next"'));
+  assert.ok(awake.includes('data-wave-live="awake"'));assert.ok(awake.includes('2 t 3 min'));assert.ok(!awake.includes('data-tile="next"'));
   assert.ok(!render(lang,props).includes('data-wave-live'));
  }
 });

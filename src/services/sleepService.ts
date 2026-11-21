@@ -271,6 +271,22 @@ export async function createManualSleep(
   return data as SleepRecord;
 }
 
+export async function updateActiveSleepStart(sleep: SleepRecord, starttime: string) {
+  const start = Date.parse(starttime);
+  if (!(start <= Date.now())) throw new Error(t("errors.endTimeAfterStart"));
+  const previous = await getLastCompletedSleep(sleep.baby_id);
+  if (previous?.endtime && start < Date.parse(previous.endtime)) throw new Error(t("sleepStart.overlap"));
+
+  const userId = await getCurrentUserId();
+  const { data, error } = await supabase.from("sleep")
+    .update({ starttime, updated_by_user_id: userId, updated_at: new Date().toISOString() })
+    .eq("id", sleep.id).eq("baby_id", sleep.baby_id).eq("starttime", sleep.starttime)
+    .is("endtime", null).is("deleted_at", null).select().single();
+  if (error) throw error;
+  notifySleepPresentationChanged();
+  return data as SleepRecord;
+}
+
 export async function updateSleep(
   id: string,
   starttime: string,

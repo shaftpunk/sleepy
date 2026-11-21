@@ -14,8 +14,8 @@ import "./SleepWave.css";
 export type SleepWaveLive = { sleeping: boolean; duration: string | null; caption: string | null };
 type Props = { sessions: SleepSession[]; active: ActiveSleep | null; prediction: NextSleepPrediction;
   forecast?: DailySleepForecast | null; upcoming?: UpcomingDayForecast | null; now: number; babyName?: string;
-  live?: SleepWaveLive | null };
-export default function SleepWaveCard({ sessions, active, prediction, forecast = null, upcoming = null, now, live = null }: Props) {
+  onEditStart?: () => void; live?: SleepWaveLive | null };
+export default function SleepWaveCard({ sessions, active, prediction, forecast = null, upcoming = null, now, onEditStart, live = null }: Props) {
   const { t, lang } = useTranslation();
   const titleId = useId(), summaryId = useId(), infoId = useId();
   const [infoOpen, setInfoOpen] = useState(false);
@@ -45,7 +45,7 @@ export default function SleepWaveCard({ sessions, active, prediction, forecast =
       {live?.sleeping ? <div className="sleep-wave-live" data-wave-live="sleeping">
         <h3>{t("sleepWave.sleepingTitle")}</h3>
         <p className="sleep-wave-time is-live">{live.duration}</p>
-        {live.caption && <p className="sleep-wave-caption">{live.caption}</p>}
+        {live.caption && <p className="sleep-wave-caption">{onEditStart ? <button className="home-edit" onClick={onEditStart}>{live.caption} <span aria-hidden="true">&#9998;</span></button> : live.caption}</p>}
       </div> : window ? <>
         <h3>{t("home.nextSleepTitle")}</h3>
         <p className="sleep-wave-time">{range(window.startMs, window.endMs)}</p>
@@ -58,12 +58,8 @@ export default function SleepWaveCard({ sessions, active, prediction, forecast =
     <SleepWaveChart model={model} now={chartNow} formatRange={range} />
     <dl className="sleep-wave-events" id={summaryId}>
       <div data-tile="last">{icon("last")}<dt>{t("sleepWave.lastSleep")}</dt><dd>{last ? range(last.startMs, last.endMs) : t("common.notRegistered")}</dd></div>
-      {window && <div data-tile="next">{icon("next")}<dt>{t("sleepWave.nextOnset")}</dt><dd>{range(window.startMs, window.endMs)}</dd></div>}
       {later[0] && <div data-tile="later">{icon("status")}<dt>{t("sleepWave.laterNap")}</dt><dd>{range(later[0].onset.startMs, later[0].onset.endMs)}</dd></div>}
     </dl>
-    {window && awakeRange && <p className="sleep-wave-awake-range">{icon("sun")}<span>{t("sleepWave.typicalAwake")}</span>
-      <strong>{awakeRange.min === awakeRange.max ? formatDuration(awakeRange.min, lang)
-        : `${formatDuration(awakeRange.min, lang)}–${formatDuration(awakeRange.max, lang)}`}</strong></p>}
     {upcoming && upcoming.status !== "not_applicable" && <SleepWaveUpcoming forecast={upcoming} />}
     <div className="sleep-wave-footer">
       <div className="sleep-wave-legend" aria-hidden="true">
@@ -77,6 +73,9 @@ export default function SleepWaveCard({ sessions, active, prediction, forecast =
         aria-label={t("sleepWave.about")} title={t("sleepWave.about")} onClick={() => setInfoOpen(open => !open)} />
     </div>
     <div id={infoId} className={`sleep-wave-info${infoOpen ? "" : " sleep-wave-sr"}`}>
+    {window && awakeRange && <p className="sleep-wave-awake-range">{icon("sun")}<span>{t("sleepWave.typicalAwake")}</span>
+      <strong>{awakeRange.min === awakeRange.max ? formatDuration(awakeRange.min, lang)
+        : `${formatDuration(awakeRange.min, lang)}–${formatDuration(awakeRange.max, lang)}`}</strong></p>}
       {!window && !sleeping && <p>{t("sleepWave.learningBody")}</p>}
       <p className="sleep-wave-note">{later.length || estimated ? t("sleepWave.forecastNote") : window ? t("sleepWave.onsetNote") : t("sleepWave.recordNote")}</p>
     </div>

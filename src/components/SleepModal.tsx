@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import {
   createManualSleep,
   updateSleep,
+  updateActiveSleepStart,
   type SleepRecord,
 } from "../services/sleepService";
 
@@ -79,6 +80,8 @@ export default function SleepModal({
   const [error, setError] =
     useState("");
 
+  const active = Boolean(sleep && !sleep.endtime);
+
   async function save() {
     if (!currentBabyId) {
       setError(t("errors.noBabySelected"));
@@ -93,7 +96,7 @@ export default function SleepModal({
         new Date(start).toISOString();
 
       const endtime =
-        new Date(end).toISOString();
+        active ? new Date().toISOString() : new Date(end).toISOString();
 
       if (
         new Date(endtime) <=
@@ -111,7 +114,9 @@ export default function SleepModal({
           ? String(rate)
           : null;
 
-      if (sleep) {
+      if (sleep && active) {
+        await updateActiveSleepStart(sleep, starttime);
+      } else if (sleep) {
         await updateSleep(
           sleep.id,
           starttime,
@@ -133,7 +138,7 @@ export default function SleepModal({
       console.error(err);
 
       setError(
-        t("errors.couldNotSaveSleep"),
+        err instanceof Error && err.message === t("sleepStart.overlap") ? err.message : t("errors.couldNotSaveSleep"),
       );
     } finally {
       setSaving(false);
@@ -191,7 +196,7 @@ export default function SleepModal({
           />
         </label>
 
-        <label className="form-field">
+        {!active && <><label className="form-field">
           <span>{t("sleep.wokeUp")}</span>
 
           <input
@@ -237,6 +242,8 @@ export default function SleepModal({
             )}
           </div>
         </div>
+
+        </>}
 
         {sleep?.endtime && !sleep.deleted_at && <SleepSoundActivity key={sleep.id} sleep={sleep} />}
 

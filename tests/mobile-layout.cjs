@@ -56,6 +56,7 @@ function mock(url) {
     getLastCompletedSleep=async()=>window.__homeLast||(p.has('hold-room')?{...sleeps[0],endtime:iso(now-2*3600000)}:sleeps[0])||null,getRecentSleeps=async()=>sleeps.slice(0,8),getAllSleeps=async()=>sleeps,getSleepsFromDate=async()=>sleeps,getSleepsOverlappingPeriod=async()=>window.__waveRows??sleeps;
     export async function startSleep(babyId,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'start',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));return window.__homeActive={...sleeps[0],id:'started',baby_id:babyId,starttime:iso(Date.now()-minutes*60000),endtime:null};}
     export async function stopSleep(id,start,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'stop',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));window.__homeActive=null;return window.__homeLast={...sleeps[0],id,starttime:start,endtime:iso(Date.now()-minutes*60000)};}
+    export async function updateActiveSleepStart(row,starttime){if(!p.has('home-refinement'))return blocked();window.__homeActive={...row,starttime};window.__corrected=row.id;}
     export {blocked as resumeSleep,blocked as updateSleep,blocked as deleteSleep,blocked as splitSleep,blocked as createManualSleep};`;
   if(url.endsWith('/sleepEstimateService.ts')&&process.argv.includes('--home-only'))return params+`export const getActiveSleepEstimate=async sleep=>({classification:p.get('classification')||'SHORT_SLEEP_LIKE',estimatedWakeTime:!p.has('classification')||p.get('classification')==='SHORT_SLEEP_LIKE'?new Date(Date.parse(sleep.starttime)+57*60000).toISOString():null}),sleepEstimateHistoryRevision=()=>0,subscribeSleepEstimateHistory=()=>()=>{},publishSleepEstimateHistory=()=>{};`;
   if (url === '/src/services/feedService.ts') return records + failure + `export const getLastFeed=async()=>feeds[0]||null,getRecentFeeds=async()=>feeds,getFeedsFromDate=async()=>feeds;export {blocked as createFeed,blocked as updateFeed,blocked as deleteFeed};`;
@@ -86,7 +87,7 @@ async function main() {
     // started after local midnight: on the real clock the quality assertion
     // failed between 00:00 and ~01:03 Oslo. A fixed midday start (time still
     // flows, so hold gestures behave normally) makes every run deterministic.
-    if(process.argv.includes('--home-only')||process.argv.includes('--history-only'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
+    if(process.argv.includes('--home-only')||process.argv.includes('--history-only')||process.argv.includes('--home-refinement'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
     if(process.argv.includes('--last-slept-only'))await page.clock.setFixedTime(new Date('2026-11-16T11:08:00Z'));
     const errors = [], failures = [], screens = [];
     page.on('pageerror', e => { errors.push(e.message); if(process.argv.includes('--entitlements-only')||process.argv.includes('--home-only'))console.error(e.message); });
@@ -200,7 +201,7 @@ async function main() {
         };
         const expectCompletedSleep = async () => {
           assert.equal(await card.locator('.card-label').textContent(), lang === 'en' ? 'Last slept' : 'Sist sovet');
-          assert.equal(await card.locator('h2').textContent(), lang === 'en' ? '2h 31m ago' : '2t 31m siden');
+          assert.equal(await card.locator('h2').evaluate(e=>e.querySelector('button')?.firstChild.textContent.trim() ?? e.textContent), lang === 'en' ? '2h 31m ago' : '2t 31m siden');
           assert.deepEqual(await card.locator('.muted').allTextContents(), [
             lang === 'en' ? 'Slept 1h 12m' : 'Sov 1t 12m', '08:25\u201309:37',
           ]);
@@ -220,7 +221,7 @@ async function main() {
             pageGap: parseFloat(getComputedStyle(sleep.parentElement).rowGap),
             equalStyles: ['padding', 'border', 'borderRadius', 'background', 'flexDirection']
               .every(property => style[property] === getComputedStyle(feed)[property]),
-            aligned: ['', 'div', 'button'].every(selector => {
+            aligned: ['', 'div', '.secondary-button'].every(selector => {
               const a = rect(selector ? sleep.querySelector(selector) : sleep);
               const b = rect(selector ? feed.querySelector(selector) : feed);
               return a.left === b.left && a.right === b.right;
@@ -373,12 +374,37 @@ async function main() {
         assert.equal(await page.locator('.sleep-wave').count(),1);assert.equal(await page.locator('[data-wave-forecast]').count(),0);
         await check('next-sleep-sleeping',true);console.log(context+' Next Sleep checked');continue;
       }
+      if(process.argv.includes('--home-refinement')){
+        await visit('/','home-fixture&long');
+        const card = page.locator('[aria-labelledby="home-last-slept"]');
+        await card.locator('.home-edit').click();
+        assert.equal(await page.locator('input[type=datetime-local]').count(),2);
+        await page.keyboard.press('Escape');
+        await card.locator('.secondary-button').click();
+        await page.waitForSelector('[role=dialog]');
+        await page.keyboard.press('Escape');
+        await page.locator('.today-stats a[href$=sessions]').click();
+        await page.waitForSelector('#history-sessions .history-item');
+        assert.ok(page.url().endsWith('today=sessions'));
+        await visit('/','home-fixture&active&long&home-refinement');
+        await page.locator('.sleep-wave .home-edit').click();
+        assert.equal(await page.locator('input[type=datetime-local]').count(),1);
+        await page.locator('[role=dialog] .primary-button').click();
+        await page.waitForFunction(()=>window.__corrected==='active' && window.__homeActive.endtime===null);
+        await check('home-active-edit',true);
+        await page.evaluate(()=>document.documentElement.style.fontSize='125%');
+        await check('home-larger-text',true);
+        await visit('/','empty');
+        await check('home-empty',true);
+        console.log(context+' refinement checked');
+        continue;
+      }
       if(process.argv.includes('--home-only')){
         const action=page.locator('.home-sleep-actions > .sleep-action'),change=page.locator('.home-change-time');
         const ready=async(extra='')=>{await visit('/','home-fixture&home-actions&'+extra);await page.waitForFunction(()=>{const e=document.querySelector('.home-sleep-actions > .sleep-action');return e&&!e.disabled;});};
         await ready();assert.ok((await page.locator('.sleep-wave [data-wave-live]').textContent()).includes('18'),'live timer shown in Sleep Wave');assert.equal(await page.locator('.home-live-state .sleep-timer').count(),0);
         assert.equal(await page.locator('.sleep-wave').count(),1);
-        assert.match(await page.locator('.today-stats > div').last().textContent(),lang==='en'?/4\.8/:/4,8/);
+        assert.equal(await page.locator('.today-stats a[href^="/history?today="]').count(),2);
         await check('home-awake',true);
         await change.click();await page.waitForSelector('[role="dialog"]');await check('home-start-sheet',true);
         await page.getByRole('button',{name:lang==='en'?'Choose time':'Velg tidspunkt',exact:true}).click();await check('home-start-explicit-time',true);

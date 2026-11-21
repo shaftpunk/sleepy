@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router-dom";
 import {
   useCallback,
   useEffect,
@@ -54,6 +55,11 @@ import { LOCALES, useTranslation } from "../i18n";
 
 
 export default function History() {
+  const [params] = useSearchParams();
+  const today = params.get("today");
+  useEffect(() => {
+    if (today) document.getElementById("history-sessions")?.scrollIntoView();
+  }, [today]);
   const { t, lang } = useTranslation();
 
   const currentBabyId =
@@ -360,6 +366,10 @@ export default function History() {
     return sleeps.filter((sleep) => !recent.has(sleep.id));
   }, [sleeps, recentSleeps]);
   const sleepById = useMemo(() => new Map(sleeps.map((sleep) => [sleep.id, sleep])), [sleeps]);
+  const midnight = new Date(now).setHours(0, 0, 0, 0);
+  const visibleSleeps = today ? sleeps.filter(sleep => !sleep.deleted_at && sleep.endtime &&
+    Date.parse(sleep.starttime) <= now && (today === "sessions" ? Date.parse(sleep.starttime) >= midnight :
+      Date.parse(sleep.endtime) > midnight)) : recentSleeps;
   const editableIds = useMemo(() => new Set(sleepById.keys()), [sleepById]);
   const newestSleepId = sleeps[0]?.id ?? null;
 
@@ -420,9 +430,9 @@ export default function History() {
         )}
 
         {/* B. Rolling last 24 hours (not the calendar day). */}
-        <section className="history-section history-last-24" aria-labelledby={last24Id}>
+        <section id="history-sessions" className="history-section history-last-24" aria-labelledby={last24Id}>
           <div className="section-heading">
-            <h2 id={last24Id}>{t("history.last24Title")}</h2>
+            <h2 id={last24Id}>{today ? t("common.today") : t("history.last24Title")}</h2>
             <button className="secondary-button" disabled={!currentBabyId} onClick={() => setNewSleep(true)}>
               {t("common.addShort")}
             </button>
@@ -433,7 +443,7 @@ export default function History() {
           )}
 
           <div className="history-list">
-            {active && (
+            {active && !today && (
               <div className="history-item is-active" data-history-active="true">
                 <div className="history-icon">☾</div>
                 <div className="history-content">
@@ -442,10 +452,10 @@ export default function History() {
                 </div>
               </div>
             )}
-            {recentSleeps.map((sleep) => renderSleep(sleep,
+            {visibleSleeps.map((sleep) => renderSleep(sleep,
               sleepDayLabel(Date.parse(sleep.starttime), sleep.endtime ? Date.parse(sleep.endtime) : null, now, lang)))}
-            {!active && recentSleeps.length === 0 && (
-              <p className="muted">{t("history.last24Empty")}</p>
+            {(!active || today) && visibleSleeps.length === 0 && (
+              <p className="muted">{today ? t("home.noCompletedSleep") : t("history.last24Empty")}</p>
             )}
           </div>
         </section>
