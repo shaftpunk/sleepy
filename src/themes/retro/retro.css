@@ -10,14 +10,14 @@
  */
 
 [data-visual-theme="retro"] {
-  --retro-bg-deep: #0c0e24;
-  --retro-bg: #141a3d;
-  --retro-panel: #1e2550;
-  --retro-panel-raised: #262f68;
+  --retro-bg-deep: #05071f;
+  --retro-bg: #080a2c;
+  --retro-panel: #101131;
+  --retro-panel-raised: #1b1942;
   --retro-border-light: #9aa5e8;
   --retro-border-dark: #06071a;
-  --retro-ink: #dbe0ff;
-  --retro-ink-dim: #7c86c9;
+  --retro-ink: #fff8ff;
+  --retro-ink-dim: #c4c5ed;
   --retro-gold: #ffd98e;
   --retro-gold-dim: #caa15f;
   --retro-green: #57c97b;
@@ -441,4 +441,130 @@
   display: flex;
   justify-content: center;
   padding: 10px 0;
+}
+
+/* Outrun instruments. The existing chart supplies every path and timestamp. */
+:root[data-visual-theme="retro"] {
+  --retro-cyan: #20e3ff;
+  --retro-blue: #4da2ff;
+  --retro-pink: #ff52b9;
+  --retro-magenta: #ff2fcf;
+  --retro-violet: #7c35ff;
+  --retro-peach: #ffab88;
+  --retro-line: #63529a;
+  --retro-display: "Arial Black", "Avenir Next", system-ui, sans-serif;
+  --retro-ui: ui-monospace, Menlo, Consolas, monospace;
+  --retro-subtle: 0 0 4px #7c35ff40;
+  --retro-medium: inset 0 0 9px #7c35ff55, 0 0 6px #4da2ff66;
+  --retro-hero: inset 0 0 12px #ff2fcf38, 0 0 3px #ff52b9, 0 0 12px #ff2fcf65;
+
+  & .home-page {
+    color: var(--retro-ink);
+    --ui-text: var(--retro-ink);
+    --ui-muted: var(--retro-ink-dim);
+    font-family: system-ui, sans-serif;
+  }
+  & .home-header { position: relative; isolation: isolate; }
+  & .home-header::before {
+    content: ""; position: absolute; z-index: -1; pointer-events: none;
+    right: 16%; bottom: 0; width: clamp(64px, 22vw, 106px); aspect-ratio: 2 / 1;
+    border-radius: 100px 100px 0 0;
+    background: linear-gradient(#ffc36b, var(--retro-pink) 65%, var(--retro-magenta));
+    mask-image: linear-gradient(#000 35%, transparent 36% 38%, #000 39% 53%, transparent 54% 58%, #000 59% 72%, transparent 73% 79%, #000 80% 90%, transparent 91% 96%, #000 97%);
+  }
+  & .home-header > div:first-child { min-width: 0; }
+  & .home-header .eyebrow, & .sleep-wave h2 {
+    color: var(--retro-pink);
+    font: italic 900 clamp(1.3rem, 6vw, 1.9rem)/1.08 "Snell Roundhand", Georgia, serif;
+    letter-spacing: -.045em;
+    text-shadow: 1px 1px var(--retro-violet), 0 0 7px #ff2fcf88;
+  }
+  & .home-header .eyebrow { text-transform: none; }
+  & .home-header h1, & .home-page .home-live-state .sleep-timer {
+    font: italic 900 clamp(1.65rem, 7vw, 2.55rem)/1.12 var(--retro-display);
+    text-transform: uppercase;
+    letter-spacing: -.035em;
+    overflow-wrap: anywhere;
+    background: linear-gradient(var(--retro-cyan) 8%, var(--retro-ink) 48%, var(--retro-blue) 49%, var(--retro-pink) 78%);
+    background-clip: text;
+    color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 1px 2px #5520ae);
+  }
+  & .home-page .status-pill, & .home-page .home-quick-actions :is(.secondary-button,.sleep-action) {
+    --rim: var(--retro-blue);
+    min-height: 44px;
+    border: 1px solid var(--rim);
+    border-radius: 9px 3px;
+    color: var(--retro-cyan);
+    background: var(--retro-bg);
+    box-shadow: var(--retro-medium);
+    font: italic 700 .85rem/1.2 var(--retro-ui);
+    text-transform: uppercase;
+  }
+  & .home-page .status-pill { min-height: auto; padding: 6px 10px; --rim: var(--retro-pink); }
+  & .home-page .home-quick-actions .sleep-action { --rim: var(--retro-pink); color: var(--retro-ink); box-shadow: var(--retro-hero); }
+  & .home-quick-actions button:active { filter: brightness(1.35); }
+  & .home-page .home-change-time { color: var(--retro-cyan); font-family: var(--retro-ui); background: transparent; }
+  & .home-page .home-live-state {
+    background: linear-gradient(90deg,transparent,#05071fcc 36% 64%,transparent), url("./horizon.svg") center bottom / 100% 100%;
+  }
+  & .home-page .home-live-state .sleep-subtitle, & .home-page .home-live-state .sleep-label { color: var(--retro-ink-dim); }
+  & .home-page .sleep-wave {
+    --wave-ink: var(--retro-ink);
+    --wave-key: var(--retro-ink);
+    --wave-muted: var(--retro-ink-dim);
+    --wave-record-light: var(--retro-pink);
+    --wave-record-top: var(--retro-magenta);
+    --wave-record-mid: #9c32c3;
+    --wave-record-bottom: #6925b54d;
+    --wave-contour: var(--retro-cyan);
+    --wave-now: var(--retro-cyan);
+    --wave-forecast: var(--retro-pink);
+    --wave-band-core: var(--retro-peach);
+    --wave-halo-tint: var(--retro-magenta);
+    --wave-light: #ffeac8;
+    --wave-crest: var(--wave-light);
+    --wave-rule: var(--retro-blue);
+    --wave-tile: var(--retro-bg);
+    --wave-border: var(--retro-line);
+    --wave-pill: var(--retro-bg);
+    --wave-pill-ink: var(--retro-cyan);
+    --font-editorial: var(--retro-ui);
+    background: repeating-linear-gradient(0deg,transparent 0 3px,#7c35ff0a 3px 4px), var(--retro-bg-deep);
+    border: 1.5px solid var(--retro-pink);
+    border-radius: 16px;
+    box-shadow: var(--retro-hero);
+  }
+  & .sleep-wave::before, & .sleep-wave::after { content: none; }
+  & .sleep-wave-chart { isolation: isolate; }
+  & .sleep-wave-chart::before {
+    content: ""; position: absolute; inset: 0 0 1.7em; z-index: -1; pointer-events: none;
+    background: url("./horizon.svg") center bottom / 100% 100% no-repeat; opacity: .45;
+  }
+  & .sleep-wave .sleep-wave-cloudscape, & .sleep-wave .sleep-wave-mist { opacity: .12; }
+  & .sleep-wave .sleep-wave-recorded { stroke-width: 1.5; }
+  & .sleep-wave h2 {
+    text-transform: uppercase;
+    background: linear-gradient(100deg,var(--retro-pink) 18%,#eaa6ff 65%,var(--retro-cyan));
+    background-clip: text; color: transparent; text-shadow: none;
+    filter: drop-shadow(0 1px 2px #ff2fcf66);
+  }
+  & .sleep-wave-header > div { flex: 1; }
+  & .sleep-wave-header h2::after {
+    content: ""; display: inline-block; vertical-align: middle; width: 10%; height: 5px;
+    margin-inline-start: .25em; pointer-events: none;
+    background: repeating-linear-gradient(0deg,var(--retro-violet) 0 1px,transparent 1px 3px);
+  }
+  & .sleep-wave .sleep-wave-time { font-family: var(--retro-display); font-weight: 850; font-style: italic; color: var(--wave-light); text-shadow: 0 1px var(--retro-pink), 0 0 6px #ff52b977; }
+  & .sleep-wave-axis, & .sleep-wave h3 { color: var(--retro-cyan); font-family: var(--retro-ui); }
+  & .sleep-wave-events > div { border: 1px solid var(--retro-line); border-radius: 8px; background: var(--retro-bg); }
+  & .home-page :is(.feed-card,.today-stats,.empty-card,.sleep-list-item,.family-message-card) {
+    background: var(--retro-panel); border: 1px solid var(--retro-line); border-radius: 10px; box-shadow: var(--retro-subtle);
+  }
+  & .home-page .card-label { color: var(--retro-cyan); font-family: var(--retro-ui); }
+  & .bottom-nav { background: var(--retro-bg-deep); border-top: 1px solid var(--retro-blue); box-shadow: 0 -2px 8px #7c35ff40; }
+  & .bottom-nav a { font-family: var(--retro-ui); color: var(--retro-ink-dim); }
+  & .bottom-nav a.active { color: var(--retro-ink); border-radius: 8px; box-shadow: inset 0 0 0 1px var(--retro-pink), var(--retro-hero); }
+  & .bottom-nav a.active::before { content: none; }
 }

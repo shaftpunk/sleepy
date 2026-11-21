@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1" gradientUnits="objectBoundingBox"><stop stop-color="#05071f" stop-opacity="0"/><stop offset=".77" stop-color="#7c1784" stop-opacity=".65"/><stop offset="1" stop-color="#080a2c"/></linearGradient>
+    <linearGradient id="sun" x2="0" y2="1"><stop stop-color="#ffc36b"/><stop offset=".6" stop-color="#ff527f"/><stop offset="1" stop-color="#ff2fcf"/></linearGradient>
+    <mask id="bands"><circle cx="292" cy="69" r="44" fill="white"/><path stroke="black" d="M245 61h94m-94 7h94m-94 7h94" /><path stroke="black" stroke-width="3" d="M245 82h94m-94 8h94m-94 8h94"/></mask>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h480v120H0z"/>
+  <g fill="#98cfff"><circle cx="63" cy="9" r=".9"/><circle cx="166" cy="20" r=".7"/><circle cx="352" cy="13" r=".8"/><circle cx="425" cy="31" r=".8"/><circle cx="203" cy="6" r=".6"/></g>
+  <svg x="237" y="10" width="110" height="88" viewBox="245 23 95 94"><path fill="url(#sun)" mask="url(#bands)" d="M245 23h95v94h-95z"/></svg>
+  <path fill="#080a2c" stroke="#7853ca" d="m0 62 26 12 41-34 43 32 16-9 47 28h119l32-17 15 4 52-46 26 25 21-9 42 24v48H0z"/>
+  <g fill="none" stroke="#663ba2" stroke-width=".85"><path d="m0 85 26-11 12 6 29-40-9 28 33 16-24-44 43 32 15 15 1-24 21 24m-147 0 58-19-20 12 15 11m5-23 33 16 19-12m229 6 26-4 26-42-10 31 25 9-15-40 26 25 12 23 9-32 15 27 27-5m-141 8 42-15-16 11 8 17m8-28 25 9 11-15"/></g>
+  <path fill="#100b30" stroke="#fb52cd" d="M0 92h480v28H0z"/>
+  <g fill="none" stroke="#644bc7" stroke-width=".8"><path d="M0 96h480M0 102h480M0 113h480M143 92l-142 28m164-28-87 28m113-28-51 28m76-28-19 28m40-28v28m26-28 21 28m4-28 57 28m-30-28 89 28m-64-28 139 28"/></g>
+</svg>
