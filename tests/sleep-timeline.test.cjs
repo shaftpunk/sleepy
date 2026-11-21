@@ -75,7 +75,6 @@ test('EN/NO rendering distinguishes recorded blocks, pattern and unrecorded peri
     assert.ok(html.includes(strings.sleepTimeline.noRecordedSleep));assert.ok(!html.includes('sleep-rhythm-pattern none'));
     assert.match(html,/aria-label=/);assert.match(html,/aria-describedby=/);
   }
-  const card=fs.readFileSync('src/components/analysis/SleepProbabilityCard.tsx','utf8'),component=fs.readFileSync('src/components/analysis/SleepRhythmTimeline.tsx','utf8');
-  assert.match(card,/selectedTime=\{selectedTime\} onSelectTime=\{setSelectedTime\}/);assert.equal((card.match(/useState\(/g)||[]).length,1);
+  const component=fs.readFileSync('src/components/analysis/SleepRhythmTimeline.tsx','utf8');
   assert.doesNotMatch(component,/useState|supabase|fetch\(|setInterval/);assert.match(component,/useMemo\(\(\) => buildSleepProbabilityBuckets/);
 });

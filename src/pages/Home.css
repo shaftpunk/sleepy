@@ -156,3 +156,25 @@
 .home-page [aria-labelledby="home-last-slept"] .home-edit::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
 .home-page [aria-labelledby="home-last-slept"] .secondary-button { position: relative; }
 .home-page .sleep-wave-legend > span { white-space: normal; min-width: 0; }
+
+.home-page .home-recent-sleep {
+  width: 100%;
+  min-height: 44px;
+  text-align: start;
+  color: var(--ui-text);
+  font: inherit;
+  cursor: pointer;
+}
+.home-recent-sleep > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.home-recent-sleep .muted { display: block; }
+.home-recent-sleep .sleep-list-icon { flex-shrink: 0; }
+.home-recent-sleep:is(:hover, :active) strong { text-decoration: underline; }
+.home-recent-sleep:focus-visible { outline: 2px solid var(--focus-ring, currentColor); }
+.home-recent-sleep .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -3,8 +3,8 @@
 .sleep-wave {
   --font-editorial: ui-serif, Georgia, "Times New Roman", serif;
   --font-wave-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --wave-ink: #faf3ee;
-  --wave-muted: #dcc6d6;
+  --wave-ink: var(--text-primary, #fcf4ef);
+  --wave-muted: var(--text-secondary, #ebd5e2);
   --wave-edge: #c7a2c4;
   --wave-record-top: #c39ce0;
   --wave-record-mid: #9b74bf;

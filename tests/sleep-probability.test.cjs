@@ -109,16 +109,16 @@ test('shared normalization excludes active/broken rows; probability guards corru
   assert.equal(calculate([...history(range(5)),...corrupt],'10:00',now).usableDays,5);
   for(const clock of ['25:00','10:60','bad',''])assert.equal(calculate(history(range(5)),clock,now).usableDays,0);
 });
-test('EN/NO real card renders clock, raw sample count and weighted estimate; insufficient sample hides percentage',()=>{
+test('EN/NO real card renders clock and complementary awake estimate; insufficient sample hides percentage',()=>{
   const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
   for(const lang of ['en','no']){
     const strings=load(`src/i18n/${lang}.ts`).default,t=(key,params={})=>key.split('.').reduce((s,k)=>s[k],strings).replace(/\{\{(\w+)\}\}/g,(_,k)=>params[k]);
     const Card=loader({'../../i18n':{useTranslation:()=>({t,locale:lang==='no'?'nb-NO':'en-GB'})}})('src/components/analysis/SleepProbabilityCard.tsx').default;
-    const html=renderToStaticMarkup(React.createElement(Card,{sessions:history(range(12),d=>d<=9),active:null,now}));
-    assert.ok(html.includes(strings.sleepProbability.title));assert.ok(html.includes(t('sleepProbability.recorded',{sleeping:9,usable:12})));
-    assert.match(html,/79/);assert.match(html,/type="time"/);assert.match(html,/step="900"/);assert.match(html,/value="10:00"/);assert.match(html,/<label for=/);
+    const html=renderToStaticMarkup(React.createElement(Card,{sessions:history(range(12),d=>d<=9),active:null,now:new Date(now).setHours(10,0,0,0)}));
+    assert.ok(html.includes(strings.sleepProbability.awakeTitle));
+    assert.match(html,/21/);assert.match(html,/type="time"/);assert.match(html,/value="10:00"/);assert.match(html,/aria-label=/);
     const empty=renderToStaticMarkup(React.createElement(Card,{sessions:history(range(3)),active:null,now}));
-    assert.ok(empty.includes(strings.sleepProbability.insufficient));assert.ok(!empty.includes('sleep-probability-estimate'));
+    assert.ok(empty.includes(strings.sleepProbability.awakeInsufficient));assert.ok(!empty.includes('sleep-probability-estimate'));
   }
   assert.match(fs.readFileSync('src/pages/analysis/OverviewTab.tsx','utf8'),/<SleepProbabilityCard sessions=\{sessions\} active=\{active\} now=\{now\}/);
   assert.doesNotMatch(fs.readFileSync('src/components/analysis/SleepProbabilityCard.tsx','utf8'),/supabase|fetch\(|canUse|useEntitlements/);

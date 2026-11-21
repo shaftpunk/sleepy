@@ -626,36 +626,21 @@ export default function Home() {
             </div>
           ) : (
             <div className="sleep-list">
-              {recentSleeps.map(
-                (sleep) => (
-                  <div
-                    className="sleep-list-item"
-                    key={
-                      sleep.id
-                    }
-                  >
-                    <div>
-                      <strong>
-                        {formatClock(new Date(sleep.starttime).getTime(), lang)}
-                        {" – "}
-                        {sleep.endtime
-                          ? formatClock(new Date(sleep.endtime).getTime(), lang)
-                          : t("common.sleeping")}
-                      </strong>
-
-                      <p className="muted">
-                        {sleep.durationminutes != null
-                          ? formatDuration(sleep.durationminutes, lang)
-                          : ""}
-                      </p>
-                    </div>
-
-                    <div className="sleep-list-icon">
-                      ☾
-                    </div>
-                  </div>
-                )
-              )}
+              {recentSleeps.map(sleep => (
+                <button type="button" className="sleep-list-item home-recent-sleep"
+                  key={sleep.id} onClick={() => setEditingSleep(sleep)}>
+                  <span>
+                    <span className="sr-only">{t("sleep.editTitle")} </span>
+                    <strong>
+                      {formatClock(Date.parse(sleep.starttime), lang)}
+                      {" \u2013 "}
+                      {sleep.endtime ? formatClock(Date.parse(sleep.endtime), lang) : t("common.sleeping")}
+                    </strong>
+                    {sleep.durationminutes != null && <span className="muted">{formatDuration(sleep.durationminutes, lang)}</span>}
+                  </span>
+                  <span className="sleep-list-icon" aria-hidden="true">&#9998;</span>
+                </button>
+              ))}
             </div>
           )}
         </section>

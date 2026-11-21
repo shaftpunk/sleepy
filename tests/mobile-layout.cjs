@@ -57,7 +57,8 @@ function mock(url) {
     export async function startSleep(babyId,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'start',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));return window.__homeActive={...sleeps[0],id:'started',baby_id:babyId,starttime:iso(Date.now()-minutes*60000),endtime:null};}
     export async function stopSleep(id,start,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'stop',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));window.__homeActive=null;return window.__homeLast={...sleeps[0],id,starttime:start,endtime:iso(Date.now()-minutes*60000)};}
     export async function updateActiveSleepStart(row,starttime){if(!p.has('home-refinement'))return blocked();window.__homeActive={...row,starttime};window.__corrected=row.id;}
-    export {blocked as resumeSleep,blocked as updateSleep,blocked as deleteSleep,blocked as splitSleep,blocked as createManualSleep};`;
+    export async function updateSleep(id,starttime,endtime,rate){if(!p.has("recent-edit"))return blocked();const row=sleeps.find(row=>row.id===id);Object.assign(row,{starttime,endtime,rate,durationminutes:(Date.parse(endtime)-Date.parse(starttime))/60000});(window.__editedSleeps??=[]).push(id);}
+    export {blocked as resumeSleep,blocked as deleteSleep,blocked as splitSleep,blocked as createManualSleep};`;
   if(url.endsWith('/sleepEstimateService.ts')&&process.argv.includes('--home-only'))return params+`export const getActiveSleepEstimate=async sleep=>({classification:p.get('classification')||'SHORT_SLEEP_LIKE',estimatedWakeTime:!p.has('classification')||p.get('classification')==='SHORT_SLEEP_LIKE'?new Date(Date.parse(sleep.starttime)+57*60000).toISOString():null}),sleepEstimateHistoryRevision=()=>0,subscribeSleepEstimateHistory=()=>()=>{},publishSleepEstimateHistory=()=>{};`;
   if (url === '/src/services/feedService.ts') return records + failure + `export const getLastFeed=async()=>feeds[0]||null,getRecentFeeds=async()=>feeds,getFeedsFromDate=async()=>feeds;export {blocked as createFeed,blocked as updateFeed,blocked as deleteFeed};`;
   if (url.endsWith('/sleepRealtime.ts')) return `export const subscribeToSleepChanges=()=>()=>{};`;
@@ -101,6 +102,39 @@ async function main() {
       }
       return route.continue();
     });
+    if (process.argv.includes('--shell-insets')) {
+      const config = JSON.parse(fs.readFileSync(path.join(root, 'capacitor.config.json'), 'utf8'));
+      assert.equal(config.ios.contentInset, 'never');
+      const cdp = await page.context().newCDPSession(page);
+      for (const width of [320,375,390,430,1024]) {
+        await page.setViewportSize({width,height:844});
+        for (const top of [0,59]) {
+          const bottom = top ? 34 : 0;
+          await cdp.send('Emulation.setSafeAreaInsetsOverride',{insets:{top,bottom,left:0,right:0}});
+          for (const route of ['/','/history','/analysis','/settings']) {
+            await page.goto(base+route+'?lang=en');
+            await page.waitForSelector('.app-shell > main');
+            const metrics = await page.evaluate(()=>{
+              const main = document.querySelector('.app-shell > main');
+              const nav = document.querySelector('.bottom-nav');
+              return {
+                header:main.firstElementChild.getBoundingClientRect().top+scrollY,
+                start:main.getBoundingClientRect().top+scrollY,
+                navPadding:parseFloat(getComputedStyle(nav).paddingBottom),
+                navBottom:nav.getBoundingClientRect().bottom,
+              };
+            });
+            const expected = top+(width<=430?8:24);
+            assert.equal(metrics.start,expected,route+' main');
+            assert.equal(metrics.header,expected,route+' header');
+            assert.equal(metrics.navPadding,12+bottom);
+            assert.equal(metrics.navBottom,844);
+          }
+        }
+      }
+      console.log('40 shell measurements passed');
+      return;
+    }
     const requestedWidth=process.argv.find(value=>value.startsWith('--width='))?.split('=')[1];
     const sizes = (process.argv.includes('--quick') ? [[320,568]] : (process.argv.includes('--sleep-wave-only')||process.argv.includes('--history-only')||process.argv.includes('--analysis-only')?[[320,568],[360,780],[375,667],[390,844],[430,932]]:[[320,568],[375,667],[390,844],[430,932]]))
       .filter(([width])=>!requestedWidth||width===Number(requestedWidth));
@@ -374,6 +408,33 @@ async function main() {
         assert.equal(await page.locator('.sleep-wave').count(),1);assert.equal(await page.locator('[data-wave-forecast]').count(),0);
         await check('next-sleep-sleeping',true);console.log(context+' Next Sleep checked');continue;
       }
+      if(process.argv.includes('--recent-edit')){
+        await visit('/','recent-edit');
+        const rows=page.locator('.home-recent-sleep');
+        await rows.first().waitFor();
+        const count=await rows.count();
+        for(const index of [0,Math.floor(count/2),count-1]){
+          const row=rows.nth(index);
+          await row.focus();
+          await page.keyboard.press('Enter');
+          const dialog=page.locator('[role=dialog]');
+          await dialog.waitFor();
+          const original=await row.innerText();
+          await page.keyboard.press('Escape');
+          assert.equal(await row.innerText(),original);
+          await row.click();
+          const inputs=dialog.locator('input[type=datetime-local]');
+          const start=await inputs.first().inputValue();
+          await inputs.last().fill(start.slice(0,11)+'23:59');
+          await dialog.locator('.primary-button').click();
+          await dialog.waitFor({state:'hidden'});
+          assert.equal(await page.evaluate(()=>window.__editedSleeps.at(-1)),index===0?'sleep':'sleep-'+index);
+          assert.match(await row.innerText(),/23:59/);
+        }
+        assert.equal(await page.evaluate(()=>window.__editedSleeps.length),3);
+        await check('recent-sleep-edit',true);
+        continue;
+      }
       if(process.argv.includes('--home-refinement')){
         await visit('/','home-fixture&long');
         const card = page.locator('[aria-labelledby="home-last-slept"]');
@@ -574,25 +635,11 @@ async function main() {
       if(process.argv.includes('--analysis-only')){
         await visit('/analysis','probability-fixture');await page.waitForSelector('.sleep-probability-estimate');
         const probability=page.locator('.sleep-probability-card'),clock=probability.locator('input[type="time"]');
-        assert.equal(await clock.inputValue(),'10:00');
-        assert.match(await probability.locator('.sleep-probability-count').innerText(),/9.*12/);
-        assert.match(await probability.locator('.sleep-probability-estimate').innerText(),/81/);
-        await clock.fill('11:45');await clock.press('Tab');
-        assert.match(await probability.locator('.sleep-probability-count').innerText(),/3.*12/);
+        await clock.fill('10:00');
         assert.match(await probability.locator('.sleep-probability-estimate').innerText(),/19/);
-        const tracks=probability.locator('.sleep-rhythm-track');assert.equal(await tracks.count(),7);
-        assert.ok(await probability.locator('.sleep-rhythm-recorded').count()>0);
-        assert.ok(await probability.locator('.sleep-rhythm-pattern').count()>0);
-        const track=tracks.last(),box=await track.boundingBox();
-        await track.click({position:{x:box.width/2,y:box.height/2}});assert.equal(await clock.inputValue(),'12:00');
-        await track.press('ArrowLeft');assert.equal(await clock.inputValue(),'11:45');
-        await track.press('Home');assert.equal(await clock.inputValue(),'00:00');
-        await track.press('End');assert.equal(await clock.inputValue(),'23:45');
-        await clock.fill('06:00');await clock.press('Tab');
-        assert.ok((await probability.locator('.sleep-rhythm-selected').evaluateAll(nodes=>nodes.map(node=>node.style.left))).every(left=>left==='25%'));
-        await clock.fill('11:45');await clock.press('Tab');
+        await clock.fill('11:45');
+        assert.match(await probability.locator('.sleep-probability-estimate').innerText(),/81/);
         await check('analysis-probability',true);
-        await probability.locator('summary').click();await check('analysis-probability-method',true);
         await page.locator('.analysis-tab').nth(3).click();
         const insightRows = page.locator('[data-insight]');
         assert.ok((await insightRows.count()) > 0);
@@ -601,9 +648,7 @@ async function main() {
         await check('analysis-insights-populated',true);
         await visit('/analysis','empty');await page.waitForSelector('.sleep-probability-card');
         assert.equal(await page.locator('.sleep-probability-estimate').count(),0);
-        assert.match(await page.locator('.sleep-probability-count').innerText(),/0.*0/);
-        assert.equal(await page.locator('.sleep-rhythm-track').count(),7);
-        assert.equal(await page.locator('.sleep-rhythm-pattern').count(),0);
+        assert.match(await page.locator('.sleep-probability-card [role=status]').innerText(),lang==='en'?/Not enough sleep history/:/historikk/);
         await check('analysis-probability-empty',true);
         await visit('/analysis');await page.waitForSelector('.analysis-tab-content');
         for(let i=0;i<6;i++){await page.locator('.analysis-tab').nth(i).click();await check('analysis-'+i,true);}

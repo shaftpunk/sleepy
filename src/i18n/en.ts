@@ -695,6 +695,9 @@ const en = {
     dst: "Clock-change day: dashed areas mark missing or repeated local times. The axis shows clock time, not elapsed duration.",
   },
   sleepProbability: {
+    awakeTitle: "How likely are they to be awake?",
+    awakeEstimate: "{{percentage}} likely awake",
+    awakeInsufficient: "Not enough sleep history yet",
     title: "Likely asleep",
     localTime: "Local clock time",
     atTime: "{{time}}",

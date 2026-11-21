@@ -694,6 +694,9 @@ const no = {
     dst: "Dag med klokkeomstilling: stiplede områder viser manglende eller gjentatte lokale klokkeslett. Aksen viser klokkeslett, ikke forløpt tid.",
   },
   sleepProbability: {
+    awakeTitle: "Hvor sannsynlig er det at barnet er våkent?",
+    awakeEstimate: "{{percentage}} sannsynlighet for at barnet er våkent",
+    awakeInsufficient: "For lite søvnhistorikk ennå",
     title: "Sannsynlig søvn",
     localTime: "Lokalt klokkeslett",
     atTime: "Kl. {{time}}",
