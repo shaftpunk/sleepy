@@ -98,6 +98,7 @@ const no = {
     error: "Kunne ikke registrere bleieskift",
   },
   onsetReminder: {
+    iphoneOnly: "Tilgjengelig i iPhone-appen.",
     setting: "Varsle meg før forventet søvn",
     timing: "10 minutter før",
     permission: "Tillat varsler i iOS-innstillingene.",

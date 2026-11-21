@@ -99,6 +99,7 @@ const en = {
     error: "Could not save diaper change",
   },
   onsetReminder: {
+    iphoneOnly: "Available in the iPhone app.",
     setting: "Notify me before likely sleep",
     timing: "10 minutes before",
     permission: "Allow notifications in iOS Settings.",

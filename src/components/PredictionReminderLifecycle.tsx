@@ -22,7 +22,16 @@ export function ReminderSetting({ user, baby }: { user: string; baby: string }) 
   const key = reminderKey(user, baby);
   const enabled = usePreference(key);
   const [denied, setDenied] = useState(false);
-  if (!reminderAvailable()) return null;
+  if (!reminderAvailable()) {
+    return <div className="notification-settings__card">
+      <div className="notification-setting-row">
+        <div>
+          <strong>{t("onsetReminder.setting")}</strong>
+          <p>{t("onsetReminder.iphoneOnly")}</p>
+        </div>
+      </div>
+    </div>;
+  }
   return <div><label><input type="checkbox" checked={enabled} onChange={async event => {
     const checked = event.target.checked;
     if (checked && !await requestReminderPermission().catch(() => false)) { setDenied(true); return; }
