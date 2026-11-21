@@ -73,6 +73,14 @@ const en = {
     viewEvents: "View events ({{count}})", showMore: "Show more events",
     underSecond: "less than 1 sec", seconds: "{{seconds}} sec", minutesSeconds: "{{minutes}} min {{seconds}} sec",
   },
+  todayActivity: {
+    session: "session",
+    sessions: "sessions",
+    feed: "feed",
+    feeds: "feeds",
+    diaper: "diaper",
+    diapers: "diapers",
+  },
   diaper: {
     historyBoth: "Wet + Dirty",
     edit: "Edit diaper change",

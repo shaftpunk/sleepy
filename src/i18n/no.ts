@@ -72,6 +72,14 @@ const no = {
     viewEvents: "Vis hendelser ({{count}})", showMore: "Vis flere hendelser",
     underSecond: "under 1 sek", seconds: "{{seconds}} sek", minutesSeconds: "{{minutes}} min {{seconds}} sek",
   },
+  todayActivity: {
+    session: "økt",
+    sessions: "økter",
+    feed: "mating",
+    feeds: "matinger",
+    diaper: "bleie",
+    diapers: "bleier",
+  },
   diaper: {
     historyBoth: "Tiss + bæsj",
     edit: "Rediger bleieskift",

@@ -38,3 +38,10 @@ export async function deleteDiaperChange(id: string, babyId: string) {
     .eq("id", id).eq("baby_id", babyId).select("id").single();
   if (error) throw error;
 }
+
+export async function countDiaperChangesBetween(babyId: string, start: string, end: string) {
+  const { count, error } = await supabase.from("diaper_changes").select("id", { count: "exact", head: true })
+    .eq("baby_id", babyId).gte("changed_at", start).lt("changed_at", end);
+  if (error) throw error;
+  return count;
+}

@@ -20,6 +20,7 @@ import {
 } from "../services/sleepService";
 
 import {
+  countFeedsBetween,
   getLastFeed,
   getRecentFeeds,
   type FeedRecord,
@@ -49,6 +50,8 @@ import ActiveSleepEstimate from "../components/ActiveSleepEstimate";
 import { feedTypeLabel, formatClock, formatDuration, formatSleepRange, sideLabel } from "../lib/format";
 import { useTranslation } from "../i18n";
 import "./SleepButton.css";
+import { countDiaperChangesBetween } from "../services/diaperService";
+import { startOfLocalDay } from "../analytics/time";
 import DiaperModal from "../components/DiaperModal";
 import SleepPrimaryAction from "../components/SleepPrimaryAction";
 import "./Home.css";
@@ -199,6 +202,38 @@ export default function Home() {
     () => computeTodayTotals(analyticsSessions, now),
     [analyticsSessions, now]
   );
+
+  const dayStart = startOfLocalDay(now);
+  const [feedTotal, setFeedTotal] = useState<{ key: string; count: number | null } | null>(null);
+  const [diaperTotal, setDiaperTotal] = useState<{ key: string; count: number | null } | null>(null);
+  const activityKey = JSON.stringify([currentBabyId, dayStart]);
+
+  useEffect(() => {
+    if (!currentBabyId) return;
+    let cancelled = false;
+    const start = new Date(dayStart);
+    const end = new Date(dayStart);
+    end.setDate(end.getDate() + 1);
+    void countFeedsBetween(currentBabyId, start.toISOString(), end.toISOString())
+      .then(count => { if (!cancelled) setFeedTotal({ key: activityKey, count }); })
+      .catch(() => { if (!cancelled) setFeedTotal({ key: activityKey, count: null }); });
+    return () => { cancelled = true; };
+  }, [currentBabyId, dayStart, activityKey, recentFeeds]);
+
+  useEffect(() => {
+    if (!currentBabyId) return;
+    let cancelled = false;
+    const start = new Date(dayStart);
+    const end = new Date(dayStart);
+    end.setDate(end.getDate() + 1);
+    void countDiaperChangesBetween(currentBabyId, start.toISOString(), end.toISOString())
+      .then(count => { if (!cancelled) setDiaperTotal({ key: activityKey, count }); })
+      .catch(() => { if (!cancelled) setDiaperTotal({ key: activityKey, count: null }); });
+    return () => { cancelled = true; };
+  }, [currentBabyId, dayStart, activityKey, diaperSaved]);
+
+  const feedCount = feedTotal?.key === activityKey ? feedTotal.count : null;
+  const diaperCount = diaperTotal?.key === activityKey ? diaperTotal.count : null;
 
   const waveActive = useMemo(() => activeSleep?.baby_id === currentBabyId
     ? { id: activeSleep.id, startMs: Date.parse(activeSleep.starttime) } : analyticsActive,
@@ -526,10 +561,14 @@ export default function Home() {
 
         <section className="home-today" aria-labelledby="home-today-title">
         <h2 className="card-label" id="home-today-title">{t("common.today")}</h2>
-        <section className="today-stats">
-          <Link to="/history?today=sleep"><span>{t("common.sleep")}</span><strong>{formatHomeDuration(todayStats.totalMinutes, lang)}</strong></Link>
-          <Link to="/history?today=sessions"><span>{t("home.sessions")}</span><strong>{todayStats.sessionCount}</strong></Link>
-        </section>
+          <div className="today-stats">
+            <Link className="today-sleep" to="/history?today=sleep">
+              <strong>{formatHomeDuration(todayStats.totalMinutes, lang)}</strong>
+              <span>{t("common.sleep")} {"·"} {todayStats.sessionCount} {t(todayStats.sessionCount === 1 ? "todayActivity.session" : "todayActivity.sessions")}</span>
+            </Link>
+            <Link to="/history?today=feed"><span>{feedCount ?? "—"} {t(feedCount === 1 ? "todayActivity.feed" : "todayActivity.feeds")}</span></Link>
+            <Link to="/history?today=diaper"><span>{diaperCount ?? "—"} {t(diaperCount === 1 ? "todayActivity.diaper" : "todayActivity.diapers")}</span></Link>
+          </div>
 
         </section>
 

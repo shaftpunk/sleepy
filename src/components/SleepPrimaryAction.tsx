@@ -83,6 +83,9 @@ export default function SleepPrimaryAction({ ending, after, babyName, disabled, 
         if (suppressClick.current) { suppressClick.current = false; return; }
         suppressClick.current = false; void commit(0);
       }}>
+      {!ending && <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 11h9l-9 9h9m2-16h7l-7 7h7" />
+      </svg>}
       {saving ? t("common.saving") : offset > 0 ? t("home.actionMinutesAgo", { minutes: offset }) : t(ending ? "home.stopSleep" : "common.sleep")}
     </button>
     <p className="home-hold-hint sr-only" id={hint}>{t("home.holdToAdjust")}</p>

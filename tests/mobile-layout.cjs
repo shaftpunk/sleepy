@@ -45,8 +45,9 @@ function mock(url) {
   if(url.endsWith('/householdContextService.ts'))return `${params}export async function getHouseholdCandidates(user,baby){await new Promise(r=>setTimeout(r,window.__contextDelay||0));if(window.__contextFailure)throw Error('Synthetic offline');return window.__candidates||(p.has('multiple')?[{id:'A',name:'Household A',role:'viewer'},{id:'B',name:'Household B',role:'parent'}]:[{id:'household',name:'Synthetic household',role:'owner'}])};export const subscribeHouseholdContext=()=>()=>{};`;
   if(url.endsWith('/entitlementService.ts'))return `import features from '/src/entitlements/features.json';export async function resolveHouseholdEntitlements(householdId){const tier=window.__tier||'free',delay=window.__resolutionDelay||0;await new Promise(r=>setTimeout(r,delay));if(window.__resolutionFailure)throw Error('Synthetic unavailable RPC');return {householdId,tier,isPlus:tier==='plus',features:Object.keys(features).filter(f=>tier==='plus'||features[f].requiredTier==='free'),verificationState:'verified',verifiedAt:new Date().toISOString(),validUntil:null,recheckAt:new Date(Date.now()+300000).toISOString(),policyVersion:1}};`;
   if (url === '/src/auth/AuthProvider.tsx') return `${params}export const useAuth=()=>({user:{id:'user',email:'parent.with.a.long.synthetic.email@example.invalid',user_metadata:{full_name:'Alexandra Strande Engevik'}},session:{user:{id:'user'}},loading:p.has('loading'),signOut:async()=>{}});`;
-  if (url === '/src/services/diaperService.ts' && process.argv.includes('--diaper-history')) return `
+  if (url === '/src/services/diaperService.ts' && (process.argv.includes('--diaper-history')||process.argv.includes('--today-summary'))) return `
     export const diaperTypes=['wet','dirty','both'];
+    export async function countDiaperChangesBetween(...args){window.__diaperCountQuery=args;return 5;}
     const rows=[['wet','10:00','baby'],['dirty','09:00','baby'],['both','11:00','baby'],['other','11:30','another']];
     export async function getRecentDiaperChanges(babyId){
       if(babyId!=='baby')throw Error('Wrong selected baby');
@@ -57,7 +58,7 @@ function mock(url) {
     export async function deleteDiaperChange(...args){window.__deletedDiaper=args;}
     export async function createDiaperChange(){}
   `;
-  if (url === '/src/lib/supabase.ts') return `export const supabase={from(table){return {insert(row){return {select(){return {async single(){if(table!=='diaper_changes')throw Error(table);window.__diaperRows??=[];window.__diaperRows.push(row);return {data:row,error:null};}};}};} };},auth:{onAuthStateChange:f=>{window.recovery=()=>f('PASSWORD_RECOVERY');return {data:{subscription:{unsubscribe(){}}}}},getUser:async()=>({data:{user:{id:'user'}}})}};`;
+  if (url === '/src/lib/supabase.ts') return `export const supabase={from(table){return {select(){let baby,start;return {eq(_,id){baby=id;return this;},gte(_,value){start=value;return this;},async lt(_,end){window.__diaperCountQuery=[baby,start,end];return {count:5,error:null};}};},insert(row){return {select(){return {async single(){if(table!=='diaper_changes')throw Error(table);window.__diaperRows??=[];window.__diaperRows.push(row);return {data:row,error:null};}};}};} };},auth:{onAuthStateChange:f=>{window.recovery=()=>f('PASSWORD_RECOVERY');return {data:{subscription:{unsubscribe(){}}}}},getUser:async()=>({data:{user:{id:'user'}}})}};`;
   if (url === '/src/services/sleepService.ts') return records + failure + `
     if(p.has('probability-fixture')){const at=(days,h,m=0)=>{const d=new Date();d.setDate(d.getDate()-days);d.setHours(h,m,0,0);return d.getTime()};const row=(start,end)=>({id:String(start),baby_id:'baby',starttime:iso(start),endtime:iso(end),durationminutes:(end-start)/60000,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,i)=>{const d=i+1;return [row(at(d+1,23,30),at(d,7)),row(at(d,d<=9?9:11,30),at(d,d<=9?10:12,30)),row(at(d,20),at(d,21))]}).flat());}
     if(p.has('next-sleep-fixture')&&!p.has('empty')){sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,d)=>Array.from({length:6},(_,i)=>{const end=now-(d+1)*86400000-i*4*3600000;return {id:String(end),baby_id:'baby',starttime:iso(end-3600000),endtime:iso(end),durationminutes:60,sleep_type:'sleep',rate:'4',deleted_at:null}})).flat(),{id:'last',baby_id:'baby',starttime:iso(now-2*3600000),endtime:iso(now-3600000),durationminutes:60,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.sort((a,b)=>Date.parse(b.endtime)-Date.parse(a.endtime));}
@@ -72,7 +73,7 @@ function mock(url) {
     export async function updateSleep(id,starttime,endtime,rate){if(!p.has("recent-edit"))return blocked();const row=sleeps.find(row=>row.id===id);Object.assign(row,{starttime,endtime,rate,durationminutes:(Date.parse(endtime)-Date.parse(starttime))/60000});(window.__editedSleeps??=[]).push(id);}
     export {blocked as resumeSleep,blocked as deleteSleep,blocked as splitSleep,blocked as createManualSleep};`;
   if(url.endsWith('/sleepEstimateService.ts')&&process.argv.includes('--home-only'))return params+`export const getActiveSleepEstimate=async sleep=>({classification:p.get('classification')||'SHORT_SLEEP_LIKE',estimatedWakeTime:!p.has('classification')||p.get('classification')==='SHORT_SLEEP_LIKE'?new Date(Date.parse(sleep.starttime)+57*60000).toISOString():null}),sleepEstimateHistoryRevision=()=>0,subscribeSleepEstimateHistory=()=>()=>{},publishSleepEstimateHistory=()=>{};`;
-  if (url === '/src/services/feedService.ts') return records + failure + `export const getLastFeed=async()=>feeds[0]||null,getRecentFeeds=async()=>feeds,getFeedsFromDate=async()=>feeds;export {blocked as createFeed,blocked as updateFeed,blocked as deleteFeed};`;
+  if (url === '/src/services/feedService.ts') return records + failure + `export async function countFeedsBetween(...args){window.__feedCountQuery=args;return 4;} export const getLastFeed=async()=>feeds[0]||null,getRecentFeeds=async()=>feeds,getFeedsFromDate=async()=>feeds;export {blocked as createFeed,blocked as updateFeed,blocked as deleteFeed};`;
   if (url.endsWith('/sleepRealtime.ts')) return `export const subscribeToSleepChanges=()=>()=>{};`;
   if (url.endsWith('/feedRealtime.ts')) return `export const subscribeToFeedChanges=()=>()=>{};`;
   if (url.endsWith('/householdService.ts')) return params + failure + `export async function getMyHouseholds(){if(p.has('error'))throw Error('Synthetic long failure message. '+ 'x'.repeat(70));return [{id:'household',name:'Strande Engevik – familie med et langt navn',role:'owner'}]};export const getMyBabies=async()=>[];export {blocked as updateBabyBirthDate,blocked as createBabyForHousehold,blocked as createHouseholdWithBaby};`;
@@ -101,7 +102,7 @@ async function main() {
     // failed between 00:00 and ~01:03 Oslo. A fixed midday start (time still
     // flows, so hold gestures behave normally) makes every run deterministic.
     if(process.argv.includes('--home-only')||process.argv.includes('--history-only')||process.argv.includes('--home-refinement'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
-    if(process.argv.includes('--diaper-history'))await page.clock.setFixedTime(new Date('2026-11-21T12:00:00Z'));
+    if(process.argv.includes('--diaper-history')||process.argv.includes('--today-summary'))await page.clock.setFixedTime(new Date('2026-11-21T12:00:00Z'));
     if(process.argv.includes('--last-slept-only'))await page.clock.setFixedTime(new Date('2026-11-16T11:08:00Z'));
     const errors = [], failures = [], screens = [];
     page.on('pageerror', e => { errors.push(e.message); if(process.argv.includes('--entitlements-only')||process.argv.includes('--home-only'))console.error(e.message); });
@@ -239,6 +240,30 @@ async function main() {
       const skin=(process.argv.find(value=>value.startsWith('--skin='))||'--skin=default').split('=')[1];
       context=`${width}x${height}-${theme}-${lang}-${skin}`;query=`theme=${theme}&lang=${lang}&skin=${skin}&long`;
       await page.setViewportSize({width,height});
+      if (process.argv.includes('--today-summary')) {
+        await visit('/','home-fixture');
+        const today=page.locator('.today-stats');
+        const feed=today.locator('a[href$=feed]'), diaper=today.locator('a[href$=diaper]');
+        await page.waitForFunction(()=>document.querySelector('.today-stats a[href$=diaper]')?.textContent.includes('5'));
+        assert.equal(await feed.textContent(),lang==='en'?'4 feeds':'4 matinger');
+        assert.equal(await diaper.textContent(),lang==='en'?'5 diapers':'5 bleier');
+        const expected=['baby','2026-11-20T23:00:00.000Z','2026-11-21T23:00:00.000Z'];
+        assert.deepEqual(await page.evaluate(()=>window.__feedCountQuery),expected);
+        assert.deepEqual(await page.evaluate(()=>window.__diaperCountQuery),expected);
+        const layout=await today.locator('a').evaluateAll(nodes=>nodes.map(node=>({w:node.offsetWidth,h:node.offsetHeight,overflow:node.scrollWidth>node.clientWidth})));
+        assert.ok(layout.slice(1).every(item=>item.h<layout[0].h && item.w<layout[0].w));
+        assert.ok(layout.every(item=>!item.overflow));
+        await check('today-summary');
+        for(const kind of ['sleep','feed','diaper']){
+          await today.locator('a[href$='+kind+']').click();
+          await page.waitForSelector('#history-sessions');
+          assert.ok(page.url().endsWith('today='+kind));
+          if(kind==='diaper') await page.waitForSelector('#history-sessions [data-diaper-change]');
+          if(kind==='feed') await page.waitForSelector('#history-sessions .history-content');
+          await visit('/','home-fixture');
+        }
+        continue;
+      }
       if (process.argv.includes('--diaper-history')) {
         await page.goto(base+'/history?'+query+'&today=sleep');
         const recent=page.locator('#history-sessions');
@@ -269,6 +294,18 @@ async function main() {
         assert.ok(Math.max(...widths)-Math.min(...widths)<1);
         assert.deepEqual(await secondary.allTextContents(),lang==='en'?['Diaper','Feed']:['Bleie','Mating']);
         assert.equal(await sleep.evaluate(e=>e.previousElementSibling.textContent.trim()),lang==='en'?'Feed':'Mating');
+        const icons = await actions.locator('button > svg').evaluateAll(nodes => nodes.map(node => {
+          const style = getComputedStyle(node);
+          const rect = node.getBoundingClientRect();
+          return { width: rect.width, height: rect.height, strokeWidth: style.strokeWidth, stroke: style.stroke };
+        }));
+        assert.equal(icons.length, 3);
+        for (const icon of icons) {
+          assert.equal(icon.width, 16);
+          assert.equal(icon.height, 16);
+          assert.equal(icon.strokeWidth, '1.5px');
+          assert.notEqual(icon.stroke, 'none');
+        }
         await check('quick-actions-awake');
         await secondary.last().click();
         await page.waitForSelector('[role=dialog]');
@@ -509,9 +546,9 @@ async function main() {
         await card.locator('.secondary-button').click();
         await page.waitForSelector('[role=dialog]');
         await page.keyboard.press('Escape');
-        await page.locator('.today-stats a[href$=sessions]').click();
+        await page.locator('.today-stats a[href$=sleep]').click();
         await page.waitForSelector('#history-sessions .history-item');
-        assert.ok(page.url().endsWith('today=sessions'));
+        assert.ok(page.url().endsWith('today=sleep'));
         await visit('/','home-fixture&active&long&home-refinement');
         await page.locator('.sleep-wave .home-edit').click();
         assert.equal(await page.locator('input[type=datetime-local]').count(),1);
@@ -530,7 +567,7 @@ async function main() {
         const ready=async(extra='')=>{await visit('/','home-fixture&home-actions&'+extra);await page.waitForFunction(()=>{const e=document.querySelector('.home-sleep-actions > .sleep-action');return e&&!e.disabled;});};
         await ready();assert.ok((await page.locator('.sleep-wave [data-wave-live]').textContent()).includes('18'),'live timer shown in Sleep Wave');assert.equal(await page.locator('.home-live-state .sleep-timer').count(),0);
         assert.equal(await page.locator('.sleep-wave').count(),1);
-        assert.equal(await page.locator('.today-stats a[href^="/history?today="]').count(),2);
+        assert.equal(await page.locator('.today-stats a[href^="/history?today="]').count(),3);
         await check('home-awake',true);
         await change.click();await page.waitForSelector('[role="dialog"]');await check('home-start-sheet',true);
         await page.getByRole('button',{name:lang==='en'?'Choose time':'Velg tidspunkt',exact:true}).click();await check('home-start-explicit-time',true);

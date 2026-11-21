@@ -264,3 +264,9 @@ export async function getFeedsFromDate(
 
   return (data ?? []) as FeedRecord[];
 }
+export async function countFeedsBetween(babyId: string, start: string, end: string) {
+  const { count, error } = await supabase.from("feed").select("id", { count: "exact", head: true })
+    .eq("baby_id", babyId).is("deleted_at", null).gte("starttime", start).lt("starttime", end);
+  if (error) throw error;
+  return count;
+}

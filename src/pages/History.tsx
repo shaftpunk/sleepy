@@ -59,6 +59,7 @@ import { LOCALES, useTranslation } from "../i18n";
 export default function History() {
   const [params] = useSearchParams();
   const today = params.get("today");
+  const activity = today === "feed" || today === "diaper" ? today : null;
   useEffect(() => {
     if (today) document.getElementById("history-sessions")?.scrollIntoView();
   }, [today]);
@@ -454,14 +455,17 @@ export default function History() {
     </div>;
   }
 
+  const nextDay = new Date(midnight);
+  nextDay.setDate(nextDay.getDate() + 1);
+  const dayEnd = nextDay.getTime();
   const start = today ? midnight : now - ROLLING_DAY_MS;
   const byTime = (a: { time: number }, b: { time: number }) => b.time - a.time;
   const careActivities = [
     ...feeds.filter(feed => feed.baby_id === currentBabyId).map(feed => ({
-      time: Date.parse(feed.starttime), node: renderFeed(feed),
+      kind: "feed", time: Date.parse(feed.starttime), node: renderFeed(feed),
     })),
     ...diapers.filter(change => change.baby_id === currentBabyId).map(change => ({
-      time: Date.parse(change.changed_at), node: renderDiaper(change),
+      kind: "diaper", time: Date.parse(change.changed_at), node: renderDiaper(change),
     })),
   ];
   const recentActivities = [
@@ -474,13 +478,13 @@ export default function History() {
                 </div>
               </div>
     ) }] : []),
-    ...visibleSleeps.map(sleep => ({
+    ...(activity ? [] : visibleSleeps).map(sleep => ({
       time: Date.parse(sleep.starttime),
       node: renderSleep(sleep, sleepDayLabel(Date.parse(sleep.starttime), sleep.endtime ? Date.parse(sleep.endtime) : null, now, lang)),
     })),
-    ...careActivities.filter(event => event.time >= start && event.time <= now),
+    ...careActivities.filter(event => event.time >= start && (activity ? event.kind === activity && event.time < dayEnd : event.time <= now)),
   ].sort(byTime);
-  const olderActivities = careActivities.filter(event => event.time < start || event.time > now).sort(byTime);
+  const olderActivities = careActivities.filter(event => event.time < start || (activity ? event.time >= dayEnd : event.time > now)).sort(byTime);
 
   return (
     <>
@@ -519,7 +523,8 @@ export default function History() {
         {/* B. Rolling last 24 hours (not the calendar day). */}
         <section id="history-sessions" className="history-section history-last-24" aria-labelledby={last24Id}>
           <div className="section-heading">
-            <h2 id={last24Id}>{today ? t("common.today") : t("history.last24Title")}</h2>
+            <h2 id={last24Id}>{today ? t("common.today") : t("history.last24Title")}
+              {activity && <> {"·"} {t(activity === "feed" ? "common.feeding" : "diaper.label")}</>}</h2>
             <button className="secondary-button" disabled={!currentBabyId} onClick={() => setNewSleep(true)}>
               {t("common.addShort")}
             </button>
