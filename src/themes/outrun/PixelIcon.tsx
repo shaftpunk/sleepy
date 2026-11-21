@@ -1,4 +1,4 @@
-// Small blocky inline-SVG icon set for the retro theme's nav (and anywhere
+// Small blocky inline-SVG icon set for the outrun theme's nav (and anywhere
 // else a themed icon is useful). Deliberately simple geometric shapes
 // rendered with crisp edges rather than a bespoke pixel-grid art set - this
 // is a CSS/presentation theme, not a new icon-design project, and simple

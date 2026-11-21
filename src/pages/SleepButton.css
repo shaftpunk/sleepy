@@ -42,15 +42,15 @@
 .primary-button.sleep-action:disabled { cursor: wait; }
 .primary-button.sleep-action:disabled .sleep-action-zzz span { animation-play-state: paused; }
 
-/* Specificity keeps the active color when the retro stylesheet loads later.
+/* Specificity keeps the active color when the outrun stylesheet loads later.
    Preserve the existing pixel bevel and pressed transform. */
-[data-visual-theme="retro"] .primary-button.sleep-action.is-sleeping {
+[data-visual-theme="outrun"] .primary-button.sleep-action.is-sleeping {
   background: #b8acd9;
-  color: var(--retro-border-dark, #21192f);
-  box-shadow: 3px 3px 0 var(--retro-border-dark, #21192f);
+  color: var(--outrun-border-dark, #21192f);
+  box-shadow: 3px 3px 0 var(--outrun-border-dark, #21192f);
 }
-[data-visual-theme="retro"] .primary-button.sleep-action.is-sleeping:active {
-  box-shadow: 1px 1px 0 var(--retro-border-dark, #21192f);
+[data-visual-theme="outrun"] .primary-button.sleep-action.is-sleeping:active {
+  box-shadow: 1px 1px 0 var(--outrun-border-dark, #21192f);
 }
 
 @media (prefers-reduced-motion: reduce) {

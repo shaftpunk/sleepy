@@ -13,7 +13,7 @@ import "./styles/premium-theme.css";
 
 import { useAppStore } from "./stores/appStore";
 import { useTranslation } from "./i18n";
-import PixelIcon from "./themes/retro/PixelIcon";
+import PixelIcon from "./themes/outrun/PixelIcon";
 import NativePushNavigation from "./components/NativePushNavigation";
 import NativeSoundLifecycle from "./components/NativeSoundLifecycle";
 import SleepLiveActivityLifecycle from "./components/SleepLiveActivityLifecycle";
@@ -44,7 +44,7 @@ function App() {
   const { t } = useTranslation();
   const theme = useAppStore((state) => state.theme);
   const visualTheme = useAppStore((state) => state.visualTheme);
-  const isRetro = visualTheme === "retro";
+  const isOutrun = visualTheme === "outrun";
   const [aliveBackground, setAliveBackground] = useState(getAliveBackground);
 
   useEffect(() => {
@@ -62,7 +62,7 @@ function App() {
   }, []);
 
   function navIcon(name: "home" | "history" | "analysis" | "settings", glyph: string) {
-    return isRetro ? <PixelIcon name={name} /> : glyph;
+    return isOutrun ? <PixelIcon name={name} /> : glyph;
   }
 
   return (

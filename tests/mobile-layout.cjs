@@ -21,7 +21,7 @@ import {useAppStore} from '/src/stores/appStore.ts';import {useSoundStore} from 
 import {HouseholdContextProvider,useHouseholdContext} from '/src/households/HouseholdContextProvider.tsx';
 import {EntitlementProvider,useEntitlements} from '/src/entitlements/EntitlementProvider.tsx';
 import HouseholdContextSelector from '/src/households/HouseholdContextSelector.tsx';
-import '/src/index.css';import '/src/themes/alive/alive.css';import '/src/themes/retro/retro.css';
+import '/src/index.css';import '/src/themes/alive/alive.css';import '/src/themes/outrun/outrun.css';
 const p=new URLSearchParams(location.search),view=p.get('view'),theme=p.get('theme')||'dark';
 document.documentElement.dataset.visualTheme=p.get('skin')||'default';
 const baby={id:'baby',name:p.has('long')?'Amalie Alexandra Strande Engevik':'Amalie',birth_date:'2026-08-03'};

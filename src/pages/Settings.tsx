@@ -414,13 +414,13 @@ export default function Settings() {
             <button
               type="button"
               className={
-                visualTheme === "retro"
+                visualTheme === "outrun"
                   ? "side-button active"
                   : "side-button"
               }
-              onClick={() => setVisualTheme("retro")}
+              onClick={() => setVisualTheme("outrun")}
             >
-              {t("settings.visualThemeRetro")}
+              {t("settings.visualThemeOutrun")}
             </button>
           </div>
         </div>

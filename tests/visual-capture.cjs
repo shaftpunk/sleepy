@@ -34,7 +34,7 @@ for (const theme of ['light', 'dark']) {
     [`home-${theme}-sleeping-full`, '/', `${q}&skin=default&wave-fixture&active`, true],
     [`home-${theme}-empty`, '/', `${q}&skin=default&empty`, false],
     [`home-${theme}-alive`, '/', `${q}&skin=alive&wave-fixture`, false],
-    [`home-${theme}-retro`, '/', `${q}&skin=retro&wave-fixture`, false],
+    [`home-${theme}-outrun`, '/', `${q}&skin=outrun&wave-fixture`, false],
     [`history-${theme}`, '/history', `${q}&skin=default`, false],
     [`history-${theme}-plan`, '/history', `${q}&skin=default&wave-fixture&night`, true],
     [`history-${theme}-plan-active`, '/history', `${q}&skin=default&wave-fixture&active`, true],

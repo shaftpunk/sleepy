@@ -7,7 +7,7 @@ import BabyLoader from "./components/BabyLoader";
 import SplashScreen from "./components/SplashScreen";
 import { useAppStore } from "./stores/appStore";
 import { useLoadAliveStyles } from "./themes/alive/useLoadAliveStyles";
-import { useLoadRetroStyles } from "./themes/retro/useLoadRetroStyles";
+import { useLoadOutrunStyles } from "./themes/outrun/useLoadOutrunStyles";
 import { HouseholdContextProvider } from "./households/HouseholdContextProvider";
 import { EntitlementProvider } from "./entitlements/EntitlementProvider";
 import { RevenueCatSession, RevenueCatHouseholdContext } from "./purchases/RevenueCatSession";
@@ -38,14 +38,14 @@ export default function Root() {
 
   // Applied to <html> (not a wrapping div) so every element - including
   // <body> itself, useful for covering mobile overscroll/bounce - is a
-  // valid CSS descendant of `[data-visual-theme="retro"]` in retro.css.
+  // valid CSS descendant of `[data-visual-theme="outrun"]` in outrun.css.
   useEffect(() => {
     document.documentElement.dataset.visualTheme = visualTheme;
   }, [visualTheme]);
 
   // Colour scheme on <html> (a separate attribute, so existing [data-theme]
   // rules don't start matching <html>) lets the premium canvas cover iOS
-  // overscroll. Premium also tints the browser/status chrome; Alive and Retro
+  // overscroll. Premium also tints the browser/status chrome; Alive and Outrun
   // keep their previous behaviour (no theme-color).
   useEffect(() => {
     document.documentElement.dataset.appearance = theme;
@@ -62,7 +62,7 @@ export default function Root() {
 
   // Optional theme styles and assets are loaded only when selected, keeping
   // the original theme's initial bundle lean.
-  useLoadRetroStyles(visualTheme === "retro");
+  useLoadOutrunStyles(visualTheme === "outrun");
   useLoadAliveStyles(visualTheme === "alive");
 
   return (

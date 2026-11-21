@@ -1,6 +1,6 @@
 /* Sleepy Premium — Daylight Blush (light) and Midnight Plum (dark).
    The app-wide design foundation for the default skin. Every rule is scoped to
-   :root[data-visual-theme="default"], so the Alive and Retro skins keep their
+   :root[data-visual-theme="default"], so the Alive and Outrun skins keep their
    own visuals. Components consume the semantic roles below; raw palette values
    appear only in this token block. Data visuals keep their meaning: only hue
    temperature changes, never which state a colour represents. */

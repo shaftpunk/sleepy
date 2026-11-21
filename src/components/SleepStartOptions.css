@@ -14,9 +14,9 @@
 .minute-picker[data-disabled="true"] .minute-wheel { overflow-y: hidden; pointer-events: none; }
 [data-theme="light"] .minute-wheel-frame { background: rgba(255,255,255,.5); border-color: rgba(58,39,87,.16); }
 [data-theme="light"] .minute-wheel-selection { background: rgba(106,80,154,.09); border-color: rgba(106,80,154,.35); }
-[data-visual-theme="retro"] .minute-wheel-frame { border: 2px solid var(--retro-border-light); border-radius: 2px; background: var(--retro-panel); color: var(--retro-ink); }
-[data-visual-theme="retro"] .minute-wheel-selection { border-color: var(--retro-gold); background: var(--retro-panel-raised); }
+[data-visual-theme="outrun"] .minute-wheel-frame { border: 2px solid var(--outrun-border-light); border-radius: 2px; background: var(--outrun-panel); color: var(--outrun-ink); }
+[data-visual-theme="outrun"] .minute-wheel-selection { border-color: var(--outrun-gold); background: var(--outrun-panel-raised); }
 @media (max-width: 360px) { .minute-picker { grid-template-columns: minmax(0, 1fr); gap: 12px; } }
 .sleep-start-custom { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; font-size: .9rem; }
 .sleep-start-custom input { width: 100%; min-width: 0; min-height: var(--ui-control-height, 48px); box-sizing: border-box; padding: 11px 12px; font: inherit; font-size: 16px; color: inherit; background: var(--ui-control, transparent); border: 1px solid var(--ui-border, currentColor); border-radius: var(--ui-control-radius, 12px); }
-[data-visual-theme="retro"] .sleep-start-custom input { border-radius: 2px; }
+[data-visual-theme="outrun"] .sleep-start-custom input { border-radius: 2px; }

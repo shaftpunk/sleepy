@@ -39,7 +39,7 @@ import SleepModal from "../components/SleepModal";
 import FamilyMessageModal from "../components/FamilyMessageModal";
 import SoundMonitorPanel from "../components/SoundMonitorPanel";
 import FeedHistory from "../components/FeedHistory";
-import BabySprite from "../themes/retro/BabySprite";
+import BabySprite from "../themes/outrun/BabySprite";
 
 import { useAnalyticsData } from "../hooks/useAnalyticsData";
 import { computeNextFeedSide, computeTodayTotals } from "../analytics/home";
@@ -73,7 +73,7 @@ export default function Home() {
     );
 
   const visualTheme = useAppStore((state) => state.visualTheme);
-  const isRetro = visualTheme === "retro";
+  const isOutrun = visualTheme === "outrun";
   const isPremium = visualTheme === "default";
 
   const currentBaby =
@@ -422,7 +422,7 @@ export default function Home() {
   const completedSleepEnd = completedSleep?.endtime;
 
   // The live timer (sleeping for / awake for), shown in Sleep Wave on the
-  // premium skin and above it on Alive/Retro. Same clock and rule for both.
+  // premium skin and above it on Alive/Outrun. Same clock and rule for both.
   const liveDuration = activeSleep || lastSleep?.endtime
     ? formatHomeDuration(Math.floor(Math.max(0, now - Date.parse(activeSleep?.starttime ?? lastSleep!.endtime!)) / 60000), lang)
     : null;
@@ -537,7 +537,7 @@ export default function Home() {
         </div>
 
         <section hidden={isPremium && !activeSleep} className="sleep-card home-live-state" aria-label={t(activeSleep ? "common.sleeping" : "common.awake")}>
-          {isRetro && (
+          {isOutrun && (
             <div className="baby-sprite-panel">
               <BabySprite asleep={Boolean(activeSleep)} />
             </div>

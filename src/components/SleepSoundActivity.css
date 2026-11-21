@@ -62,7 +62,7 @@
 [data-theme="light"] .sound-activity-event.low > span { background: #a58bbf; border-color: #624783; }
 [data-theme="light"] .sound-activity-event.medium > span { background: #8b60bc; }
 [data-theme="light"] .sound-activity-event.high > span { background: #704299; border-top-color: #3a2059; }
-[data-visual-theme="retro"] .sleep-sound-activity, [data-visual-theme="retro"] .sound-activity-detail { border-radius: 0; }
+[data-visual-theme="outrun"] .sleep-sound-activity, [data-visual-theme="outrun"] .sound-activity-detail { border-radius: 0; }
 @media (max-width: 380px) {
   .sleep-detail-modal { padding: 16px; }
   .sleep-sound-activity { padding: 12px; }

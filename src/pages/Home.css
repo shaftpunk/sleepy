@@ -1,6 +1,6 @@
 /* Premium (default skin) Home details. Canvas, navigation, cards and controls
    come from the app-wide tokens in src/styles/premium-theme.css; Alive and
-   Retro keep their own visual identity. */
+   Outrun keep their own visual identity. */
 :root[data-visual-theme="default"] [data-theme] .home-header h1 { letter-spacing: -.035em; }
 :root[data-visual-theme="default"] [data-theme] .home-page .sleep-timer { font-weight: 500; }
 :root[data-visual-theme="default"] [data-theme] .home-page .sleep-list-item p { color: var(--text-secondary); }
@@ -105,9 +105,9 @@
 .sleep-time-presets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .sleep-time-presets button:first-child { grid-column: 1 / -1; }
 .sleep-time-sheet .text-button { color: var(--ui-text); }
-[data-visual-theme="retro"] .home-page .home-live-state { border: 0; background: transparent; box-shadow: none; }
-[data-visual-theme="retro"] .home-live-state .baby-sprite-panel { position: absolute; top: 4px; left: 12px; padding: 0; }
-[data-visual-theme="retro"] .home-live-state .baby-sprite { width: 32px; height: 32px; }
+[data-visual-theme="outrun"] .home-page .home-live-state { border: 0; background: transparent; box-shadow: none; }
+[data-visual-theme="outrun"] .home-live-state .baby-sprite-panel { position: absolute; top: 4px; left: 12px; padding: 0; }
+[data-visual-theme="outrun"] .home-live-state .baby-sprite { width: 32px; height: 32px; }
 @media (prefers-reduced-motion: no-preference) {
   .home-live-state .sleep-action { transition: background-color .2s ease; }
 }

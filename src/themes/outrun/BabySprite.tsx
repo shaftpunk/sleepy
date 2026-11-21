@@ -1,4 +1,4 @@
-// A small blocky pixel-art sprite for the retro theme's Home status panel -
+// A small blocky pixel-art sprite for the outrun theme's Home status panel -
 // purely decorative, mirrors the reference image's centerpiece. Two simple
 // states (sleeping / awake); no animation logic, no data of its own - the
 // caller (Home.tsx) passes whether the baby is currently asleep.

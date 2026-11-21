@@ -25,4 +25,4 @@
      transition, timers or independent rendering loop are needed. */
   will-change: transform;
 }
-[data-visual-theme="retro"] .sound-panel { border-radius: 0; border-width: 2px; }
+[data-visual-theme="outrun"] .sound-panel { border-radius: 0; border-width: 2px; }
