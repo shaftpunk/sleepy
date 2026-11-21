@@ -34,9 +34,9 @@ export function isSleepAtLocalTime(session: Interval, localDate: string, selecte
   return instant !== null && session.startMs <= instant && instant < session.endMs;
 }
 
-export function getUsableHistoricalDays(sessions: SleepSession[], selectedTime: string, now: number, active: ActiveSleep | null = null) {
+export function getUsableHistoricalDays(sessions: SleepSession[], selectedTime: string, now: number, active: ActiveSleep | null = null, ageDays: number | null = null) {
   const days: { localDate: string; daysAgo: number; asleep: boolean; weight: number }[] = [];
-  for (const day of usableCompletedDays(sessions, now, active)) {
+  for (const day of usableCompletedDays(sessions, now, active, ageDays)) {
     const instant = localClockInstant(day.localDate, selectedTime);
     const first = day.fragments[0].startMs, last = day.fragments[day.fragments.length - 1].endMs;
     // Probability alone needs evidence bracketing the selected wall-clock instant.
@@ -46,8 +46,8 @@ export function getUsableHistoricalDays(sessions: SleepSession[], selectedTime: 
   }
   return days;
 }
-export function calculateSleepProbability(sessions: SleepSession[], selectedTime: string, now: number, active: ActiveSleep | null = null): SleepProbability {
-  const days = getUsableHistoricalDays(sessions, selectedTime, now, active);
+export function calculateSleepProbability(sessions: SleepSession[], selectedTime: string, now: number, active: ActiveSleep | null = null, ageDays: number | null = null): SleepProbability {
+  const days = getUsableHistoricalDays(sessions, selectedTime, now, active, ageDays);
   const sleepingDays = days.filter(day => day.asleep).length;
   const weightedTotal = days.reduce((total, day) => total + day.weight, 0);
   const weightedSleep = days.reduce((total, day) => total + (day.asleep ? day.weight : 0), 0);
