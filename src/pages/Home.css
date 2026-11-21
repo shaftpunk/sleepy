@@ -132,9 +132,9 @@
 .home-page .home-today .today-stats {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  padding: 0;
-  background: transparent;
-  border: 0;
+  padding: 0 10px;
+  background: var(--surface-1, transparent);
+  border: 1px solid var(--ui-border);
   box-shadow: none;
 }
 .home-page .today-stats a {
@@ -143,15 +143,17 @@
   justify-content: center;
   min-height: 44px;
   min-width: 0;
-  padding: 5px 10px;
+  padding: 6px 12px;
   color: var(--text-primary, var(--ui-text));
   overflow-wrap: anywhere;
 }
 .home-page .today-stats a:not(.today-sleep) { border-inline-start: 1px solid var(--ui-border); }
-.home-page .today-stats .today-sleep { grid-row: span 2; gap: 4px; padding-inline-start: 0; }
+.home-page .today-stats a:last-child { border-block-start: 1px solid var(--ui-border); }
+.home-page .today-stats .today-sleep { grid-row: span 2; gap: 6px; padding-inline-start: 4px; }
 .home-page .today-stats .today-sleep strong {
   font-family: var(--font-display);
-  font-size: clamp(1.5rem, 6vw, 2rem);
+  font-size: clamp(1.4rem, 5vw, 1.75rem);
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }

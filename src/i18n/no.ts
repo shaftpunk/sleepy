@@ -198,6 +198,8 @@ const no = {
     lastSlept: "Sist sovet",
     sleptDuration: "Sov {{duration}}",
     noCompletedSleep: "Ingen søvn registrert ennå",
+    lastDiaper: "Siste bleieskift",
+    noDiaperYet: "Ingen bleieskift registrert",
     lastFed: "Sist matet",
     noFeedingYet: "Ingen mating ennå",
     nextFeedSide: "neste: {{side}}",

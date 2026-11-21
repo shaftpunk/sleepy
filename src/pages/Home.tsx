@@ -50,7 +50,7 @@ import ActiveSleepEstimate from "../components/ActiveSleepEstimate";
 import { feedTypeLabel, formatClock, formatDuration, formatSleepRange, sideLabel } from "../lib/format";
 import { useTranslation } from "../i18n";
 import "./SleepButton.css";
-import { countDiaperChangesBetween } from "../services/diaperService";
+import { countDiaperChangesBetween, getRecentDiaperChanges, type DiaperChange } from "../services/diaperService";
 import { startOfLocalDay } from "../analytics/time";
 import DiaperModal from "../components/DiaperModal";
 import SleepPrimaryAction from "../components/SleepPrimaryAction";
@@ -162,6 +162,8 @@ export default function Home() {
 
   const [editingSleep,setEditingSleep] = useState<SleepRecord | null>(null);
   const [diaperBabyId, setDiaperBabyId] = useState<string | null>(null);
+  const [latestDiaper, setLatestDiaper] = useState<DiaperChange | null>(null);
+  const [editingDiaper, setEditingDiaper] = useState<DiaperChange | null>(null);
   const [diaperSaved, setDiaperSaved] = useState(false);
   const [sleepModalOpen, setSleepModalOpen] = useState(false);
   const [familyMessageOpen, setFamilyMessageOpen] = useState(false);
@@ -231,6 +233,23 @@ export default function Home() {
       .catch(() => { if (!cancelled) setDiaperTotal({ key: activityKey, count: null }); });
     return () => { cancelled = true; };
   }, [currentBabyId, dayStart, activityKey, diaperSaved]);
+
+  useEffect(() => {
+    if (!currentBabyId) return;
+    let cancelled = false;
+    void getRecentDiaperChanges(currentBabyId, 1)
+      .then(([change]) => { if (!cancelled) setLatestDiaper(change ?? null); })
+      .catch(() => { if (!cancelled) setLatestDiaper(null); });
+    return () => { cancelled = true; };
+  }, [currentBabyId, diaperSaved]);
+
+  const lastDiaper = latestDiaper?.baby_id === currentBabyId ? latestDiaper : null;
+
+  function openDiaper(change: DiaperChange | null = null) {
+    setEditingDiaper(change);
+    setDiaperSaved(false);
+    setDiaperBabyId(currentBabyId);
+  }
 
   const feedCount = feedTotal?.key === activityKey ? feedTotal.count : null;
   const diaperCount = diaperTotal?.key === activityKey ? diaperTotal.count : null;
@@ -504,7 +523,7 @@ export default function Home() {
             after={activeSleep ? Date.parse(activeSleep.starttime) : lastSleep?.endtime ? Date.parse(lastSleep.endtime) : null}
             babyName={currentBaby?.name ?? t("common.appName")} disabled={loading || saving || !currentBabyId || Boolean(activeSleep && activeSleep.baby_id !== currentBabyId)}
             saving={saving} awakeActions={<>
-              <button type="button" className="secondary-button" disabled={loading || !currentBabyId} onClick={() => { setDiaperSaved(false); setDiaperBabyId(currentBabyId); }}>
+              <button type="button" className="secondary-button" disabled={loading || !currentBabyId} onClick={() => openDiaper()}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v6c0 4-4 7-9 8-5-1-9-4-9-8zm0 4c4 0 7 3 7 9m11-9c-4 0-7 3-7 9M3 8h5m8 0h5" /></svg>
                 {t("diaper.label")}
               </button>
@@ -640,6 +659,27 @@ export default function Home() {
           </button>
         </section>
 
+        <section className="feed-card" aria-labelledby="home-last-diaper">
+          <div>
+            <p className="card-label" id="home-last-diaper">{t("home.lastDiaper")}</p>
+            {lastDiaper ? <>
+              <h2><button type="button" className="home-edit" aria-label={t("diaper.edit")} onClick={() => openDiaper(lastDiaper)}>
+                {relativeTime(lastDiaper.changed_at)} <span aria-hidden="true">&#9998;</span>
+              </button></h2>
+              <p className="muted">
+                {t(lastDiaper.type === "both" ? "diaper.historyBoth" : `diaper.${lastDiaper.type}`)}
+                {" · "}{formatClock(Date.parse(lastDiaper.changed_at), lang)}
+              </p>
+            </> : <>
+              <h2>{t("common.notRegistered")}</h2>
+              <p className="muted">{t("home.noDiaperYet")}</p>
+            </>}
+          </div>
+          <button type="button" className="secondary-button" disabled={!currentBabyId} onClick={() => openDiaper()}>
+            {t("common.register")}
+          </button>
+        </section>
+
         <section className="family-message-card">
           <div>
             <p className="card-label">{t("familyMessage.eyebrow")}</p>
@@ -748,7 +788,7 @@ export default function Home() {
         <SleepModal sleep={editingSleep} onClose={() => { setSleepModalOpen(false); setEditingSleep(null); }} onSaved={loadSleepData} />
       )}
 
-      {diaperBabyId && diaperBabyId === currentBabyId && <DiaperModal babyId={diaperBabyId}
+      {diaperBabyId && diaperBabyId === currentBabyId && <DiaperModal babyId={diaperBabyId} change={editingDiaper ?? undefined}
         onClose={() => setDiaperBabyId(null)} onSaved={() => { setDiaperBabyId(null); setDiaperSaved(true); }} />}
 
       {feedModalOpen && (

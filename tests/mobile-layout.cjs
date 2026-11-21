@@ -47,18 +47,22 @@ function mock(url) {
   if (url === '/src/auth/AuthProvider.tsx') return `${params}export const useAuth=()=>({user:{id:'user',email:'parent.with.a.long.synthetic.email@example.invalid',user_metadata:{full_name:'Alexandra Strande Engevik'}},session:{user:{id:'user'}},loading:p.has('loading'),signOut:async()=>{}});`;
   if (url === '/src/services/diaperService.ts' && (process.argv.includes('--diaper-history')||process.argv.includes('--today-summary'))) return `
     export const diaperTypes=['wet','dirty','both'];
-    export async function countDiaperChangesBetween(...args){window.__diaperCountQuery=args;return 5;}
+    export async function countDiaperChangesBetween(...args){window.__diaperCountQuery=args;return new URLSearchParams(location.search).has("empty")?0:5;}
     const rows=[['wet','10:00','baby'],['dirty','09:00','baby'],['both','11:00','baby'],['other','11:30','another']];
-    export async function getRecentDiaperChanges(babyId){
+    export async function getRecentDiaperChanges(babyId,limit){
       if(babyId!=='baby')throw Error('Wrong selected baby');
+      if(limit===1){
+        if(new URLSearchParams(location.search).has('empty'))return [];
+        return [window.__savedDiaper||{id:'both',type:'both',baby_id:babyId,changed_at:'2026-11-21T11:00:00Z'}];
+      }
       return [...rows.map(([id,time,baby_id])=>({id,type:id,baby_id,changed_at:'2026-11-21T'+time+':00Z'})),
         {id:'yesterday',type:'wet',baby_id:'baby',changed_at:'2026-11-20T18:00:00Z'}];
     }
     export async function updateDiaperChange(...args){window.__updatedDiaper=args;}
     export async function deleteDiaperChange(...args){window.__deletedDiaper=args;}
-    export async function createDiaperChange(){}
+    export async function createDiaperChange(babyId,type,changedAt){window.__savedDiaper={id:"new",baby_id:babyId,type,changed_at:changedAt};}
   `;
-  if (url === '/src/lib/supabase.ts') return `export const supabase={from(table){return {select(){let baby,start;return {eq(_,id){baby=id;return this;},gte(_,value){start=value;return this;},async lt(_,end){window.__diaperCountQuery=[baby,start,end];return {count:5,error:null};}};},insert(row){return {select(){return {async single(){if(table!=='diaper_changes')throw Error(table);window.__diaperRows??=[];window.__diaperRows.push(row);return {data:row,error:null};}};}};} };},auth:{onAuthStateChange:f=>{window.recovery=()=>f('PASSWORD_RECOVERY');return {data:{subscription:{unsubscribe(){}}}}},getUser:async()=>({data:{user:{id:'user'}}})}};`;
+  if (url === '/src/lib/supabase.ts') return `export const supabase={from(table){return {select(){let baby,start;return {eq(_,id){baby=id;return this;},order(){return this;},async limit(){return {data:[],error:null};},gte(_,value){start=value;return this;},async lt(_,end){window.__diaperCountQuery=[baby,start,end];return {count:5,error:null};}};},insert(row){return {select(){return {async single(){if(table!=='diaper_changes')throw Error(table);window.__diaperRows??=[];window.__diaperRows.push(row);return {data:row,error:null};}};}};} };},auth:{onAuthStateChange:f=>{window.recovery=()=>f('PASSWORD_RECOVERY');return {data:{subscription:{unsubscribe(){}}}}},getUser:async()=>({data:{user:{id:'user'}}})}};`;
   if (url === '/src/services/sleepService.ts') return records + failure + `
     if(p.has('probability-fixture')){const at=(days,h,m=0)=>{const d=new Date();d.setDate(d.getDate()-days);d.setHours(h,m,0,0);return d.getTime()};const row=(start,end)=>({id:String(start),baby_id:'baby',starttime:iso(start),endtime:iso(end),durationminutes:(end-start)/60000,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,i)=>{const d=i+1;return [row(at(d+1,23,30),at(d,7)),row(at(d,d<=9?9:11,30),at(d,d<=9?10:12,30)),row(at(d,20),at(d,21))]}).flat());}
     if(p.has('next-sleep-fixture')&&!p.has('empty')){sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,d)=>Array.from({length:6},(_,i)=>{const end=now-(d+1)*86400000-i*4*3600000;return {id:String(end),baby_id:'baby',starttime:iso(end-3600000),endtime:iso(end),durationminutes:60,sleep_type:'sleep',rate:'4',deleted_at:null}})).flat(),{id:'last',baby_id:'baby',starttime:iso(now-2*3600000),endtime:iso(now-3600000),durationminutes:60,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.sort((a,b)=>Date.parse(b.endtime)-Date.parse(a.endtime));}
@@ -73,7 +77,7 @@ function mock(url) {
     export async function updateSleep(id,starttime,endtime,rate){if(!p.has("recent-edit"))return blocked();const row=sleeps.find(row=>row.id===id);Object.assign(row,{starttime,endtime,rate,durationminutes:(Date.parse(endtime)-Date.parse(starttime))/60000});(window.__editedSleeps??=[]).push(id);}
     export {blocked as resumeSleep,blocked as deleteSleep,blocked as splitSleep,blocked as createManualSleep};`;
   if(url.endsWith('/sleepEstimateService.ts')&&process.argv.includes('--home-only'))return params+`export const getActiveSleepEstimate=async sleep=>({classification:p.get('classification')||'SHORT_SLEEP_LIKE',estimatedWakeTime:!p.has('classification')||p.get('classification')==='SHORT_SLEEP_LIKE'?new Date(Date.parse(sleep.starttime)+57*60000).toISOString():null}),sleepEstimateHistoryRevision=()=>0,subscribeSleepEstimateHistory=()=>()=>{},publishSleepEstimateHistory=()=>{};`;
-  if (url === '/src/services/feedService.ts') return records + failure + `export async function countFeedsBetween(...args){window.__feedCountQuery=args;return 4;} export const getLastFeed=async()=>feeds[0]||null,getRecentFeeds=async()=>feeds,getFeedsFromDate=async()=>feeds;export {blocked as createFeed,blocked as updateFeed,blocked as deleteFeed};`;
+  if (url === '/src/services/feedService.ts') return records + failure + `export async function countFeedsBetween(...args){window.__feedCountQuery=args;return p.has("empty")?0:4;} export const getLastFeed=async()=>feeds[0]||null,getRecentFeeds=async()=>feeds,getFeedsFromDate=async()=>feeds;export {blocked as createFeed,blocked as updateFeed,blocked as deleteFeed};`;
   if (url.endsWith('/sleepRealtime.ts')) return `export const subscribeToSleepChanges=()=>()=>{};`;
   if (url.endsWith('/feedRealtime.ts')) return `export const subscribeToFeedChanges=()=>()=>{};`;
   if (url.endsWith('/householdService.ts')) return params + failure + `export async function getMyHouseholds(){if(p.has('error'))throw Error('Synthetic long failure message. '+ 'x'.repeat(70));return [{id:'household',name:'Strande Engevik – familie med et langt navn',role:'owner'}]};export const getMyBabies=async()=>[];export {blocked as updateBabyBirthDate,blocked as createBabyForHousehold,blocked as createHouseholdWithBaby};`;
@@ -253,6 +257,19 @@ async function main() {
         const layout=await today.locator('a').evaluateAll(nodes=>nodes.map(node=>({w:node.offsetWidth,h:node.offsetHeight,overflow:node.scrollWidth>node.clientWidth})));
         assert.ok(layout.slice(1).every(item=>item.h<layout[0].h && item.w<layout[0].w));
         assert.ok(layout.every(item=>!item.overflow));
+        const lastDiaper=page.locator('[aria-labelledby="home-last-diaper"]');
+        assert.equal(await lastDiaper.evaluate(e=>e.previousElementSibling.querySelector('.card-label').textContent.trim()),lang==='en'?'Last fed':'Sist matet');
+        await lastDiaper.locator('.home-edit').waitFor();
+        assert.match(await lastDiaper.locator('.muted').innerText(),lang==='en'?/Wet \+ Dirty/:/Tiss \+ b\u00e6sj/);
+        await lastDiaper.locator('.home-edit').click();
+        const editor=page.locator('.diaper-modal');
+        assert.equal(await editor.locator('[aria-pressed=true]').count(),1);
+        await page.keyboard.press('Escape');
+        await lastDiaper.locator('.secondary-button').click();
+        await editor.locator('.diaper-types button').first().click();
+        await editor.locator('[type=submit]').click();
+        await editor.waitFor({state:'hidden'});
+        await page.waitForFunction(()=>document.querySelector('[aria-labelledby=home-last-diaper] .muted')?.textContent.includes('13:00'));
         await check('today-summary');
         for(const kind of ['sleep','feed','diaper']){
           await today.locator('a[href$='+kind+']').click();
@@ -262,6 +279,9 @@ async function main() {
           if(kind==='feed') await page.waitForSelector('#history-sessions .history-content');
           await visit('/','home-fixture');
         }
+        await visit('/','empty');
+        assert.equal(await lastDiaper.locator('.home-edit').count(),0);
+        await check('today-summary-empty');
         continue;
       }
       if (process.argv.includes('--diaper-history')) {

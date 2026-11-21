@@ -199,6 +199,8 @@ const en = {
     lastSlept: "Last slept",
     sleptDuration: "Slept {{duration}}",
     noCompletedSleep: "No sleep recorded yet",
+    lastDiaper: "Last diaper",
+    noDiaperYet: "No diaper changes yet",
     lastFed: "Last fed",
     noFeedingYet: "No feeding yet",
     nextFeedSide: "next: {{side}}",
