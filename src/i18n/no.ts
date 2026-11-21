@@ -72,6 +72,17 @@ const no = {
     viewEvents: "Vis hendelser ({{count}})", showMore: "Vis flere hendelser",
     underSecond: "under 1 sek", seconds: "{{seconds}} sek", minutesSeconds: "{{minutes}} min {{seconds}} sek",
   },
+  diaper: {
+    feed: "Mating",
+    label: "Bleie",
+    wet: "Tiss",
+    dirty: "Bæsj",
+    both: "Begge",
+    title: "Skift bleie",
+    saved: "Bleie registrert",
+    time: "Tid",
+    error: "Kunne ikke registrere bleieskift",
+  },
   common: {
     appName: "Sleepy",
     save: "Lagre",

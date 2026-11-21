@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "../i18n";
 import { createSleepHold, withinSleepHoldTarget } from "../lib/holdSleepAction";
 import { maximumBackdate } from "../lib/sleepActionTime";
@@ -6,8 +6,8 @@ import { selectionFeedback } from "../services/interactionFeedback";
 import SleepTimeSheet from "./SleepTimeSheet";
 
 type Props = { ending: boolean; after: number | null; babyName: string; disabled: boolean; saving: boolean;
-  onCommit: (minutes: number) => Promise<boolean> };
-export default function SleepPrimaryAction({ ending, after, babyName, disabled, saving, onCommit }: Props) {
+  awakeActions?: ReactNode; onCommit: (minutes: number) => Promise<boolean> };
+export default function SleepPrimaryAction({ ending, after, babyName, disabled, saving, awakeActions, onCommit }: Props) {
   const { t } = useTranslation();
   const hint = useId();
   const [offset, setOffset] = useState(0), [sheet, setSheet] = useState(false);
@@ -39,7 +39,7 @@ export default function SleepPrimaryAction({ ending, after, babyName, disabled, 
     busy.current = true;
     try { return await latest.current.onCommit(minutes); } finally { busy.current = false; }
   }
-  return <div className="home-sleep-actions">
+  return <div className={`home-sleep-actions${ending ? " is-ending" : ""}`}>
     <button type="button" className={`primary-button sleep-action${ending ? " is-sleeping" : ""}${pressed ? " is-pressed" : ""}`}
       disabled={disabled} aria-describedby={hint}
       onContextMenu={event => event.preventDefault()}
@@ -82,8 +82,9 @@ export default function SleepPrimaryAction({ ending, after, babyName, disabled, 
         if (suppressClick.current) { suppressClick.current = false; return; }
         suppressClick.current = false; void commit(0);
       }}>
-      {saving ? t("common.saving") : offset > 0 ? t("home.actionMinutesAgo", { minutes: offset }) : t(ending ? "home.stopSleep" : "home.startSleep")}
+      {saving ? t("common.saving") : offset > 0 ? t("home.actionMinutesAgo", { minutes: offset }) : t(ending ? "home.stopSleep" : "common.sleep")}
     </button>
+    {!ending && awakeActions}
     <p className="home-hold-hint sr-only" id={hint}>{t("home.holdToAdjust")}</p>
     <span className="sr-only" role="status">{offset > 0 ? t("home.actionMinutesAgo", { minutes: offset }) : ""}</span>
     <button type="button" className="text-button home-change-time" title={t(ending ? "home.whenWoke" : "home.whenAsleep", { name: babyName })} aria-label={`${t("home.changeTime")}: ${t(ending ? "home.whenWoke" : "home.whenAsleep", { name: babyName })}`} disabled={disabled} onClick={() => setSheet(true)}>{t("home.changeTime")}</button>

@@ -1,0 +1,62 @@
+﻿import { useId, useRef, useState } from "react";
+import { useModalAccessibility } from "../hooks/useModalAccessibility";
+import { useTranslation } from "../i18n";
+import { createDiaperChange, diaperTypes, type DiaperType } from "../services/diaperService";
+
+export default function DiaperModal({ babyId, onClose, onSaved }: {
+  babyId: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { t } = useTranslation();
+  const titleId = useId();
+  const busy = useRef(false);
+  const dialogRef = useModalAccessibility(() => { if (!busy.current) onClose(); });
+  const [type, setType] = useState<DiaperType | null>(null);
+  const [time, setTime] = useState(() => {
+    const now = new Date();
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  });
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  async function save() {
+    if (!type || !time || busy.current) return;
+    busy.current = true;
+    setSaving(true);
+    setFailed(false);
+    try {
+      await createDiaperChange(babyId, type, new Date(time).toISOString());
+      onSaved();
+    } catch {
+      setFailed(true);
+    } finally {
+      busy.current = false;
+      setSaving(false);
+    }
+  }
+
+  return <div className="modal-backdrop">
+    <div className="feed-modal diaper-modal" role="dialog" aria-modal="true" aria-labelledby={titleId} ref={dialogRef}>
+      <div className="modal-header">
+        <h2 id={titleId}>{t("diaper.title")}</h2>
+        <button type="button" className="modal-close" disabled={saving} onClick={onClose} aria-label={t("common.close")}>&times;</button>
+      </div>
+      <form onSubmit={event => { event.preventDefault(); void save(); }}>
+        <div className="diaper-types" role="group" aria-label={t("diaper.title")}>
+          {diaperTypes.map(value => <button key={value} type="button" className="secondary-button"
+            disabled={saving} aria-pressed={type === value} onClick={() => setType(value)}>{t(`diaper.${value}`)}</button>)}
+        </div>
+        <label className="form-field">
+          <span>{t("diaper.time")}</span>
+          <input className="datetime-input" type="datetime-local" required value={time} disabled={saving}
+            onChange={event => setTime(event.target.value)} />
+        </label>
+        {failed && <p className="form-error" role="alert">{t("diaper.error")}</p>}
+        <button className="primary-button" type="submit" disabled={!type || saving}>
+          {t(saving ? "common.saving" : "common.save")}
+        </button>
+      </form>
+    </div>
+  </div>;
+}

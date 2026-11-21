@@ -73,6 +73,17 @@ const en = {
     viewEvents: "View events ({{count}})", showMore: "Show more events",
     underSecond: "less than 1 sec", seconds: "{{seconds}} sec", minutesSeconds: "{{minutes}} min {{seconds}} sec",
   },
+  diaper: {
+    feed: "Feed",
+    label: "Diaper",
+    wet: "Wet",
+    dirty: "Dirty",
+    both: "Both",
+    title: "Change diaper",
+    saved: "Diaper changed",
+    time: "Time",
+    error: "Could not save diaper change",
+  },
   common: {
     appName: "Sleepy",
     save: "Save",

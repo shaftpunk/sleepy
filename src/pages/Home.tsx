@@ -49,6 +49,7 @@ import ActiveSleepEstimate from "../components/ActiveSleepEstimate";
 import { feedTypeLabel, formatClock, formatDuration, formatSleepRange, sideLabel } from "../lib/format";
 import { useTranslation } from "../i18n";
 import "./SleepButton.css";
+import DiaperModal from "../components/DiaperModal";
 import SleepPrimaryAction from "../components/SleepPrimaryAction";
 import "./Home.css";
 import { formatHomeDuration } from "../lib/homePresentation";
@@ -157,6 +158,8 @@ export default function Home() {
     useState(false);
 
   const [editingSleep,setEditingSleep] = useState<SleepRecord | null>(null);
+  const [diaperBabyId, setDiaperBabyId] = useState<string | null>(null);
+  const [diaperSaved, setDiaperSaved] = useState(false);
   const [sleepModalOpen, setSleepModalOpen] = useState(false);
   const [familyMessageOpen, setFamilyMessageOpen] = useState(false);
 
@@ -461,7 +464,25 @@ export default function Home() {
           </div>
         </header>}
 
-        <section className="sleep-card home-live-state" aria-label={t(activeSleep ? "common.sleeping" : "common.awake")}>
+        <div className="home-quick-actions">
+          <SleepPrimaryAction key={`${currentBabyId}:${activeSleep?.id ?? "awake"}:${activeSleep?.starttime ?? lastSleep?.endtime ?? ""}`} ending={Boolean(activeSleep)}
+            after={activeSleep ? Date.parse(activeSleep.starttime) : lastSleep?.endtime ? Date.parse(lastSleep.endtime) : null}
+            babyName={currentBaby?.name ?? t("common.appName")} disabled={loading || saving || !currentBabyId || Boolean(activeSleep && activeSleep.baby_id !== currentBabyId)}
+            saving={saving} awakeActions={<>
+              <button type="button" className="secondary-button" disabled={loading || !currentBabyId} onClick={() => setFeedModalOpen(true)}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7V5a2 2 0 0 1 4 0v2m-6 0h8v4H8zM9 11h6l2 3v6H7v-6zm1 4h2m-2 3h2" /></svg>
+                {t("diaper.feed")}
+              </button>
+              <button type="button" className="secondary-button" disabled={loading || !currentBabyId} onClick={() => { setDiaperSaved(false); setDiaperBabyId(currentBabyId); }}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v6c0 4-4 7-9 8-5-1-9-4-9-8zm0 4c4 0 7 3 7 9m11-9c-4 0-7 3-7 9M3 8h5m8 0h5" /></svg>
+                {t("diaper.label")}
+              </button>
+            </>} onCommit={handleSleep} />
+          {sleepActionError && <p role="alert">{sleepActionError}</p>}
+          {diaperSaved && <p role="status">{t("diaper.saved")}</p>}
+        </div>
+
+        <section hidden={isPremium && !activeSleep} className="sleep-card home-live-state" aria-label={t(activeSleep ? "common.sleeping" : "common.awake")}>
           {isRetro && (
             <div className="baby-sprite-panel">
               <BabySprite asleep={Boolean(activeSleep)} />
@@ -493,11 +514,6 @@ export default function Home() {
             {activeSleep && activeSleep.baby_id === currentBabyId && wakeEstimate?.sleep === activeSleep &&
               <ActiveSleepEstimate presentation={wakeEstimate.presentation} sleepStartedAt={activeSleep.starttime} now={now} />}
           </div>}
-          <SleepPrimaryAction key={`${currentBabyId}:${activeSleep?.id ?? "awake"}:${activeSleep?.starttime ?? lastSleep?.endtime ?? ""}`} ending={Boolean(activeSleep)}
-            after={activeSleep ? Date.parse(activeSleep.starttime) : lastSleep?.endtime ? Date.parse(lastSleep.endtime) : null}
-            babyName={currentBaby?.name ?? t("common.appName")} disabled={loading || saving || !currentBabyId || Boolean(activeSleep && activeSleep.baby_id !== currentBabyId)}
-            saving={saving} onCommit={handleSleep} />
-          {sleepActionError && <p role="alert">{sleepActionError}</p>}
         </section>
 
         <SleepWaveCard key={currentBabyId} sessions={analyticsSessions} active={waveActive}
@@ -692,6 +708,9 @@ export default function Home() {
       {(sleepModalOpen || (editingSleep && editingSleep.baby_id === currentBabyId)) && (
         <SleepModal sleep={editingSleep} onClose={() => { setSleepModalOpen(false); setEditingSleep(null); }} onSaved={loadSleepData} />
       )}
+
+      {diaperBabyId && diaperBabyId === currentBabyId && <DiaperModal babyId={diaperBabyId}
+        onClose={() => setDiaperBabyId(null)} onSaved={() => { setDiaperBabyId(null); setDiaperSaved(true); }} />}
 
       {feedModalOpen && (
         <FeedModal
