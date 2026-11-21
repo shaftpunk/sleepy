@@ -26,3 +26,15 @@ export async function getRecentDiaperChanges(babyId: string, limit = 20) {
   if (error) throw error;
   return data as DiaperChange[];
 }
+
+export async function updateDiaperChange(id: string, babyId: string, type: DiaperType, changedAt: string) {
+  const { error } = await supabase.from("diaper_changes").update({ type, changed_at: changedAt })
+    .eq("id", id).eq("baby_id", babyId).select("id").single();
+  if (error) throw error;
+}
+
+export async function deleteDiaperChange(id: string, babyId: string) {
+  const { error } = await supabase.from("diaper_changes").delete()
+    .eq("id", id).eq("baby_id", babyId).select("id").single();
+  if (error) throw error;
+}

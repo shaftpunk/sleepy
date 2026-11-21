@@ -40,6 +40,7 @@ export default function SleepPrimaryAction({ ending, after, babyName, disabled, 
     try { return await latest.current.onCommit(minutes); } finally { busy.current = false; }
   }
   return <div className={`home-sleep-actions${ending ? " is-ending" : ""}`}>
+    {!ending && awakeActions}
     <button type="button" className={`primary-button sleep-action${ending ? " is-sleeping" : ""}${pressed ? " is-pressed" : ""}`}
       disabled={disabled} aria-describedby={hint}
       onContextMenu={event => event.preventDefault()}
@@ -84,7 +85,6 @@ export default function SleepPrimaryAction({ ending, after, babyName, disabled, 
       }}>
       {saving ? t("common.saving") : offset > 0 ? t("home.actionMinutesAgo", { minutes: offset }) : t(ending ? "home.stopSleep" : "common.sleep")}
     </button>
-    {!ending && awakeActions}
     <p className="home-hold-hint sr-only" id={hint}>{t("home.holdToAdjust")}</p>
     <span className="sr-only" role="status">{offset > 0 ? t("home.actionMinutesAgo", { minutes: offset }) : ""}</span>
     <button type="button" className="text-button home-change-time" title={t(ending ? "home.whenWoke" : "home.whenAsleep", { name: babyName })} aria-label={`${t("home.changeTime")}: ${t(ending ? "home.whenWoke" : "home.whenAsleep", { name: babyName })}`} disabled={disabled} onClick={() => setSheet(true)}>{t("home.changeTime")}</button>

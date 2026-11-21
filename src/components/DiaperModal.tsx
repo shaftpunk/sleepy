@@ -1,10 +1,12 @@
+import "./DiaperModal.css";
 ﻿import { useId, useRef, useState } from "react";
 import { useModalAccessibility } from "../hooks/useModalAccessibility";
 import { useTranslation } from "../i18n";
-import { createDiaperChange, diaperTypes, type DiaperType } from "../services/diaperService";
+import { createDiaperChange, diaperTypes, updateDiaperChange, type DiaperChange, type DiaperType } from "../services/diaperService";
 
-export default function DiaperModal({ babyId, onClose, onSaved }: {
+export default function DiaperModal({ babyId, change, onClose, onSaved }: {
   babyId: string;
+  change?: DiaperChange;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -12,9 +14,9 @@ export default function DiaperModal({ babyId, onClose, onSaved }: {
   const titleId = useId();
   const busy = useRef(false);
   const dialogRef = useModalAccessibility(() => { if (!busy.current) onClose(); });
-  const [type, setType] = useState<DiaperType | null>(null);
+  const [type, setType] = useState<DiaperType | null>(change?.type ?? null);
   const [time, setTime] = useState(() => {
-    const now = new Date();
+    const now = change ? new Date(change.changed_at) : new Date();
     return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   });
   const [saving, setSaving] = useState(false);
@@ -26,7 +28,9 @@ export default function DiaperModal({ babyId, onClose, onSaved }: {
     setSaving(true);
     setFailed(false);
     try {
-      await createDiaperChange(babyId, type, new Date(time).toISOString());
+      const changedAt = new Date(time).toISOString();
+      if (change) await updateDiaperChange(change.id, babyId, type, changedAt);
+      else await createDiaperChange(babyId, type, changedAt);
       onSaved();
     } catch {
       setFailed(true);
@@ -39,7 +43,7 @@ export default function DiaperModal({ babyId, onClose, onSaved }: {
   return <div className="modal-backdrop">
     <div className="feed-modal diaper-modal" role="dialog" aria-modal="true" aria-labelledby={titleId} ref={dialogRef}>
       <div className="modal-header">
-        <h2 id={titleId}>{t("diaper.title")}</h2>
+        <h2 id={titleId}>{t(change ? "diaper.edit" : "diaper.title")}</h2>
         <button type="button" className="modal-close" disabled={saving} onClick={onClose} aria-label={t("common.close")}>&times;</button>
       </div>
       <form onSubmit={event => { event.preventDefault(); void save(); }}>

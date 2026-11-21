@@ -469,13 +469,13 @@ export default function Home() {
             after={activeSleep ? Date.parse(activeSleep.starttime) : lastSleep?.endtime ? Date.parse(lastSleep.endtime) : null}
             babyName={currentBaby?.name ?? t("common.appName")} disabled={loading || saving || !currentBabyId || Boolean(activeSleep && activeSleep.baby_id !== currentBabyId)}
             saving={saving} awakeActions={<>
-              <button type="button" className="secondary-button" disabled={loading || !currentBabyId} onClick={() => setFeedModalOpen(true)}>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7V5a2 2 0 0 1 4 0v2m-6 0h8v4H8zM9 11h6l2 3v6H7v-6zm1 4h2m-2 3h2" /></svg>
-                {t("diaper.feed")}
-              </button>
               <button type="button" className="secondary-button" disabled={loading || !currentBabyId} onClick={() => { setDiaperSaved(false); setDiaperBabyId(currentBabyId); }}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v6c0 4-4 7-9 8-5-1-9-4-9-8zm0 4c4 0 7 3 7 9m11-9c-4 0-7 3-7 9M3 8h5m8 0h5" /></svg>
                 {t("diaper.label")}
+              </button>
+              <button type="button" className="secondary-button" disabled={loading || !currentBabyId} onClick={() => setFeedModalOpen(true)}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7V5a2 2 0 0 1 4 0v2m-6 0h8v4H8zM9 11h6l2 3v6H7v-6zm1 4h2m-2 3h2" /></svg>
+                {t("diaper.feed")}
               </button>
             </>} onCommit={handleSleep} />
           {sleepActionError && <p role="alert">{sleepActionError}</p>}

@@ -45,6 +45,18 @@ function mock(url) {
   if(url.endsWith('/householdContextService.ts'))return `${params}export async function getHouseholdCandidates(user,baby){await new Promise(r=>setTimeout(r,window.__contextDelay||0));if(window.__contextFailure)throw Error('Synthetic offline');return window.__candidates||(p.has('multiple')?[{id:'A',name:'Household A',role:'viewer'},{id:'B',name:'Household B',role:'parent'}]:[{id:'household',name:'Synthetic household',role:'owner'}])};export const subscribeHouseholdContext=()=>()=>{};`;
   if(url.endsWith('/entitlementService.ts'))return `import features from '/src/entitlements/features.json';export async function resolveHouseholdEntitlements(householdId){const tier=window.__tier||'free',delay=window.__resolutionDelay||0;await new Promise(r=>setTimeout(r,delay));if(window.__resolutionFailure)throw Error('Synthetic unavailable RPC');return {householdId,tier,isPlus:tier==='plus',features:Object.keys(features).filter(f=>tier==='plus'||features[f].requiredTier==='free'),verificationState:'verified',verifiedAt:new Date().toISOString(),validUntil:null,recheckAt:new Date(Date.now()+300000).toISOString(),policyVersion:1}};`;
   if (url === '/src/auth/AuthProvider.tsx') return `${params}export const useAuth=()=>({user:{id:'user',email:'parent.with.a.long.synthetic.email@example.invalid',user_metadata:{full_name:'Alexandra Strande Engevik'}},session:{user:{id:'user'}},loading:p.has('loading'),signOut:async()=>{}});`;
+  if (url === '/src/services/diaperService.ts' && process.argv.includes('--diaper-history')) return `
+    export const diaperTypes=['wet','dirty','both'];
+    const rows=[['wet','10:00','baby'],['dirty','09:00','baby'],['both','11:00','baby'],['other','11:30','another']];
+    export async function getRecentDiaperChanges(babyId){
+      if(babyId!=='baby')throw Error('Wrong selected baby');
+      return [...rows.map(([id,time,baby_id])=>({id,type:id,baby_id,changed_at:'2026-11-21T'+time+':00Z'})),
+        {id:'yesterday',type:'wet',baby_id:'baby',changed_at:'2026-11-20T18:00:00Z'}];
+    }
+    export async function updateDiaperChange(...args){window.__updatedDiaper=args;}
+    export async function deleteDiaperChange(...args){window.__deletedDiaper=args;}
+    export async function createDiaperChange(){}
+  `;
   if (url === '/src/lib/supabase.ts') return `export const supabase={from(table){return {insert(row){return {select(){return {async single(){if(table!=='diaper_changes')throw Error(table);window.__diaperRows??=[];window.__diaperRows.push(row);return {data:row,error:null};}};}};} };},auth:{onAuthStateChange:f=>{window.recovery=()=>f('PASSWORD_RECOVERY');return {data:{subscription:{unsubscribe(){}}}}},getUser:async()=>({data:{user:{id:'user'}}})}};`;
   if (url === '/src/services/sleepService.ts') return records + failure + `
     if(p.has('probability-fixture')){const at=(days,h,m=0)=>{const d=new Date();d.setDate(d.getDate()-days);d.setHours(h,m,0,0);return d.getTime()};const row=(start,end)=>({id:String(start),baby_id:'baby',starttime:iso(start),endtime:iso(end),durationminutes:(end-start)/60000,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,i)=>{const d=i+1;return [row(at(d+1,23,30),at(d,7)),row(at(d,d<=9?9:11,30),at(d,d<=9?10:12,30)),row(at(d,20),at(d,21))]}).flat());}
@@ -89,6 +101,7 @@ async function main() {
     // failed between 00:00 and ~01:03 Oslo. A fixed midday start (time still
     // flows, so hold gestures behave normally) makes every run deterministic.
     if(process.argv.includes('--home-only')||process.argv.includes('--history-only')||process.argv.includes('--home-refinement'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
+    if(process.argv.includes('--diaper-history'))await page.clock.setFixedTime(new Date('2026-11-21T12:00:00Z'));
     if(process.argv.includes('--last-slept-only'))await page.clock.setFixedTime(new Date('2026-11-16T11:08:00Z'));
     const errors = [], failures = [], screens = [];
     page.on('pageerror', e => { errors.push(e.message); if(process.argv.includes('--entitlements-only')||process.argv.includes('--home-only'))console.error(e.message); });
@@ -226,6 +239,25 @@ async function main() {
       const skin=(process.argv.find(value=>value.startsWith('--skin='))||'--skin=default').split('=')[1];
       context=`${width}x${height}-${theme}-${lang}-${skin}`;query=`theme=${theme}&lang=${lang}&skin=${skin}&long`;
       await page.setViewportSize({width,height});
+      if (process.argv.includes('--diaper-history')) {
+        await page.goto(base+'/history?'+query+'&today=sleep');
+        const recent=page.locator('#history-sessions');
+        const rows=recent.locator('[data-diaper-change]');
+        await rows.first().waitFor();
+        assert.deepEqual(await rows.evaluateAll(nodes=>nodes.map(node=>node.dataset.diaperChange)),['both','wet','dirty']);
+        assert.deepEqual(await rows.locator('strong').allTextContents(),lang==='en'?['Wet + Dirty','Wet','Dirty']:['Tiss + b\u00e6sj','Tiss','B\u00e6sj']);
+        assert.equal(await page.locator('[data-diaper-change=other]').count(),0);
+        assert.equal(await page.locator('[data-diaper-change=yesterday]').count(),1);
+        await check('history-diapers');
+        await rows.first().locator('.history-content').click();
+        const editor=page.locator('.diaper-modal');
+        await editor.locator('.diaper-types button').first().click();
+        await editor.locator('input').fill('2026-11-21T09:30');
+        await editor.locator('[type=submit]').click();
+        await editor.waitFor({state:'hidden'});
+        assert.deepEqual(await page.evaluate(()=>window.__updatedDiaper),['both','baby','wet','2026-11-21T08:30:00.000Z']);
+        continue;
+      }
       if (process.argv.includes('--quick-actions')) {
         await visit('/','home-actions');
         const actions=page.locator('.home-quick-actions .home-sleep-actions');
@@ -235,12 +267,13 @@ async function main() {
         const widths=await actions.locator('.sleep-action,.secondary-button').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().width));
         assert.equal(widths.length,3);
         assert.ok(Math.max(...widths)-Math.min(...widths)<1);
-        assert.deepEqual(await secondary.allTextContents(),lang==='en'?['Feed','Diaper']:['Mating','Bleie']);
+        assert.deepEqual(await secondary.allTextContents(),lang==='en'?['Diaper','Feed']:['Bleie','Mating']);
+        assert.equal(await sleep.evaluate(e=>e.previousElementSibling.textContent.trim()),lang==='en'?'Feed':'Mating');
         await check('quick-actions-awake');
-        await secondary.first().click();
+        await secondary.last().click();
         await page.waitForSelector('[role=dialog]');
         await page.keyboard.press('Escape');
-        await secondary.last().click();
+        await secondary.first().click();
         const diaper=page.locator('.diaper-modal');
         await check('diaper-dialog');
         await diaper.locator('.diaper-types button').last().click();

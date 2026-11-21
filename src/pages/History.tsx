@@ -1,3 +1,5 @@
+import DiaperModal from "../components/DiaperModal";
+import { deleteDiaperChange, getRecentDiaperChanges, type DiaperChange } from "../services/diaperService";
 import { useSearchParams } from "react-router-dom";
 import {
   useCallback,
@@ -49,7 +51,7 @@ import DailySleepPlanner from "../components/history/DailySleepPlanner";
 import SleepHistoryItem from "../components/history/SleepHistoryItem";
 import { useAnalyticsData } from "../hooks/useAnalyticsData";
 import { useSleepForecasts } from "../hooks/useSleepForecasts";
-import { sleepDayLabel, sleepsInLast24Hours } from "../lib/recentSleeps";
+import { ROLLING_DAY_MS, sleepDayLabel, sleepsInLast24Hours } from "../lib/recentSleeps";
 import { feedTypeLabel, formatClock, formatDuration, sideLabel } from "../lib/format";
 import { LOCALES, useTranslation } from "../i18n";
 
@@ -360,6 +362,19 @@ export default function History() {
   ]);
 
 
+  const [diapers, setDiapers] = useState<DiaperChange[]>([]);
+  const [editingDiaper, setEditingDiaper] = useState<DiaperChange | null>(null);
+  const [diaperRevision, refreshDiapers] = useState(0);
+  const [diaperDeleteError, setDiaperDeleteError] = useState(false);
+  useEffect(() => {
+    if (!currentBabyId) return;
+    let cancelled = false;
+    void getRecentDiaperChanges(currentBabyId, 100).then(rows => {
+      if (!cancelled) setDiapers(rows);
+    }).catch(error => console.error("Could not load diaper changes", error));
+    return () => { cancelled = true; };
+  }, [currentBabyId, diaperRevision]);
+
   const recentSleeps = useMemo(() => sleepsInLast24Hours(sleeps, now), [sleeps, now]);
   const olderSleeps = useMemo(() => {
     const recent = new Set(recentSleeps.map((sleep) => sleep.id));
@@ -394,6 +409,78 @@ export default function History() {
       />
     );
   }
+
+  function renderFeed(feed: FeedRecord) {
+    return (
+      <div className="history-item" key={feed.id}>
+        <div className="history-icon" aria-hidden="true">
+          {feed.feedtype === "bottle" ? "🍼" : feed.feedtype === "food" ? "🥣" : "♡"}
+        </div>
+        <button type="button" className="history-content clickable" onClick={() => setEditingFeed(feed)}>
+          <strong>{feedLabel(feed)}</strong>
+          <span>{formatDate(feed.starttime)} {"·"} {formatClock(Date.parse(feed.starttime), lang)}</span>
+          {feed.note && <span className="history-note">{feed.note}</span>}
+        </button>
+        <button type="button" className="history-delete" aria-label={t("common.deleteFeedingAria")} onClick={async () => {
+          if (!window.confirm(t("common.confirmDeleteFeed"))) return;
+          await deleteFeed(feed.id);
+          await load();
+        }}>&times;</button>
+      </div>
+    );
+  }
+
+  function renderDiaper(change: DiaperChange) {
+    return <div className="history-item" key={change.id} data-diaper-change={change.id}>
+      <div className="history-icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M3 6h18v6c0 4-4 7-9 8-5-1-9-4-9-8zm0 4c4 0 7 3 7 9m11-9c-4 0-7 3-7 9M3 8h5m8 0h5" />
+        </svg>
+      </div>
+      <button type="button" className="history-content clickable" onClick={() => setEditingDiaper(change)}>
+        <strong>{t(change.type === "both" ? "diaper.historyBoth" : `diaper.${change.type}`)}</strong>
+        <span>{formatDate(change.changed_at)} {"·"} {formatClock(Date.parse(change.changed_at), lang)}</span>
+      </button>
+      <button type="button" className="history-delete" aria-label={t("diaper.delete")} onClick={async () => {
+        if (!window.confirm(t("diaper.delete"))) return;
+        setDiaperDeleteError(false);
+        try {
+          await deleteDiaperChange(change.id, change.baby_id);
+          refreshDiapers(value => value + 1);
+        } catch {
+          setDiaperDeleteError(true);
+        }
+      }}>&times;</button>
+    </div>;
+  }
+
+  const start = today ? midnight : now - ROLLING_DAY_MS;
+  const byTime = (a: { time: number }, b: { time: number }) => b.time - a.time;
+  const careActivities = [
+    ...feeds.filter(feed => feed.baby_id === currentBabyId).map(feed => ({
+      time: Date.parse(feed.starttime), node: renderFeed(feed),
+    })),
+    ...diapers.filter(change => change.baby_id === currentBabyId).map(change => ({
+      time: Date.parse(change.changed_at), node: renderDiaper(change),
+    })),
+  ];
+  const recentActivities = [
+    ...(active && !today ? [{ time: active.startMs, node: (
+              <div key="active-sleep" className="history-item is-active" data-history-active="true">
+                <div className="history-icon">☾</div>
+                <div className="history-content">
+                  <strong>{formatClock(active.startMs, lang)} – <em className="history-live">{t("history.planSleepingNow")}</em></strong>
+                  <span>{sleepDayLabel(active.startMs, null, now, lang)} · {formatDuration((now - active.startMs) / 60000, lang)}</span>
+                </div>
+              </div>
+    ) }] : []),
+    ...visibleSleeps.map(sleep => ({
+      time: Date.parse(sleep.starttime),
+      node: renderSleep(sleep, sleepDayLabel(Date.parse(sleep.starttime), sleep.endtime ? Date.parse(sleep.endtime) : null, now, lang)),
+    })),
+    ...careActivities.filter(event => event.time >= start && event.time <= now),
+  ].sort(byTime);
+  const olderActivities = careActivities.filter(event => event.time < start || event.time > now).sort(byTime);
 
   return (
     <>
@@ -443,19 +530,9 @@ export default function History() {
           )}
 
           <div className="history-list">
-            {active && !today && (
-              <div className="history-item is-active" data-history-active="true">
-                <div className="history-icon">☾</div>
-                <div className="history-content">
-                  <strong>{formatClock(active.startMs, lang)} – <em className="history-live">{t("history.planSleepingNow")}</em></strong>
-                  <span>{sleepDayLabel(active.startMs, null, now, lang)} · {formatDuration((now - active.startMs) / 60000, lang)}</span>
-                </div>
-              </div>
-            )}
-            {visibleSleeps.map((sleep) => renderSleep(sleep,
-              sleepDayLabel(Date.parse(sleep.starttime), sleep.endtime ? Date.parse(sleep.endtime) : null, now, lang)))}
-            {(!active || today) && visibleSleeps.length === 0 && (
-              <p className="muted">{today ? t("home.noCompletedSleep") : t("history.last24Empty")}</p>
+            {recentActivities.map(event => event.node)}
+            {(!active || today) && recentActivities.length === 0 && (
+              <p className="muted">{t(today ? "diaper.emptyToday" : "diaper.emptyRecent")}</p>
             )}
           </div>
         </section>
@@ -522,7 +599,7 @@ export default function History() {
 
             <div className="section-heading">
               <h2>
-                {t("common.feeding")}
+                {t("diaper.older")}
               </h2>
 
               <button
@@ -539,83 +616,7 @@ export default function History() {
 
             <div className="history-list">
 
-              {feeds.map(
-                (feed) => (
-
-                  <div
-                    className="history-item"
-                    key={feed.id}
-                  >
-
-                    <div className="history-icon">
-                      {feed.feedtype ===
-                      "bottle"
-                        ? "🍼"
-                        : feed.feedtype ===
-                            "food"
-                          ? "🥣"
-                          : "♡"}
-                    </div>
-
-
-                    <button type="button"
-                      className="history-content clickable"
-                      onClick={() =>
-                        setEditingFeed(
-                          feed
-                        )
-                      }
-                    >
-
-                      <strong>
-                        {feedLabel(
-                          feed
-                        )}
-                      </strong>
-
-                      <span>
-                        {formatDate(
-                          feed.starttime
-                        )}
-                        {" · "}
-                        {formatClock(new Date(feed.starttime).getTime(), lang)}
-                      </span>
-
-                      {feed.note && (
-                        <span className="history-note">
-                          {feed.note}
-                        </span>
-                      )}
-
-                    </button>
-
-
-                    <button
-                      className="history-delete"
-                      aria-label={t("common.deleteFeedingAria")}
-                      onClick={async () => {
-
-                        if (
-                          !window.confirm(
-                            t("common.confirmDeleteFeed")
-                          )
-                        ) {
-                          return;
-                        }
-
-                        await deleteFeed(
-                          feed.id
-                        );
-
-                        await load();
-                      }}
-                    >
-                      ×
-                    </button>
-
-                  </div>
-                )
-              )}
+              {olderActivities.map(event => event.node)}
 
             </div>
 
@@ -625,6 +626,10 @@ export default function History() {
 
       </main>
 
+
+      {diaperDeleteError && <p role="alert">{t("diaper.error")}</p>}
+      {editingDiaper && editingDiaper.baby_id === currentBabyId && <DiaperModal babyId={editingDiaper.baby_id} change={editingDiaper}
+        onClose={() => setEditingDiaper(null)} onSaved={() => { setEditingDiaper(null); refreshDiapers(value => value + 1); }} />}
 
       {(newSleep ||
         editingSleep) && (

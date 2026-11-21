@@ -74,6 +74,12 @@ const en = {
     underSecond: "less than 1 sec", seconds: "{{seconds}} sec", minutesSeconds: "{{minutes}} min {{seconds}} sec",
   },
   diaper: {
+    historyBoth: "Wet + Dirty",
+    edit: "Edit diaper change",
+    delete: "Delete diaper change?",
+    older: "Older feeding and diapers",
+    emptyRecent: "No activity recorded in the last 24 hours.",
+    emptyToday: "No activity recorded today.",
     feed: "Feed",
     label: "Diaper",
     wet: "Wet",

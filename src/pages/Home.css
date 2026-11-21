@@ -220,7 +220,3 @@
 .home-quick-actions .home-change-time { grid-column: 1 / -1; justify-self: end; }
 .home-quick-actions + .home-live-state:not([hidden]) { margin-top: -12px; }
 .home-quick-actions p[role="status"] { margin: 4px 0 0; }
-.diaper-modal form { display: grid; gap: 10px; }
-.diaper-types { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.diaper-types .secondary-button { min-height: 44px; padding-inline: 4px; overflow-wrap: anywhere; }
-.diaper-types [aria-pressed="true"] { background: var(--control-active); border-color: var(--focus-ring); }

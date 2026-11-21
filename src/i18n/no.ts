@@ -73,6 +73,12 @@ const no = {
     underSecond: "under 1 sek", seconds: "{{seconds}} sek", minutesSeconds: "{{minutes}} min {{seconds}} sek",
   },
   diaper: {
+    historyBoth: "Tiss + bæsj",
+    edit: "Rediger bleieskift",
+    delete: "Slette bleieskift?",
+    older: "Eldre mating og bleieskift",
+    emptyRecent: "Ingen aktivitet registrert de siste 24 timene.",
+    emptyToday: "Ingen aktivitet registrert i dag.",
     feed: "Mating",
     label: "Bleie",
     wet: "Tiss",
