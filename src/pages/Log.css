@@ -15,3 +15,10 @@
 .log-row strong, .log-row > span > span { display: block; overflow-wrap: anywhere; }
 .log-row > span > span, .log-empty { color: var(--ui-muted); font-size: .875rem; }
 .log-add-dialog { display: grid; gap: 8px; }
+
+.log-identity { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.log-identity > svg { width: 40px; height: 40px; padding: 9px; flex-shrink: 0; border-radius: 50%; background: var(--pink-soft, var(--control-bg)); fill: none; stroke: currentColor; stroke-width: 1.5; }
+.log-identity strong, .log-identity small { display: block; overflow-wrap: anywhere; }
+.log-identity:has(strong) h1, .log-identity small { font-size: .8125rem; color: var(--ui-muted); }
+.log-identity strong { font-size: 1.125rem; }
+.log-header > button { flex-shrink: 0; }

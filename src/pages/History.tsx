@@ -1,5 +1,6 @@
 ﻿import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { ageInDays } from "../analytics/localDate";
 import SleepyIcon from "../components/SleepyIcon";
 import DiaperModal from "../components/DiaperModal";
 import FeedModal from "../components/FeedModal";
@@ -27,6 +28,8 @@ type EventKind = "sleep" | "feed" | "diaper";
 
 export default function History() {
   const babyId = useAppStore(state => state.currentBabyId);
+  const baby = useAppStore(state => state.babies.find(child => child.id === babyId));
+  const age = ageInDays(baby?.birth_date, Date.now());
   const [params, setParams] = useSearchParams();
   const [today, setToday] = useState(() => localDayKey(new Date()));
   useEffect(() => {
@@ -59,7 +62,13 @@ export default function History() {
     }).format(start);
   return <main className="history-page log-page">
     <header className="log-header">
-      <h1>{t("nav.log")}</h1>
+      <div className="log-identity">
+        {baby && <SleepyIcon name="baby" />}
+        <div><h1>{t("nav.log")}</h1>
+          {baby && <strong>{baby.name}</strong>}
+          {age != null && <small>{new Intl.NumberFormat(LOCALES[lang], { style: "unit", unit: "day", unitDisplay: "long" }).format(age)}</small>}
+        </div>
+      </div>
       <button className="secondary-button" type="button" disabled={!babyId} ref={addButton} onClick={() => setAdding(viewKey)}>
         <span aria-hidden="true">+</span> {t("log.add")}
       </button>
