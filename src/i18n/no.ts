@@ -155,6 +155,14 @@ const no = {
     now: "Nå",
   },
 
+  log: {
+    add: "Legg til",
+    previous: "Forrige dag",
+    next: "Neste dag",
+    chooseDate: "Velg dato",
+    empty: "Ingen aktivitet registrert",
+    loadError: "Kunne ikke laste aktivitet.",
+  },
   nav: {
     log: "Logg",
     home: "Hjem",

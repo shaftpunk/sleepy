@@ -156,6 +156,14 @@ const en = {
     now: "Now",
   },
 
+  log: {
+    add: "Add",
+    previous: "Previous day",
+    next: "Next day",
+    chooseDate: "Choose date",
+    empty: "No activity recorded",
+    loadError: "Could not load activity.",
+  },
   nav: {
     log: "Log",
     home: "Home",

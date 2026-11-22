@@ -4,10 +4,11 @@ import { useModalAccessibility } from "../hooks/useModalAccessibility";
 import { useTranslation } from "../i18n";
 import { createDiaperChange, deleteDiaperChange, diaperTypes, updateDiaperChange, type DiaperChange, type DiaperType } from "../services/diaperService";
 
-export default function DiaperModal({ babyId, change, allowDelete, onClose, onSaved }: {
+export default function DiaperModal({ babyId, change, allowDelete, initialTime, onClose, onSaved }: {
   babyId: string;
   change?: DiaperChange;
   allowDelete?: boolean;
+  initialTime?: Date;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -17,7 +18,7 @@ export default function DiaperModal({ babyId, change, allowDelete, onClose, onSa
   const dialogRef = useModalAccessibility(() => { if (!busy.current) onClose(); });
   const [type, setType] = useState<DiaperType | null>(change?.type ?? null);
   const [time, setTime] = useState(() => {
-    const now = change ? new Date(change.changed_at) : new Date();
+    const now = change ? new Date(change.changed_at) : initialTime ?? new Date();
     return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   });
   const [saving, setSaving] = useState(false);

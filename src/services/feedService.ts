@@ -270,3 +270,17 @@ export async function countFeedsBetween(babyId: string, start: string, end: stri
   if (error) throw error;
   return count;
 }
+
+export async function getFeedsBetween(babyId: string, start: string, end: string): Promise<FeedRecord[]> {
+  const rows: FeedRecord[] = [];
+  const pageSize = 200;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase.from("feed").select("*")
+      .eq("baby_id", babyId).is("deleted_at", null).gte("starttime", start).lt("starttime", end)
+      .order("starttime").order("id").range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    const page = (data ?? []) as FeedRecord[];
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
+  }
+}

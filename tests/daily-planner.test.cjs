@@ -156,16 +156,10 @@ test('planner renders in Norwegian and English, distinguishes actual and predict
   assert.ok(night.includes('Søvnplan for neste dag'));assert.ok(night.includes('Tir. 17. nov.'));assert.ok(night.includes('Foreløpig'));
 });
 
-test('History wiring: shared forecast hook, three sections in order, older history collapsed, nothing persisted',()=>{
-  const page=fs.readFileSync('src/pages/History.tsx','utf8'),home=fs.readFileSync('src/pages/Home.tsx','utf8');
-  assert.ok(page.includes('useSleepForecasts('));
-  assert.ok(home.includes('calculateNextSleep('));
-  assert.doesNotMatch(home, /useSleepForecasts|calculateDailySleepForecast/);
-  assert.ok(page.indexOf('<DailySleepPlanner')<page.indexOf('history.last24Title'));
-  assert.ok(page.indexOf('history.last24Title')<page.indexOf('history.moreHistory'));
-  assert.match(page,/aria-expanded=\{moreOpen\}/);assert.match(page,/hidden=\{!moreOpen\}/);
-  assert.match(page,/\[moreOpen, setMoreOpen\] = useState\(false\)/);
-  assert.match(page,/confirm\(t\("common.confirmDeleteSleep"\)\)/);
+test('Log keeps the planner and its forecasts outside the activity timeline',()=>{
+  const log=fs.readFileSync('src/pages/History.tsx','utf8');
+  assert.doesNotMatch(log, /DailySleepPlanner|SleepClock|useSleepForecasts|useAnalyticsData/);
+  assert.match(log, /getSleepsOverlappingPeriod/);
   for(const file of ['src/hooks/useSleepForecasts.ts','src/analytics/dailyPlannerModel.ts','src/components/history/DailySleepPlanner.tsx','src/lib/recentSleeps.ts']){
     assert.doesNotMatch(fs.readFileSync(file,'utf8').replace(/^import type .*$/gm,''),/services\/|supabase|localStorage|insert\(|upsert/,file);
   }

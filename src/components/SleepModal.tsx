@@ -17,6 +17,9 @@ type Props = {
   sleep?: SleepRecord | null;
   allowDelete?: boolean;
   activeDetails?: ReactNode;
+  initialTime?: Date;
+  onSplit?: () => void;
+  onResume?: () => Promise<void>;
   onClose: () => void;
   onSaved: () => void;
 };
@@ -34,6 +37,9 @@ export default function SleepModal({
   sleep,
   allowDelete,
   activeDetails,
+  initialTime,
+  onSplit,
+  onResume,
   onClose,
   onSaved,
 }: Props) {
@@ -53,7 +59,7 @@ export default function SleepModal({
     (baby) => baby.id === currentBabyId,
   );
 
-  const now = new Date();
+  const now = initialTime ?? new Date();
 
   const defaultStart = new Date(
     now.getTime() - 60 * 60000,
@@ -86,6 +92,20 @@ export default function SleepModal({
     useState("");
 
   const active = Boolean(sleep && !sleep.endtime);
+
+  async function resume() {
+    if (!onResume || saving || !window.confirm(t("history.confirmResumeSleep"))) return;
+    setSaving(true);
+    setError("");
+    try {
+      await onResume();
+      onClose();
+    } catch {
+      setError(t("errors.couldNotResumeSleep"));
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function save(removing = false) {
     if (saving) return;
@@ -281,6 +301,12 @@ export default function SleepModal({
               ? t("common.saveChanges")
               : t("sleep.addTitle")}
         </button>
+        {onSplit && <button type="button" className="secondary-button" disabled={saving} onClick={onSplit}>
+          {t("sleep.splitButton")}
+        </button>}
+        {onResume && <button type="button" className="secondary-button" disabled={saving} onClick={() => void resume()}>
+          {t("history.resumeSleepTitle")}
+        </button>}
         {allowDelete && sleep?.endtime && <button type="button" className="secondary-button" disabled={saving}
           onClick={() => { if (window.confirm(t("common.confirmDeleteSleep"))) void save(true); }}>
           {t("common.deleteSleepAria")}

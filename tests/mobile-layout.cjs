@@ -3,6 +3,7 @@
    node tests/mobile-layout.cjs <playwright module path> [--quick]
    SLEEPY_CHROMIUM_PATH can select an already installed Chromium executable. */
 const assert = require('node:assert/strict');
+const logOnly = ['--log-only', '--history-only', '--diaper-history'].some(flag => process.argv.includes(flag));
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -27,7 +28,7 @@ document.documentElement.dataset.visualTheme=p.get('skin')||'default';
 const baby={id:'baby',name:p.has('long')?'Amalie Alexandra Strande Engevik':'Amalie',birth_date:'2026-08-03'};
 useAppStore.setState({language:p.get('lang')||'no',theme,visualTheme:p.get('skin')||'default',currentBabyId:'baby',currentBbyId:'fixture-baby',babies:[baby,{...baby,id:'baby-2',name:'Alexander'}]});
 useSoundStore.setState({enabled:!!p.get('sound'),sensitivity:'medium'});
-if(p.has('wave-fixture'))window.__waveStore=useAppStore;
+if(p.has('wave-fixture')||p.has('log-fixture'))window.__waveStore=useAppStore;
 const sleep={id:'sleep',baby_id:'baby',starttime:new Date(Date.now()-12*3600000).toISOString(),endtime:new Date(Date.now()-2*3600000).toISOString(),durationminutes:600,rate:'5',deleted_at:null,note:'Testnotat / a synthetic note'};
 const onset=new Date();onset.setHours(14,25,0,0);const peak=onset.getTime(),onsetNow=peak-3600000;
 const onsetView=React.createElement('main',{className:'home-page'},React.createElement(SleepWave,{sessions:[],active:null,now:onsetNow,
@@ -49,7 +50,7 @@ function mock(url) {
   if(url.endsWith('/householdContextService.ts'))return `${params}export async function getHouseholdCandidates(user,baby){await new Promise(r=>setTimeout(r,window.__contextDelay||0));if(window.__contextFailure)throw Error('Synthetic offline');return window.__candidates||(p.has('multiple')?[{id:'A',name:'Household A',role:'viewer'},{id:'B',name:'Household B',role:'parent'}]:[{id:'household',name:'Synthetic household',role:'owner'}])};export const subscribeHouseholdContext=()=>()=>{};`;
   if(url.endsWith('/entitlementService.ts'))return `import features from '/src/entitlements/features.json';export async function resolveHouseholdEntitlements(householdId){const tier=window.__tier||'free',delay=window.__resolutionDelay||0;await new Promise(r=>setTimeout(r,delay));if(window.__resolutionFailure)throw Error('Synthetic unavailable RPC');return {householdId,tier,isPlus:tier==='plus',features:Object.keys(features).filter(f=>tier==='plus'||features[f].requiredTier==='free'),verificationState:'verified',verifiedAt:new Date().toISOString(),validUntil:null,recheckAt:new Date(Date.now()+300000).toISOString(),policyVersion:1}};`;
   if (url === '/src/auth/AuthProvider.tsx') return `${params}export const useAuth=()=>({user:{id:'user',email:'parent.with.a.long.synthetic.email@example.invalid',user_metadata:{full_name:'Alexandra Strande Engevik'}},session:{user:{id:'user'}},loading:p.has('loading'),signOut:async()=>{}});`;
-  if (url === '/src/services/diaperService.ts' && (process.argv.includes('--diaper-history')||process.argv.includes('--today-summary')||process.argv.includes('--minimal-home'))) return `
+  if (url === '/src/services/diaperService.ts' && (logOnly||process.argv.includes('--today-summary')||process.argv.includes('--minimal-home'))) return `
     export const diaperTypes=['wet','dirty','both'];
     export async function countDiaperChangesBetween(...args){window.__diaperCountQuery=args;return new URLSearchParams(location.search).has("empty")?0:5;}
     const rows=[['wet','10:00','baby'],['dirty','09:00','baby'],['both','11:00','baby'],['other','11:30','another']];
@@ -62,11 +63,14 @@ function mock(url) {
       return [...rows.map(([id,time,baby_id])=>({id,type:id,baby_id,changed_at:'2026-11-21T'+time+':00Z'})),
         {id:'yesterday',type:'wet',baby_id:'baby',changed_at:'2026-11-20T18:00:00Z'}];
     }
-    export async function updateDiaperChange(...args){window.__updatedDiaper=args;}
-    export async function deleteDiaperChange(...args){window.__deletedDiaper=args;}
-    export async function createDiaperChange(babyId,type,changedAt){window.__savedDiaper={id:"new",baby_id:babyId,type,changed_at:changedAt};}
+    const daily=rows.slice(0,3).map(([id,time,baby_id])=>({id,type:id,baby_id,changed_at:'2026-11-21T'+time+':00Z'}));
+    daily.push({id:'old',type:'both',baby_id:'baby',changed_at:'2026-10-24T11:00:00Z'});
+    export const getDiaperChangesBetween=async(id,from,to)=>daily.filter(row=>row.baby_id===id&&row.changed_at>=from&&row.changed_at<to);
+    export async function updateDiaperChange(...args){window.__updatedDiaper=args;const row=daily.find(row=>row.id===args[0]);if(row)Object.assign(row,{type:args[2],changed_at:args[3]});}
+    export async function deleteDiaperChange(...args){window.__deletedDiaper=args;const index=daily.findIndex(row=>row.id===args[0]);if(index>=0)daily.splice(index,1);}
+    export async function createDiaperChange(babyId,type,changedAt){window.__savedDiaper={id:"new",baby_id:babyId,type,changed_at:changedAt};daily.push(window.__savedDiaper);}
   `;
-  if (url === '/src/lib/supabase.ts') return `export const supabase={from(table){return {select(){let baby,start;return {eq(_,id){baby=id;return this;},order(){return this;},async limit(){return {data:[],error:null};},gte(_,value){start=value;return this;},async lt(_,end){window.__diaperCountQuery=[baby,start,end];return {count:5,error:null};}};},insert(row){return {select(){return {async single(){if(table!=='diaper_changes')throw Error(table);window.__diaperRows??=[];window.__diaperRows.push(row);return {data:row,error:null};}};}};} };},auth:{onAuthStateChange:f=>{window.recovery=()=>f('PASSWORD_RECOVERY');return {data:{subscription:{unsubscribe(){}}}}},getUser:async()=>({data:{user:{id:'user'}}})}};`;
+  if (url === '/src/lib/supabase.ts') return `export const supabase={from(table){return {select(){let baby,start;return {eq(_,id){baby=id;return this;},order(){return this;},async limit(){return {data:[],error:null};},gte(_,value){start=value;return this;},lt(_,end){window.__diaperCountQuery=[baby,start,end];return {count:5,error:null,order(){return this;},async range(){return {data:[],error:null};}};}};},insert(row){return {select(){return {async single(){if(table!=='diaper_changes')throw Error(table);window.__diaperRows??=[];window.__diaperRows.push(row);return {data:row,error:null};}};}};} };},auth:{onAuthStateChange:f=>{window.recovery=()=>f('PASSWORD_RECOVERY');return {data:{subscription:{unsubscribe(){}}}}},getUser:async()=>({data:{user:{id:'user'}}})}};`;
   if (url === '/src/services/sleepService.ts') return records + failure + `
     if(p.has('probability-fixture')){const at=(days,h,m=0)=>{const d=new Date();d.setDate(d.getDate()-days);d.setHours(h,m,0,0);return d.getTime()};const row=(start,end)=>({id:String(start),baby_id:'baby',starttime:iso(start),endtime:iso(end),durationminutes:(end-start)/60000,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,i)=>{const d=i+1;return [row(at(d+1,23,30),at(d,7)),row(at(d,d<=9?9:11,30),at(d,d<=9?10:12,30)),row(at(d,20),at(d,21))]}).flat());}
     if(p.has('next-sleep-fixture')&&!p.has('empty')){sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,d)=>Array.from({length:6},(_,i)=>{const end=now-(d+1)*86400000-i*4*3600000;return {id:String(end),baby_id:'baby',starttime:iso(end-3600000),endtime:iso(end),durationminutes:60,sleep_type:'sleep',rate:'4',deleted_at:null}})).flat(),{id:'last',baby_id:'baby',starttime:iso(now-2*3600000),endtime:iso(now-3600000),durationminutes:60,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.sort((a,b)=>Date.parse(b.endtime)-Date.parse(a.endtime));}
@@ -74,16 +78,21 @@ function mock(url) {
     if(p.has('home-fixture')&&!p.has('empty')){sleeps.splice(0,sleeps.length,...Array.from({length:24},(_,i)=>({...sleeps[0],id:'history-'+i,baby_id:'baby',starttime:iso(now-(63+i*120)*60000),endtime:iso(now-(18+i*120)*60000),durationminutes:45,sleep_type:'sleep',rate:'4.8',deleted_at:null})));}
     if(p.has('last-slept-fixture')&&sleeps[0])Object.assign(sleeps[0],{starttime:iso(now-223*60000),endtime:iso(now-151*60000),durationminutes:72});
     export const getActiveSleep=async()=>window.__homeActive!==undefined?window.__homeActive:p.has('active')?{...sleeps[0],id:'active',baby_id:'baby',sleep_type:'sleep',starttime:p.has('wave-fixture')||p.has('home-fixture')||p.has('last-slept-fixture')?iso(now-42*60000):sleeps[0].starttime,endtime:null}:null,
-    getLastCompletedSleep=async()=>window.__homeLast||(p.has('hold-room')?{...sleeps[0],endtime:iso(now-2*3600000)}:sleeps[0])||null,getRecentSleeps=async()=>sleeps.slice(0,8),getAllSleeps=async()=>sleeps,getSleepsFromDate=async()=>sleeps,getSleepsOverlappingPeriod=async()=>window.__waveRows??sleeps;
+    getLastCompletedSleep=async()=>window.__homeLast||(p.has('hold-room')?{...sleeps[0],endtime:iso(now-2*3600000)}:sleeps[0])||null,getRecentSleeps=async()=>sleeps.slice(0,8),getAllSleeps=async()=>sleeps,getSleepsFromDate=async()=>sleeps,getSleepsOverlappingPeriod=async(id,from,to)=>p.has("log-fixture")?[...sleeps,{...sleeps[0],id:"overnight",starttime:"2026-11-20T22:40:00.000Z",endtime:"2026-11-21T00:20:00.000Z",durationminutes:100},{...sleeps[0],id:"active",starttime:window.__logActiveStart??"2026-11-21T17:00:00.000Z",endtime:null}].filter(row=>row.baby_id===id&&row.starttime<to&&(!row.endtime||row.endtime>from)):window.__waveRows??sleeps;
     export async function startSleep(babyId,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'start',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));return window.__homeActive={...sleeps[0],id:'started',baby_id:babyId,starttime:iso(Date.now()-minutes*60000),endtime:null};}
     export async function stopSleep(id,start,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'stop',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));window.__homeActive=null;return window.__homeLast={...sleeps[0],id,starttime:start,endtime:iso(Date.now()-minutes*60000)};}
-    export async function updateActiveSleepStart(row,starttime){if(!p.has('home-refinement'))return blocked();window.__homeActive={...row,starttime};window.__corrected=row.id;}
-    export async function updateSleep(id,starttime,endtime,rate){if(!p.has("recent-edit"))return blocked();const row=sleeps.find(row=>row.id===id);Object.assign(row,{starttime,endtime,rate,durationminutes:(Date.parse(endtime)-Date.parse(starttime))/60000});(window.__editedSleeps??=[]).push(id);}
-    export {blocked as resumeSleep,blocked as deleteSleep,blocked as splitSleep,blocked as createManualSleep};`;
+    export async function updateActiveSleepStart(row,starttime){if(p.has('log-fixture')){window.__logActiveStart=starttime;return;}if(!p.has('home-refinement'))return blocked();window.__homeActive={...row,starttime};window.__corrected=row.id;}
+    export async function updateSleep(id,starttime,endtime,rate){if(!p.has("recent-edit")&&!p.has("log-fixture"))return blocked();const row=sleeps.find(row=>row.id===id);Object.assign(row,{starttime,endtime,rate,durationminutes:(Date.parse(endtime)-Date.parse(starttime))/60000});(window.__editedSleeps??=[]).push(id);}
+    export {blocked as resumeSleep};
+    export async function deleteSleep(id){if(!p.has("log-fixture"))return blocked();sleeps.splice(sleeps.findIndex(row=>row.id===id),1);}
+    export async function splitSleep(id,at){if(!p.has("log-fixture"))return blocked();const row=sleeps.find(row=>row.id===id);sleeps.push({...row,id:id+"-split",starttime:at});row.endtime=at;}
+    export async function createManualSleep(row){if(!p.has("log-fixture"))return blocked();sleeps.push({...row,id:"new-sleep"});}`;
   if(url.endsWith('/sleepEstimateService.ts')&&process.argv.includes('--home-only'))return params+`export const getActiveSleepEstimate=async sleep=>({classification:p.get('classification')||'SHORT_SLEEP_LIKE',estimatedWakeTime:!p.has('classification')||p.get('classification')==='SHORT_SLEEP_LIKE'?new Date(Date.parse(sleep.starttime)+57*60000).toISOString():null}),sleepEstimateHistoryRevision=()=>0,subscribeSleepEstimateHistory=()=>()=>{},publishSleepEstimateHistory=()=>{};`;
-  if (url === '/src/services/feedService.ts') return records + failure + `export async function countFeedsBetween(...args){window.__feedCountQuery=args;return p.has("empty")?0:4;} export const getLastFeed=async()=>feeds[0]||null,getRecentFeeds=async()=>feeds,getFeedsFromDate=async()=>feeds;export {blocked as createFeed,blocked as updateFeed,blocked as deleteFeed};`;
+  if (url === '/src/services/feedService.ts') return records + failure + `if(p.has("log-fixture"))window.__logFeeds=feeds;export async function countFeedsBetween(...args){window.__feedCountQuery=args;return p.has("empty")?0:4;} export const getLastFeed=async()=>feeds[0]||null,getRecentFeeds=async()=>feeds,getFeedsFromDate=async()=>feeds,getFeedsBetween=async(id,from,to)=>feeds.filter(row=>row.baby_id===id&&row.starttime>=from&&row.starttime<to);export async function createFeed(row){if(!p.has("log-fixture"))return blocked();feeds.push({...row,id:"new-feed"});}
+export async function updateFeed(id,row){if(!p.has("log-fixture"))return blocked();Object.assign(feeds.find(record=>record.id===id),row);}
+export async function deleteFeed(id){if(!p.has("log-fixture"))return blocked();feeds.splice(feeds.findIndex(row=>row.id===id),1);}`;
   if (url.endsWith('/sleepRealtime.ts')) return `export const subscribeToSleepChanges=()=>()=>{};`;
-  if (url.endsWith('/feedRealtime.ts')) return `export const subscribeToFeedChanges=()=>()=>{};`;
+  if (url.endsWith('/feedRealtime.ts')) return `export const subscribeToFeedChanges=(_id,refresh)=>{window.__feedRefresh=refresh;return ()=>{};};`;
   if (url.endsWith('/householdService.ts')) return params + failure + `export async function getMyHouseholds(){if(p.has('error'))throw Error('Synthetic long failure message. '+ 'x'.repeat(70));return [{id:'household',name:'Strande Engevik – familie med et langt navn',role:'owner'}]};export const getMyBabies=async()=>[];export {blocked as updateBabyBirthDate,blocked as createBabyForHousehold,blocked as createHouseholdWithBaby};`;
   if (url.endsWith('/invitationService.ts')) return `export const createHouseholdInvitation=async()=>({token:'synthetic-layout-only-'+ 'A'.repeat(65),expires_at:new Date().toISOString()}),acceptHouseholdInvitation=async()=>({household_name:'Synthetic family'});`;
   if (url.endsWith('/pushService.ts')) return `export const hasPushSubscription=async()=>true,attributePushSubscription=async()=>{},enablePushNotifications=async()=>{},disablePushNotifications=async()=>{},sendTestNotification=async()=>{};`;
@@ -104,13 +113,14 @@ async function main() {
     for (let n = 0; n < 100; n++) { try { if ((await fetch(base)).ok) break; } catch { /* starting */ } await new Promise(r => setTimeout(r, 100)); }
     browser = await chromium.launch({ headless: true, ...(process.env.SLEEPY_CHROMIUM_PATH ? { executablePath: process.env.SLEEPY_CHROMIUM_PATH } : {}) });
     const page = await browser.newPage({timezoneId:'Europe/Oslo'});
+    if (logOnly) await page.clock.setFixedTime(new Date('2026-11-21T18:00:00Z'));
     if(process.argv.includes('--sleep-wave-only')||process.argv.includes('--analysis-only'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
     // Home fixtures are relative to "now", but Today stats count sessions that
     // started after local midnight: on the real clock the quality assertion
     // failed between 00:00 and ~01:03 Oslo. A fixed midday start (time still
     // flows, so hold gestures behave normally) makes every run deterministic.
-    if(process.argv.includes('--home-only')||process.argv.includes('--history-only')||process.argv.includes('--home-refinement'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
-    if(process.argv.includes('--diaper-history')||process.argv.includes('--today-summary'))await page.clock.setFixedTime(new Date('2026-11-21T12:00:00Z'));
+    if(process.argv.includes('--home-only')||process.argv.includes('--home-refinement'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
+    if(process.argv.includes('--today-summary'))await page.clock.setFixedTime(new Date('2026-11-21T12:00:00Z'));
     if(process.argv.includes('--last-slept-only'))await page.clock.setFixedTime(new Date('2026-11-16T11:08:00Z'));
     const errors = [], failures = [], screens = [];
     page.on('pageerror', e => { errors.push(e.message); if(process.argv.includes('--entitlements-only')||process.argv.includes('--home-only'))console.error(e.message); });
@@ -158,7 +168,7 @@ async function main() {
       return;
     }
     const requestedWidth=process.argv.find(value=>value.startsWith('--width='))?.split('=')[1];
-    const sizes = (process.argv.includes('--quick') ? [[320,568]] : (process.argv.includes('--sleep-wave-only')||process.argv.includes('--history-only')||process.argv.includes('--analysis-only')?[[320,568],[360,780],[375,667],[390,844],[430,932]]:[[320,568],[375,667],[390,844],[430,932]]))
+    const sizes = (process.argv.includes('--quick') ? [[320,568]] : (process.argv.includes('--sleep-wave-only')||process.argv.includes('--analysis-only')?[[320,568],[360,780],[375,667],[390,844],[430,932]]:[[320,568],[375,667],[390,844],[430,932]]))
       .filter(([width])=>!requestedWidth||width===Number(requestedWidth));
     const themes = process.argv.includes('--quick') ? ['dark'] : ['dark','light'];
     let context = '', query = '';
@@ -295,25 +305,6 @@ async function main() {
         await visit('/','empty');
         assert.equal(await lastDiaper.locator('.home-edit').count(),0);
         await check('today-summary-empty');
-        continue;
-      }
-      if (process.argv.includes('--diaper-history')) {
-        await page.goto(base+'/history?'+query+'&today=sleep');
-        const recent=page.locator('#history-sessions');
-        const rows=recent.locator('[data-diaper-change]');
-        await rows.first().waitFor();
-        assert.deepEqual(await rows.evaluateAll(nodes=>nodes.map(node=>node.dataset.diaperChange)),['both','wet','dirty']);
-        assert.deepEqual(await rows.locator('strong').allTextContents(),lang==='en'?['Wet + Dirty','Wet','Dirty']:['Tiss + b\u00e6sj','Tiss','B\u00e6sj']);
-        assert.equal(await page.locator('[data-diaper-change=other]').count(),0);
-        assert.equal(await page.locator('[data-diaper-change=yesterday]').count(),1);
-        await check('history-diapers');
-        await rows.first().locator('.history-content').click();
-        const editor=page.locator('.diaper-modal');
-        await editor.locator('.diaper-types button').first().click();
-        await editor.locator('input').fill('2026-11-21T09:30');
-        await editor.locator('[type=submit]').click();
-        await editor.waitFor({state:'hidden'});
-        assert.deepEqual(await page.evaluate(()=>window.__updatedDiaper),['both','baby','wet','2026-11-21T08:30:00.000Z']);
         continue;
       }
       if (process.argv.includes('--quick-actions')) {
@@ -485,47 +476,6 @@ async function main() {
         const peaks=await card.locator('.sleep-wave-peak-label').evaluateAll(nodes=>nodes.map(e=>{const r=e.getBoundingClientRect();return {l:r.left,r:r.right,t:r.top,b:r.bottom}}));
         for(let i=0;i<peaks.length;i++)for(let j=i+1;j<peaks.length;j++)assert.ok(peaks[i].r<=peaks[j].l+1||peaks[j].r<=peaks[i].l+1||peaks[i].b<=peaks[j].t+1||peaks[j].b<=peaks[i].t+1,'condensed labels overlap');
         await check('sleep-wave-night',true);console.log(context+' Sleep Wave checked');continue;
-      }
-      if(process.argv.includes('--history-only')){
-        // Daily planner: same forecast as Sleep Wave, linear calendar, rolling 24 h, collapsible older history.
-        await visit('/','wave-fixture&night');await page.waitForSelector('.sleep-wave-time');
-        const waveWindow=(await page.locator('.sleep-wave-time').innerText()).trim();
-        await visit('/history','wave-fixture&night');await page.waitForSelector('.sleep-planner [data-planner-event]');
-        const planner=page.locator('.sleep-planner');
-        assert.equal(await planner.count(),1);
-        assert.equal((await planner.locator('[data-planner-event="next"] strong').innerText()).trim(),waveWindow,'planner and Sleep Wave show the same window');
-        assert.equal(await planner.locator('[data-planner-event="recorded"]').count(),2);
-        assert.ok(await planner.locator('[data-planner-event="later"]').count()>=1);
-        assert.ok((await planner.locator('[data-planner-event="recorded"]').first().innerText()).includes('20:09'),'overnight sleep keeps its true start');
-        const scroll=planner.locator('.sleep-planner-scroll');
-        assert.ok(await scroll.evaluate(e=>e.scrollTop>0&&e.scrollHeight>e.clientHeight),'calendar opens at now');
-        assert.ok(await scroll.evaluate(e=>{const n=e.querySelector('.sleep-planner-now').getBoundingClientRect(),r=e.getBoundingClientRect();return n.top>=r.top&&n.top<=r.bottom;}),'now line visible');
-        assert.ok(await planner.evaluate(e=>e.getBoundingClientRect().height<=innerHeight*.9+260),'planner height is bounded');
-        const rows=page.locator('.history-last-24 .history-item');
-        assert.ok(await rows.count()>=2);assert.ok((await rows.allInnerTexts()).some(text=>text.includes('06:53')),'overnight session in last 24 h');
-        assert.ok(await rows.evaluateAll(nodes=>nodes.every(n=>n.getBoundingClientRect().height<=96)),'compact rows');
-        const toggle=page.locator('.history-more-toggle'),more=page.locator('.history-more');
-        assert.equal(await toggle.getAttribute('aria-expanded'),'false');assert.equal(await more.isVisible(),false);
-        await check('history-plan',true);
-        await toggle.click();assert.equal(await toggle.getAttribute('aria-expanded'),'true');assert.equal(await more.isVisible(),true);
-        assert.ok(await more.locator('.history-item').count()>=1,'older history available');await check('history-more',true);
-        await toggle.focus();await page.keyboard.press('Enter');assert.equal(await toggle.getAttribute('aria-expanded'),'false');assert.equal(await more.isVisible(),false);
-        await planner.locator('button.sleep-planner-hit').last().click();await page.waitForSelector('[role="dialog"]');
-        await page.keyboard.press('Escape');await page.waitForSelector('[role="dialog"]',{state:'detached'});
-        await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await scroll.evaluate(e=>getComputedStyle(e).scrollBehavior),'auto');await page.emulateMedia({reducedMotion:'no-preference'});
-        // 200% text: the planner and rows must not overflow horizontally. (The app-wide
-        // bottom-nav padding check also fails on Settings at 200%; not History-specific.)
-        await page.evaluate(()=>document.documentElement.style.fontSize='200%');
-        assert.deepEqual(await page.evaluate(()=>({page:document.documentElement.scrollWidth>innerWidth+1,planner:[...document.querySelectorAll('.sleep-planner,.sleep-planner-scroll,.history-last-24 .history-item')].filter(e=>e.scrollWidth>e.clientWidth+1).map(e=>e.className+':'+e.scrollWidth+'>'+e.clientWidth).join()||false})),{page:false,planner:false});
-        await page.screenshot({path:path.join(output,context+'-history-plan-large-text.png'),fullPage:true});screens.push(context+'/history-plan-large-text');
-        await page.evaluate(()=>document.documentElement.style.fontSize='');
-        await page.evaluate(()=>window.__waveStore.setState({currentBabyId:'baby-2'}));
-        await page.waitForFunction(()=>!document.querySelector('[data-planner-event="recorded"]'));
-        await page.evaluate(()=>window.__waveStore.setState({currentBabyId:'baby'}));await page.waitForSelector('[data-planner-event="recorded"]');
-        await page.evaluate(()=>{window.__waveRows=[];window.dispatchEvent(new Event('sleepy:sleep-presentation-changed'))});
-        await page.waitForFunction(()=>!document.querySelector('[data-planner-event="recorded"],[data-planner-event="next"]'));
-        await visit('/history','empty');await page.waitForSelector('.sleep-planner');assert.equal(await page.locator('[data-planner-event]').count(),0);
-        await check('history-plan-empty',true);console.log(context+' History checked');continue;
       }
       if(process.argv.includes('--next-sleep-only')){
         await visit('/','next-sleep-fixture');await page.waitForSelector('.sleep-wave-time');
@@ -814,6 +764,98 @@ async function main() {
         await page.locator('.sound-settings .sound-panel').waitFor();
         continue;
       }
+      if (logOnly) {
+        await visit('/history', 'log-fixture');
+        assert.equal(new URL(page.url()).pathname, '/log');
+        const log = page.locator('.log-page');
+        const rows = log.locator('.log-row');
+        const date = log.locator('input[type=date]');
+        const row = id => log.locator('[data-event-id="'+id+'"]');
+        const dialog = page.getByRole('dialog');
+        await row('active').waitFor();
+        assert.equal(await date.inputValue(), '2026-11-21');
+        assert.equal(await row('overnight').count(), 1);
+        const times = await rows.locator('time').evaluateAll(nodes => nodes.map(node => node.dateTime));
+        assert.deepEqual(times, [...times].sort().reverse());
+        await check('log-timeline', true);
+        await log.locator('.log-date button').first().click();
+        await page.waitForFunction(() => document.querySelector('.log-date input').value === '2026-11-20');
+        await row('overnight').waitFor();
+        assert.equal(await date.inputValue(), '2026-11-20');
+        await log.locator('.log-date button').last().click();
+        await row('active').waitFor();
+        await row('active').click();
+        assert.equal(await dialog.locator('input[type=datetime-local]').count(), 1);
+        await dialog.locator('input[type=datetime-local]').fill('2026-11-21T17:55');
+        await dialog.locator('.primary-button').click();
+        await dialog.waitFor({state:'hidden'});
+        assert.match(await row('active').innerText(), /17:55/);
+        await row('sleep').focus();
+        await page.keyboard.press('Enter');
+        await dialog.getByRole('button', { name: lang === 'en' ? 'Split sleep' : /Del / }).click();
+        await dialog.locator('.primary-button').click();
+        await row('sleep-split').waitFor();
+        await row('sleep-split').click();
+        page.once('dialog', confirm => confirm.accept());
+        await dialog.getByRole('button', { name: lang === 'en' ? /Delete sleep/ : /Slett/ }).click();
+        await row('sleep-split').waitFor({ state: 'hidden' });
+        await row('sleep').click();
+        const sleepInputs = dialog.locator('input[type=datetime-local]');
+        await sleepInputs.first().fill('2026-11-20T13:00');
+        await sleepInputs.last().fill('2026-11-20T13:30');
+        await dialog.locator('.primary-button').click();
+        await row('sleep').waitFor({ state: 'hidden' });
+
+        await row('feed-0').click();
+        await dialog.locator('input[type=datetime-local]').waitFor();
+        await page.keyboard.press('Escape');
+        assert.equal(await row('feed-0').evaluate(button => button === document.activeElement), true);
+        await row('feed-0').click();
+        await dialog.locator('input[type=datetime-local]').fill('2026-11-20T14:00');
+        await dialog.locator('.primary-button').click();
+        await row('feed-0').waitFor({ state: 'hidden' });
+        await log.locator('.log-date button').first().click();
+        await row('feed-0').waitFor();
+        await row('sleep').waitFor();
+        await row('feed-0').click();
+        page.once('dialog', confirm => confirm.accept());
+        await dialog.getByRole('button', { name: lang === 'en' ? /Delete feeding/ : /Slett/ }).click();
+        await row('feed-0').waitFor({ state: 'hidden' });
+        await page.evaluate(() => {
+          window.__logFeeds.push({id:'remote', baby_id:'baby', starttime:'2026-11-20T17:00:00.000Z', feedtype:'food'});
+          window.__feedRefresh();
+        });
+        await row('remote').waitFor();
+
+        await date.fill('2026-10-24');
+        await row('old').waitFor();
+        await row('old').click();
+        await dialog.locator('.diaper-types button').first().click();
+        await dialog.locator('button[type=submit]').click();
+        await dialog.waitFor({ state: 'hidden' });
+        assert.match(await row('old').innerText(), lang === 'en' ? /Wet/ : /Tiss/i);
+        await row('old').click();
+        page.once('dialog', confirm => confirm.accept());
+        await dialog.getByRole('button', { name: lang === 'en' ? /Delete diaper/ : /Slett/ }).click();
+        await row('old').waitFor({ state: 'hidden' });
+
+        for (const index of [0,1,2]) {
+          await log.locator('.log-header button').click();
+          await dialog.locator('button').nth(index).click();
+          await dialog.locator('input[type=datetime-local]').first().waitFor();
+          assert.ok((await dialog.locator('input[type=datetime-local]').first().inputValue()).startsWith('2026-10-24'));
+          if (index === 2) await dialog.locator('.diaper-types button').last().click();
+          await dialog.locator('.primary-button').click();
+          await dialog.waitFor({ state: 'hidden' });
+          await row(['new-sleep','new-feed','new'][index]).waitFor();
+        }
+        await date.fill('2026-11-21');
+        await row('active').waitFor();
+        await page.evaluate(() => window.__waveStore.setState({currentBabyId:'baby-2'}));
+        await log.locator('.log-empty').waitFor();
+        assert.equal(await rows.count(), 0);
+        continue;
+      }
       if(process.argv.includes('--navigation-only')){
         await visit('/');
         const nav = page.locator('.bottom-nav a');
@@ -882,12 +924,12 @@ async function main() {
       }
       await visit();await check('home',true);
       await visit('/','active&sound=listening');await check('active-sleep-sound',true);
-      await visit('/history');await page.waitForSelector('.history-content');await check('history',true);
-      await page.locator('button.history-content').first().focus();await page.keyboard.press('Enter');await page.waitForSelector('[role="dialog"]');await check('history-keyboard-detail');
+      await visit('/history');await page.waitForSelector('.log-row');await check('history',true);
+      await page.locator('button.log-row').first().focus();await page.keyboard.press('Enter');await page.waitForSelector('[role="dialog"]');await check('history-keyboard-detail');
       await page.keyboard.press('Shift+Tab');
       assert.equal(await page.evaluate(()=>!!document.activeElement.closest('[role="dialog"]')),true,'modal keyboard focus escaped');
       await page.keyboard.press('Escape');await page.waitForSelector('[role="dialog"]',{state:'detached'});
-      assert.equal(await page.evaluate(()=>document.activeElement.matches('button.history-content')),true,'opening control did not regain focus');
+      assert.equal(await page.evaluate(()=>document.activeElement.matches('button.log-row')),true,'opening control did not regain focus');
       for(const view of ['feed','sleep','newSleep','split','message']){
         await visit('/',`view=${view}`);await check(view,true);
         if(view==='feed'){for(const i of [1,2]){await page.locator('.feed-type-button').nth(i).click();await check('feed-type-'+i);}}

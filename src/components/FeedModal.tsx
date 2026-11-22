@@ -18,12 +18,13 @@ type Props = {
   feed?: FeedRecord | null;
   nextSide?: FeedSide | null;
   allowDelete?: boolean;
+  initialTime?: Date;
   onClose: () => void;
   onSaved: () => void;
 };
 
-function localDateTime(date?: string) {
-  const d = date ? new Date(date) : new Date();
+function localDateTime(date?: string, initialTime?: Date) {
+  const d = date ? new Date(date) : initialTime ?? new Date();
   const offset = d.getTimezoneOffset() * 60000;
 
   return new Date(d.getTime() - offset)
@@ -35,6 +36,7 @@ export default function FeedModal({
   feed,
   nextSide,
   allowDelete,
+  initialTime,
   onClose,
   onSaved,
 }: Props) {
@@ -72,7 +74,7 @@ export default function FeedModal({
     useState(feed?.note ?? "");
 
   const [time, setTime] = useState(
-    localDateTime(feed?.starttime),
+    localDateTime(feed?.starttime, initialTime),
   );
 
   const [saving, setSaving] =

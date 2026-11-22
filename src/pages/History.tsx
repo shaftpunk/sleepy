@@ -1,690 +1,249 @@
-import DiaperModal from "../components/DiaperModal";
-import { deleteDiaperChange, getRecentDiaperChanges, type DiaperChange } from "../services/diaperService";
+﻿import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useState,
-} from "react";
-
-import {
-  useAppStore,
-} from "../stores/appStore";
-
-import {
-  deleteSleep,
-  getAllSleeps,
-  getRecentSleeps,
-  resumeSleep,
-  type SleepRecord,
-} from "../services/sleepService";
-
-import {
-  deleteFeed,
-  getRecentFeeds,
-  type FeedRecord,
-} from "../services/feedService";
-
-import {
-  subscribeToSleepChanges,
-} from "../services/sleepRealtime";
-
-import {
-  subscribeToFeedChanges,
-} from "../services/feedRealtime";
-
-import SleepModal
-  from "../components/SleepModal";
-
-import SleepSplitModal
-  from "../components/SleepSplitModal";
-
-import FeedModal
-  from "../components/FeedModal";
-
-import SleepClock
-  from "../components/history/SleepClock";
-
-import DailySleepPlanner from "../components/history/DailySleepPlanner";
-import SleepHistoryItem from "../components/history/SleepHistoryItem";
-import { useAnalyticsData } from "../hooks/useAnalyticsData";
-import { useSleepForecasts } from "../hooks/useSleepForecasts";
-import { ROLLING_DAY_MS, sleepDayLabel, sleepsInLast24Hours } from "../lib/recentSleeps";
-import { feedTypeLabel, formatClock, formatDuration, sideLabel } from "../lib/format";
+import DiaperModal from "../components/DiaperModal";
+import FeedModal from "../components/FeedModal";
+import SleepModal from "../components/SleepModal";
+import SleepSplitModal from "../components/SleepSplitModal";
+import { useModalAccessibility } from "../hooks/useModalAccessibility";
 import { LOCALES, useTranslation } from "../i18n";
+import { feedTypeLabel, formatClock, formatDuration, formatSleepRange, sideLabel } from "../lib/format";
+import { localDayKey, logDayBounds, logTimeline, shiftLocalDay } from "../lib/logDay";
+import { getDiaperChangesBetween, type DiaperChange } from "../services/diaperService";
+import { getFeedsBetween, type FeedRecord } from "../services/feedService";
+import { subscribeToFeedChanges } from "../services/feedRealtime";
+import { getActiveSleep, getLastCompletedSleep, getSleepsOverlappingPeriod, resumeSleep, type SleepRecord } from "../services/sleepService";
+import { subscribeToSleepChanges } from "../services/sleepRealtime";
+import { useAppStore } from "../stores/appStore";
+import "./Log.css";
 
+type Editor =
+  | { kind: "sleep"; record?: SleepRecord }
+  | { kind: "split"; record: SleepRecord }
+  | { kind: "feed"; record?: FeedRecord }
+  | { kind: "diaper"; record?: DiaperChange };
+
+const iconPaths = {
+  sleep: "M20 15A8 8 0 0 1 9 4a8 8 0 1 0 11 11Z",
+  feed: "M10 7V5a2 2 0 0 1 4 0v2m-6 0h8v4H8zM9 11h6l2 3v6H7v-6zm1 4h2m-2 3h2",
+  diaper: "M3 6h18v6c0 4-4 7-9 8-5-1-9-4-9-8zm0 4c4 0 7 3 7 9m11-9c-4 0-7 3-7 9",
+};
 
 export default function History() {
-  const [params] = useSearchParams();
-  const today = params.get("today");
-  const activity = today === "feed" || today === "diaper" ? today : null;
+  const babyId = useAppStore(state => state.currentBabyId);
+  const [params, setParams] = useSearchParams();
+  const [today, setToday] = useState(() => localDayKey(new Date()));
   useEffect(() => {
-    if (today) document.getElementById("history-sessions")?.scrollIntoView();
-  }, [today]);
-  const { t, lang } = useTranslation();
-
-  const currentBabyId =
-    useAppStore(
-      (state) =>
-        state.currentBabyId
-    );
-
-  const babies =
-    useAppStore(
-      (state) =>
-        state.babies
-    );
-
-  const currentBaby =
-    babies.find(
-      (baby) =>
-        baby.id === currentBabyId
-    ) ?? null;
-
-  const {
-    sessions,
-    active,
-  } = useAnalyticsData(currentBabyId);
-
-  const [now, setNow] = useState(() => Date.now());
-  const [moreOpen, setMoreOpen] = useState(false);
-  const last24Id = useId(), moreId = useId();
-  // The same forecast Sleep Wave shows on Home (shared hook, same inputs).
-  const { nextSleep, dayForecast, upcomingForecast } = useSleepForecasts({
-    sessions, active, now, birthDate: currentBaby?.birth_date,
-  });
-  const [copyingSleep, setCopyingSleep] = useState(false);
-  const [resumingSleepId, setResumingSleepId] = useState<string | null>(null);
-  const [copyMessage, setCopyMessage] = useState<string | null>(null);
-  const [resumeMessage, setResumeMessage] = useState<string | null>(null);
-
-  // Keep the planner current: a regular tick (covers the minute and the
-  // local day change) plus an immediate update when the app resumes.
-  useEffect(() => {
-    const update = () => setNow(Date.now());
-    const interval = window.setInterval(update, 15000);
+    const update = () => setToday(localDayKey(new Date()));
+    const timer = window.setInterval(update, 1000);
     document.addEventListener("visibilitychange", update);
-    document.addEventListener("resume", update);
     return () => {
-      window.clearInterval(interval);
+      clearInterval(timer);
       document.removeEventListener("visibilitychange", update);
-      document.removeEventListener("resume", update);
     };
   }, []);
 
-  function formatDate(date: string) {
-    return new Intl.DateTimeFormat(LOCALES[lang], {
-      weekday: "short",
-      day: "2-digit",
-      month: "short",
-    }).format(new Date(date));
+  const { start, key: day } = logDayBounds(params.get("date"), today);
+  const { t, lang } = useTranslation();
+  const viewKey = JSON.stringify([babyId, day]);
+  const [adding, setAdding] = useState<string | null>(null);
+  const addButton = useRef<HTMLButtonElement>(null);
+  function selectDate(date: string) {
+    setAdding(null);
+    const next = new URLSearchParams(params);
+    next.delete("today");
+    next.set("date", date);
+    setParams(next);
   }
 
-  function feedLabel(feed: FeedRecord) {
-    const typeLabel = feedTypeLabel(feed.feedtype, lang);
-
-    if (feed.feedtype === "bottle") {
-      return `${typeLabel}${feed.amountml !== null ? ` · ${feed.amountml} ml` : ""}`;
-    }
-
-    if (feed.feedtype === "breast") {
-      const side = sideLabel(feed.side, lang);
-      return `${typeLabel}${side ? ` · ${side}` : ""}`;
-    }
-
-    return typeLabel;
-  }
-
-  async function copyText(text: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      const copied = document.execCommand("copy");
-      textarea.remove();
-      if (!copied) throw new Error("Clipboard unavailable");
-    }
-  }
-
-  async function handleCopySleepJson() {
-    if (!currentBabyId || !currentBaby) return;
-
-    try {
-      setCopyingSleep(true);
-      setCopyMessage(null);
-      const allSleeps = await getAllSleeps(currentBabyId);
-      const payload = {
-        format: "sleepy-sleep-export",
-        version: 1,
-        exported_at: new Date().toISOString(),
-        baby: {
-          id: currentBaby.id,
-          name: currentBaby.name,
-          birth_date: currentBaby.birth_date,
-        },
-        sessions: allSleeps.map((sleep) => ({
-          id: sleep.id,
-          baby_id: sleep.baby_id,
-          starttime: sleep.starttime,
-          endtime: sleep.endtime,
-          durationminutes: sleep.durationminutes,
-          sleep_type: sleep.sleep_type,
-          rate: sleep.rate,
-          note: sleep.note ?? null,
-          created_at: sleep.created_at ?? null,
-          updated_at: sleep.updated_at ?? null,
-        })),
-      };
-
-      await copyText(JSON.stringify(payload, null, 2));
-      setCopyMessage(t("history.copyJsonSuccess", { count: allSleeps.length }));
-    } catch (error) {
-      console.error("Could not copy sleep history:", error);
-      setCopyMessage(t("history.copyJsonError"));
-    } finally {
-      setCopyingSleep(false);
-    }
-  }
-
-  async function handleResumeSleep(sleep: SleepRecord) {
-    if (resumingSleepId) return;
-
-    if (
-      !window.confirm(
-        t("history.confirmResumeSleep")
-      )
-    ) {
-      return;
-    }
-
-    try {
-      setResumingSleepId(sleep.id);
-      setResumeMessage(null);
-
-      await resumeSleep(sleep);
-      await load();
-
-      setResumeMessage(t("history.resumeSleepSuccess"));
-    } catch (error) {
-      console.error("Could not resume sleep:", error);
-      setResumeMessage(
-        error instanceof Error
-          ? error.message
-          : t("errors.couldNotResumeSleep")
-      );
-    } finally {
-      setResumingSleepId(null);
-    }
-  }
-
-
-  const [
-    sleeps,
-    setSleeps,
-  ] = useState<
-    SleepRecord[]
-  >([]);
-
-  const [
-    feeds,
-    setFeeds,
-  ] = useState<
-    FeedRecord[]
-  >([]);
-
-
-  const [
-    editingSleep,
-    setEditingSleep,
-  ] =
-    useState<
-      SleepRecord | null
-    >(null);
-
-
-  const [
-    splittingSleep,
-    setSplittingSleep,
-  ] =
-    useState<
-      SleepRecord | null
-    >(null);
-
-
-  const [
-    editingFeed,
-    setEditingFeed,
-  ] =
-    useState<
-      FeedRecord | null
-    >(null);
-
-
-  const [
-    newSleep,
-    setNewSleep,
-  ] =
-    useState(false);
-
-
-  const [
-    newFeed,
-    setNewFeed,
-  ] =
-    useState(false);
-
-
-  const load =
-    useCallback(
-      async () => {
-        if (!currentBabyId) {
-          setSleeps([]);
-          setFeeds([]);
-          return;
-        }
-
-        try {
-          const [
-            sleepData,
-            feedData,
-          ] =
-            await Promise.all([
-              getRecentSleeps(
-                currentBabyId,
-                100
-              ),
-
-              getRecentFeeds(
-                currentBabyId,
-                100
-              ),
-            ]);
-
-          setSleeps(
-            sleepData
-          );
-
-          setFeeds(
-            feedData
-          );
-        } catch (error) {
-          console.error(
-            "Could not load history:",
-            error
-          );
-        }
-      },
-      [currentBabyId, setSleeps, setFeeds]
-    );
-
-
-  useEffect(() => {
-    if (!currentBabyId) {
-      // Reset history when the selected baby is cleared.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSleeps([]);
-      setFeeds([]);
-      return;
-    }
-
-    void load();
-
-    const offSleep =
-      subscribeToSleepChanges(
-        currentBabyId,
-        () => {
-          void load();
-        }
-      );
-
-    const offFeed =
-      subscribeToFeedChanges(
-        currentBabyId,
-        () => {
-          void load();
-        }
-      );
-
-    return () => {
-      offSleep();
-      offFeed();
-    };
-
-  }, [
-    currentBabyId,
-    load,
-  ]);
-
-
-  const [diapers, setDiapers] = useState<DiaperChange[]>([]);
-  const [editingDiaper, setEditingDiaper] = useState<DiaperChange | null>(null);
-  const [diaperRevision, refreshDiapers] = useState(0);
-  const [diaperDeleteError, setDiaperDeleteError] = useState(false);
-  useEffect(() => {
-    if (!currentBabyId) return;
-    let cancelled = false;
-    void getRecentDiaperChanges(currentBabyId, 100).then(rows => {
-      if (!cancelled) setDiapers(rows);
-    }).catch(error => console.error("Could not load diaper changes", error));
-    return () => { cancelled = true; };
-  }, [currentBabyId, diaperRevision]);
-
-  const recentSleeps = useMemo(() => sleepsInLast24Hours(sleeps, now), [sleeps, now]);
-  const olderSleeps = useMemo(() => {
-    const recent = new Set(recentSleeps.map((sleep) => sleep.id));
-    return sleeps.filter((sleep) => !recent.has(sleep.id));
-  }, [sleeps, recentSleeps]);
-  const sleepById = useMemo(() => new Map(sleeps.map((sleep) => [sleep.id, sleep])), [sleeps]);
-  const midnight = new Date(now).setHours(0, 0, 0, 0);
-  const visibleSleeps = today ? sleeps.filter(sleep => !sleep.deleted_at && sleep.endtime &&
-    Date.parse(sleep.starttime) <= now && (today === "sessions" ? Date.parse(sleep.starttime) >= midnight :
-      Date.parse(sleep.endtime) > midnight)) : recentSleeps;
-  const editableIds = useMemo(() => new Set(sleepById.keys()), [sleepById]);
-  const newestSleepId = sleeps[0]?.id ?? null;
-
-  async function handleDeleteSleep(sleep: SleepRecord) {
-    if (!window.confirm(t("common.confirmDeleteSleep"))) return;
-    await deleteSleep(sleep.id);
-    await load();
-  }
-
-  function renderSleep(sleep: SleepRecord, dateLabel: string) {
-    return (
-      <SleepHistoryItem
-        key={sleep.id}
-        sleep={sleep}
-        dateLabel={dateLabel}
-        canResume={!active && sleep.id === newestSleepId}
-        resuming={resumingSleepId === sleep.id}
-        onEdit={setEditingSleep}
-        onResume={(target) => void handleResumeSleep(target)}
-        onSplit={setSplittingSleep}
-        onDelete={(target) => void handleDeleteSleep(target)}
-      />
-    );
-  }
-
-  function renderFeed(feed: FeedRecord) {
-    return (
-      <div className="history-item" key={feed.id}>
-        <div className="history-icon" aria-hidden="true">
-          {feed.feedtype === "bottle" ? "🍼" : feed.feedtype === "food" ? "🥣" : "♡"}
-        </div>
-        <button type="button" className="history-content clickable" onClick={() => setEditingFeed(feed)}>
-          <strong>{feedLabel(feed)}</strong>
-          <span>{formatDate(feed.starttime)} {"·"} {formatClock(Date.parse(feed.starttime), lang)}</span>
-          {feed.note && <span className="history-note">{feed.note}</span>}
-        </button>
-        <button type="button" className="history-delete" aria-label={t("common.deleteFeedingAria")} onClick={async () => {
-          if (!window.confirm(t("common.confirmDeleteFeed"))) return;
-          await deleteFeed(feed.id);
-          await load();
-        }}>&times;</button>
-      </div>
-    );
-  }
-
-  function renderDiaper(change: DiaperChange) {
-    return <div className="history-item" key={change.id} data-diaper-change={change.id}>
-      <div className="history-icon" aria-hidden="true">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <path d="M3 6h18v6c0 4-4 7-9 8-5-1-9-4-9-8zm0 4c4 0 7 3 7 9m11-9c-4 0-7 3-7 9M3 8h5m8 0h5" />
-        </svg>
-      </div>
-      <button type="button" className="history-content clickable" onClick={() => setEditingDiaper(change)}>
-        <strong>{t(change.type === "both" ? "diaper.historyBoth" : `diaper.${change.type}`)}</strong>
-        <span>{formatDate(change.changed_at)} {"·"} {formatClock(Date.parse(change.changed_at), lang)}</span>
+  const label = day === today ? t("common.today") : localDayKey(shiftLocalDay(start, 1)) === today
+    ? t("common.yesterday")
+    : new Intl.DateTimeFormat(lang === "en" ? "en-US" : LOCALES[lang], {
+      month: "short", day: "numeric", ...(day.slice(0, 4) !== today.slice(0, 4) && { year: "numeric" }),
+    }).format(start);
+  return <main className="history-page log-page">
+    <header className="log-header">
+      <h1>{t("nav.log")}</h1>
+      <button className="secondary-button" type="button" disabled={!babyId} ref={addButton} onClick={() => setAdding(viewKey)}>
+        <span aria-hidden="true">+</span> {t("log.add")}
       </button>
-      <button type="button" className="history-delete" aria-label={t("diaper.delete")} onClick={async () => {
-        if (!window.confirm(t("diaper.delete"))) return;
-        setDiaperDeleteError(false);
-        try {
-          await deleteDiaperChange(change.id, change.baby_id);
-          refreshDiapers(value => value + 1);
-        } catch {
-          setDiaperDeleteError(true);
-        }
-      }}>&times;</button>
-    </div>;
+    </header>
+    <div className="log-date">
+      <button type="button" className="secondary-button" aria-label={t("log.previous")}
+        onClick={() => selectDate(localDayKey(shiftLocalDay(start, -1)))}>&lsaquo;</button>
+      <label className="log-date-picker">
+        <span aria-hidden="true">{label}</span>
+        <input type="date" value={day} aria-label={t("log.chooseDate")}
+          onChange={event => { if (event.target.value) selectDate(event.target.value); }} />
+      </label>
+      <button type="button" className="secondary-button" aria-label={t("log.next")}
+        onClick={() => selectDate(localDayKey(shiftLocalDay(start, 1)))}>&rsaquo;</button>
+    </div>
+
+    <LogDay key={viewKey} babyId={babyId} day={day} today={today} adding={adding === viewKey}
+      closeAdd={() => setAdding(null)} restoreFocus={() => addButton.current?.focus()} />
+  </main>;
+}
+
+function LogDay({ babyId, day, today, adding, closeAdd, restoreFocus }: {
+  babyId: string | null;
+  day: string;
+  today: string;
+  adding: boolean;
+  closeAdd: () => void;
+  restoreFocus: () => void;
+}) {
+  const { t, lang } = useTranslation();
+  const { start, end } = logDayBounds(day, today);
+  const from = start.toISOString();
+  const to = end.toISOString();
+  const [sleeps, setSleeps] = useState<SleepRecord[]>([]);
+  const [feeds, setFeeds] = useState<FeedRecord[]>([]);
+  const [diapers, setDiapers] = useState<DiaperChange[]>([]);
+  const [loading, setLoading] = useState(Boolean(babyId));
+  const [error, setError] = useState(false);
+  const [editor, setEditor] = useState<Editor | null>(null);
+  const [resumable, setResumable] = useState<string | null>(null);
+
+  const requests = useRef({ sleep: 0, feed: 0, diaper: 0 });
+  const refreshSleep = useCallback(async () => {
+    if (!babyId) return;
+    const request = ++requests.current.sleep;
+    const rows = await getSleepsOverlappingPeriod(babyId, from, to);
+    if (requests.current.sleep === request) setSleeps(rows);
+  }, [babyId, from, to]);
+  const refreshFeed = useCallback(async () => {
+    if (!babyId) return;
+    const request = ++requests.current.feed;
+    const rows = await getFeedsBetween(babyId, from, to);
+    if (requests.current.feed === request) setFeeds(rows);
+  }, [babyId, from, to]);
+  const refreshDiaper = useCallback(async () => {
+    if (!babyId) return;
+    const request = ++requests.current.diaper;
+    const rows = await getDiaperChangesBetween(babyId, from, to);
+    if (requests.current.diaper === request) setDiapers(rows);
+  }, [babyId, from, to]);
+  const reportError = useCallback((cause: unknown) => {
+    console.error("Failed loading Log:", cause);
+    setError(true);
+  }, []);
+  const refresh = useCallback(async () => {
+    setError(false);
+    await Promise.all([refreshSleep(), refreshFeed(), refreshDiaper()]).catch(reportError);
+    setLoading(false);
+  }, [refreshSleep, refreshFeed, refreshDiaper, reportError]);
+
+  useEffect(() => {
+    if (!babyId) return;
+    void refresh();
+    const unsubscribeSleep = subscribeToSleepChanges(babyId, () => void refreshSleep().catch(reportError));
+    const unsubscribeFeed = subscribeToFeedChanges(babyId, () => void refreshFeed().catch(reportError));
+    const visible = () => { if (document.visibilityState === "visible") void refresh(); };
+    document.addEventListener("visibilitychange", visible);
+    window.addEventListener("focus", visible);
+    // Diapers are not in the repository's Realtime publication. Refresh just
+    // that bounded read while Log is visible to pick up other caregivers' changes.
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refreshDiaper().catch(reportError);
+    }, 15000);
+    return () => {
+      const pending = requests.current;
+      pending.sleep++;
+      pending.feed++;
+      pending.diaper++;
+      unsubscribeSleep();
+      unsubscribeFeed();
+      document.removeEventListener("visibilitychange", visible);
+      window.removeEventListener("focus", visible);
+      clearInterval(timer);
+    };
+  }, [babyId, refresh, refreshSleep, refreshFeed, refreshDiaper, reportError]);
+
+  const timeline = logTimeline(day > today ? sleeps.filter(sleep => sleep.endtime) : sleeps, feeds, diapers, start.getTime(), end.getTime());
+  const labels = { sleep: t("common.sleep"), feed: t("diaper.feed"), diaper: t("diaper.label") };
+  const now = new Date();
+  const initialTime = new Date(start);
+  initialTime.setHours(now.getHours(), now.getMinutes(), 0, 0);
+
+  function open(event: (typeof timeline)[number]) {
+    setResumable(null);
+    setEditor(event);
+    if (babyId && event.kind === "sleep" && event.record.endtime) {
+      void Promise.all([getLastCompletedSleep(babyId), getActiveSleep(babyId)]).then(([latest, active]) => {
+        setResumable(!active && latest?.id === event.record.id ? event.record.id : null);
+      }).catch(cause => console.error("Failed checking whether sleep can resume:", cause));
+    }
   }
 
-  const nextDay = new Date(midnight);
-  nextDay.setDate(nextDay.getDate() + 1);
-  const dayEnd = nextDay.getTime();
-  const start = today ? midnight : now - ROLLING_DAY_MS;
-  const byTime = (a: { time: number }, b: { time: number }) => b.time - a.time;
-  const careActivities = [
-    ...feeds.filter(feed => feed.baby_id === currentBabyId).map(feed => ({
-      kind: "feed", time: Date.parse(feed.starttime), node: renderFeed(feed),
-    })),
-    ...diapers.filter(change => change.baby_id === currentBabyId).map(change => ({
-      kind: "diaper", time: Date.parse(change.changed_at), node: renderDiaper(change),
-    })),
-  ];
-  const recentActivities = [
-    ...(active && !today ? [{ time: active.startMs, node: (
-              <div key="active-sleep" className="history-item is-active" data-history-active="true">
-                <div className="history-icon">☾</div>
-                <div className="history-content">
-                  <strong>{formatClock(active.startMs, lang)} – <em className="history-live">{t("history.planSleepingNow")}</em></strong>
-                  <span>{sleepDayLabel(active.startMs, null, now, lang)} · {formatDuration((now - active.startMs) / 60000, lang)}</span>
-                </div>
-              </div>
-    ) }] : []),
-    ...(activity ? [] : visibleSleeps).map(sleep => ({
-      time: Date.parse(sleep.starttime),
-      node: renderSleep(sleep, sleepDayLabel(Date.parse(sleep.starttime), sleep.endtime ? Date.parse(sleep.endtime) : null, now, lang)),
-    })),
-    ...careActivities.filter(event => event.time >= start && (activity ? event.kind === activity && event.time < dayEnd : event.time <= now)),
-  ].sort(byTime);
-  const olderActivities = careActivities.filter(event => event.time < start || (activity ? event.time >= dayEnd : event.time > now)).sort(byTime);
+  function details(event: (typeof timeline)[number]) {
+    if (event.kind === "sleep") {
+      const sleep = event.record;
+      const began = Date.parse(sleep.starttime);
+      if (!sleep.endtime) return [formatClock(began, lang), t("common.sleeping")].join(" \u00b7 ");
+      const ended = Date.parse(sleep.endtime);
+      return [formatSleepRange(began, ended, start.getTime(), lang),
+        formatDuration(sleep.durationminutes ?? (ended - began) / 60000, lang)].join(" \u00b7 ");
+    }
+    if (event.kind === "feed") {
+      const feed = event.record;
+      return [feedTypeLabel(feed.feedtype, lang), feed.feedtype === "breast" ? sideLabel(feed.side, lang) : null,
+        feed.feedtype === "bottle" && feed.amountml != null ? feed.amountml + " ml" : null,
+        feed.durationminutes != null ? formatDuration(feed.durationminutes, lang) : null].filter(Boolean).join(" \u00b7 ");
+    }
+    const type = event.record.type;
+    return t(type === "both" ? "diaper.historyBoth" : `diaper.${type}`);
+  }
 
-  return (
-    <>
-      <main className="history-page">
+  function close() {
+    setEditor(null);
+    requestAnimationFrame(() => { if (document.activeElement === document.body) restoreFocus(); });
+  }
 
-        <header className="page-header">
-          <p className="eyebrow">
-            {currentBaby?.name ??
-              t("common.appName")}
-          </p>
+  return <>
+    {error && <p role="alert">{t("log.loadError")} <button className="text-button" onClick={() => void refresh()}>{t("common.retry")}</button></p>}
+    {loading ? <p role="status">{t("common.loading")}</p> : timeline.length === 0 && !error ? <p className="log-empty">{t("log.empty")}</p> : (
+      <ul className="log-timeline">
+        {timeline.map(event => <li key={event.kind + ":" + event.record.id}>
+          <button type="button" className="log-row" data-kind={event.kind} data-event-id={event.record.id} onClick={() => open(event)}>
+            <time dateTime={new Date(event.time).toISOString()}>{formatClock(event.time, lang)}</time>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d={iconPaths[event.kind]} /></svg>
+            <span><strong>{labels[event.kind]}</strong><span>{details(event)}</span></span>
+            <span aria-hidden="true">&rsaquo;</span>
+          </button>
+        </li>)}
+      </ul>
+    )}
 
-          <h1>
-            {t("history.pageTitle")}
-          </h1>
+    {adding && <AddEntry labels={labels} onClose={closeAdd} onChoose={kind => {
+      setEditor({ kind });
+      closeAdd();
+    }} />}
+    {editor?.kind === "sleep" && <SleepModal sleep={editor.record} initialTime={initialTime} allowDelete onClose={close} onSaved={refresh}
+      onSplit={editor.record?.endtime ? () => setEditor({ kind: "split", record: editor.record! }) : undefined}
+      onResume={editor.record?.id === resumable && editor.record ? async () => {
+        await resumeSleep(editor.record!);
+        await refresh();
+      } : undefined} />}
+    {editor?.kind === "split" && <SleepSplitModal sleep={editor.record} onClose={close} onSaved={refresh} />}
+    {editor?.kind === "feed" && <FeedModal feed={editor.record} initialTime={initialTime} allowDelete onClose={close} onSaved={refresh} />}
+    {editor?.kind === "diaper" && babyId && <DiaperModal babyId={babyId} change={editor.record} initialTime={initialTime} allowDelete
+      onClose={close} onSaved={() => { close(); void refresh(); }} />}
+  </>;
+}
 
-          <p className="page-description">
-            {t("history.pageDescription")}
-          </p>
-        </header>
-
-        {/* A. Today's sleep plan: the same forecast as Sleep Wave on Home. */}
-        {currentBabyId && (
-          <DailySleepPlanner
-            sessions={sessions}
-            active={active}
-            prediction={nextSleep}
-            forecast={dayForecast}
-            upcoming={upcomingForecast}
-            now={now}
-            editableIds={editableIds}
-            onSelectSession={(id) => setEditingSleep(sleepById.get(id) ?? null)}
-            resetKey={currentBabyId}
-          />
-        )}
-
-        {/* B. Rolling last 24 hours (not the calendar day). */}
-        <section id="history-sessions" className="history-section history-last-24" aria-labelledby={last24Id}>
-          <div className="section-heading">
-            <h2 id={last24Id}>{today ? t("common.today") : t("history.last24Title")}
-              {activity && <> {"·"} {t(activity === "feed" ? "common.feeding" : "diaper.label")}</>}</h2>
-            <button className="secondary-button" disabled={!currentBabyId} onClick={() => setNewSleep(true)}>
-              {t("common.addShort")}
-            </button>
-          </div>
-
-          {resumeMessage && (
-            <p className="history-copy-message" role="status">{resumeMessage}</p>
-          )}
-
-          <div className="history-list">
-            {recentActivities.map(event => event.node)}
-            {(!active || today) && recentActivities.length === 0 && (
-              <p className="muted">{t(today ? "diaper.emptyToday" : "diaper.emptyRecent")}</p>
-            )}
-          </div>
-        </section>
-
-        {/* C. Older history: the existing browsing experience, collapsed by default. */}
-        <button
-          type="button"
-          className="secondary-button history-more-toggle"
-          aria-expanded={moreOpen}
-          aria-controls={moreId}
-          onClick={() => setMoreOpen((open) => !open)}
-        >
-          {moreOpen ? t("history.lessHistory") : t("history.moreHistory")}
-        </button>
-
-        <div id={moreId} hidden={!moreOpen} className="history-more">
-          {currentBabyId && moreOpen && (
-            <section className="analysis-card">
-              <div className="analysis-card-heading">
-                <div>
-                  <p className="card-label">{t("common.sleep")}</p>
-                  <h2>{t("history.sleepClockTitle")}</h2>
-                </div>
-              </div>
-
-              <p className="muted">{t("history.sleepClockDescription")}</p>
-
-              <SleepClock sessions={sessions} active={active} now={now} />
-            </section>
-          )}
-
-          <section className="history-section">
-
-            <div className="section-heading">
-              <h2>
-                {t("history.olderSleep")}
-              </h2>
-
-              <div className="history-heading-actions">
-                <button
-                  type="button"
-                  className="secondary-button history-copy-button"
-                  disabled={!currentBabyId || copyingSleep}
-                  onClick={() => void handleCopySleepJson()}
-                  title={t("history.copyJsonDescription")}
-                >
-                  <span aria-hidden="true">⧉</span>
-                  {copyingSleep ? t("history.copyingJson") : t("history.copyJson")}
-                </button>
-              </div>
-            </div>
-
-            {copyMessage && (
-              <p className="history-copy-message" role="status">{copyMessage}</p>
-            )}
-
-            <div className="history-list">
-              {olderSleeps.map((sleep) => renderSleep(sleep, formatDate(sleep.starttime)))}
-            </div>
-
-          </section>
-
-          <section className="history-section">
-
-            <div className="section-heading">
-              <h2>
-                {t("diaper.older")}
-              </h2>
-
-              <button
-                className="secondary-button"
-                disabled={!currentBabyId}
-                onClick={() =>
-                  setNewFeed(true)
-                }
-              >
-                {t("common.addShort")}
-              </button>
-            </div>
-
-
-            <div className="history-list">
-
-              {olderActivities.map(event => event.node)}
-
-            </div>
-
-          </section>
-
-        </div>
-
-      </main>
-
-
-      {diaperDeleteError && <p role="alert">{t("diaper.error")}</p>}
-      {editingDiaper && editingDiaper.baby_id === currentBabyId && <DiaperModal babyId={editingDiaper.baby_id} change={editingDiaper}
-        onClose={() => setEditingDiaper(null)} onSaved={() => { setEditingDiaper(null); refreshDiapers(value => value + 1); }} />}
-
-      {(newSleep ||
-        editingSleep) && (
-
-        <SleepModal
-          sleep={editingSleep}
-          onClose={() => {
-            setNewSleep(
-              false
-            );
-
-            setEditingSleep(
-              null
-            );
-          }}
-          onSaved={load}
-        />
-
-      )}
-
-
-      {splittingSleep && (
-
-        <SleepSplitModal
-          sleep={splittingSleep}
-          onClose={() =>
-            setSplittingSleep(
-              null
-            )
-          }
-          onSaved={load}
-        />
-
-      )}
-
-
-      {(newFeed ||
-        editingFeed) && (
-
-        <FeedModal
-          feed={editingFeed}
-          onClose={() => {
-            setNewFeed(false);
-            setEditingFeed(null);
-          }}
-          onSaved={load}
-        />
-
-      )}
-
-    </>
-  );
+function AddEntry({ labels, onChoose, onClose }: {
+  labels: Record<keyof typeof iconPaths, string>;
+  onChoose: (kind: keyof typeof iconPaths) => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const ref = useModalAccessibility(onClose);
+  return <div className="modal-backdrop" onClick={onClose}>
+    <div ref={ref} className="feed-modal log-add-dialog" role="dialog" aria-modal="true" aria-label={t("log.add")}
+      onClick={event => event.stopPropagation()}>
+      {(["sleep", "feed", "diaper"] as const).map(kind => <button key={kind} className="secondary-button" type="button"
+        onClick={() => onChoose(kind)}>{labels[kind]}</button>)}
+      <button className="text-button" type="button" onClick={onClose}>{t("common.close")}</button>
+    </div>
+  </div>;
 }

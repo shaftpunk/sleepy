@@ -1,0 +1,17 @@
+﻿.log-page { display: grid; gap: 14px; }
+.log-header, .log-date { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.log-header h1 { margin: 0; font-size: 1.4rem; }
+.log-page button { min-height: 44px; }
+.log-date button { min-width: 44px; padding: 0 10px; font-size: 1.4rem; }
+.log-date-picker { min-height: 48px; display: grid; place-items: center; position: relative; flex: 1; border-radius: 12px; background: var(--control-bg, rgba(127,114,172,.12)); }
+.log-date-picker input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.log-date-picker input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.log-page button:focus-visible, .log-date-picker:focus-within { outline: 2px solid var(--focus-ring, currentColor); outline-offset: 2px; }
+.log-timeline { list-style: none; padding: 0; margin: 0; }
+.log-timeline li { border-bottom: 1px solid var(--control-border, rgba(127, 120, 145, .35)); }
+.log-row { display: grid; grid-template-columns: auto 20px minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; padding: 9px 2px; border: 0; background: transparent; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.log-row time { font-size: .875rem; font-variant-numeric: tabular-nums; }
+.log-row svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.log-row strong, .log-row > span > span { display: block; overflow-wrap: anywhere; }
+.log-row > span > span, .log-empty { color: var(--ui-muted); font-size: .875rem; }
+.log-add-dialog { display: grid; gap: 8px; }
