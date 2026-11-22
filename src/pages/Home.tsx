@@ -581,12 +581,12 @@ export default function Home() {
         <section className="home-today" aria-labelledby="home-today-title">
         <h2 className="card-label" id="home-today-title">{t("common.today")}</h2>
           <div className="today-stats">
-            <Link className="today-sleep" to="/history?today=sleep">
+            <Link className="today-sleep" to="/log?today=sleep">
               <strong>{formatHomeDuration(todayStats.totalMinutes, lang)}</strong>
               <span>{t("common.sleep")} {"·"} {todayStats.sessionCount} {t(todayStats.sessionCount === 1 ? "todayActivity.session" : "todayActivity.sessions")}</span>
             </Link>
-            <Link to="/history?today=feed"><span>{feedCount ?? "—"} {t(feedCount === 1 ? "todayActivity.feed" : "todayActivity.feeds")}</span></Link>
-            <Link to="/history?today=diaper"><span>{diaperCount ?? "—"} {t(diaperCount === 1 ? "todayActivity.diaper" : "todayActivity.diapers")}</span></Link>
+            <Link to="/log?today=feed"><span>{feedCount ?? "—"} {t(feedCount === 1 ? "todayActivity.feed" : "todayActivity.feeds")}</span></Link>
+            <Link to="/log?today=diaper"><span>{diaperCount ?? "—"} {t(diaperCount === 1 ? "todayActivity.diaper" : "todayActivity.diapers")}</span></Link>
           </div>
 
         </section>

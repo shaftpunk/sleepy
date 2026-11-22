@@ -157,7 +157,7 @@ async function initialize() {
     });
     await PushNotifications.addListener("pushNotificationActionPerformed", ({ notification }) => {
       const path: unknown = notification.data?.url;
-      if (typeof path === "string" && ["/", "/history", "/settings", "/analysis"].includes(path)) {
+      if (typeof path === "string" && ["/", "/log", "/history", "/settings", "/analysis"].includes(path)) {
         pendingPath = path;
         observers.forEach(listener => listener());
       }

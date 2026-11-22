@@ -35,7 +35,7 @@
   width: 100%;
   max-width: 520px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   padding: 12px max(10px, env(safe-area-inset-right, 0px))
     calc(12px + env(safe-area-inset-bottom, 0px))
     max(10px, env(safe-area-inset-left, 0px));

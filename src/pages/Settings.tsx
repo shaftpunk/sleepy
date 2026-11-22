@@ -19,12 +19,12 @@ import "./Settings.css";
 const purchaseTestPanelEnabled =
   import.meta.env.VITE_ENABLE_PURCHASE_TEST_PANEL === 'true';
 
-export default function Settings() {
+type SettingsTab = "baby" | "sleep" | "notifications" | "account";
+
+export default function Settings({ initialTab = "baby" }: { initialTab?: SettingsTab }) {
   const { t } = useTranslation();
   const { signOut, user } = useAuth();
-  const [activeTab, setActiveTab] = useState<
-    "baby" | "sleep" | "notifications" | "account"
-  >("baby");
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
 
   // Still read (not shown in the UI anymore, see below) because
   // NotificationSettings/notification_settings and push_subscriptions are

@@ -39,6 +39,7 @@ newSleep:React.createElement(SleepModal,{onClose:done,onSaved:done}),split:React
 message:React.createElement(Message,{babyId:'baby',babyName:baby.name,onClose:done})};
 function Probe(){const h=useHouseholdContext(),e=useEntitlements();window.__probe={h,e};window.__setBaby=id=>useAppStore.setState({currentBabyId:id});return React.createElement('main',null,React.createElement(HouseholdContextSelector),React.createElement('output',{id:'probe'},JSON.stringify({user:h.userId,baby:h.babyId,household:h.householdId,loading:e.loading,tier:e.tier,isPlus:e.isPlus,verification:e.verificationState,canUse:e.canUse('family'),wouldAllow:e.wouldAllow('family')})));}
 const wrapped=child=>React.createElement(HouseholdContextProvider,null,React.createElement(EntitlementProvider,null,child));
+if(view==='analysis')views.analysis=wrapped(React.createElement((await import('/src/pages/Analysis.tsx')).default));
 DOM.createRoot(document.getElementById('root')).render(view==='entitlements'?wrapped(React.createElement(Probe)):view?React.createElement('div',{'data-theme':theme},views[view]):wrapped(React.createElement(App)));`;
 const params = `const p=new URLSearchParams(location.search);`;
 const records = `${params}const now=Date.now(),iso=n=>new Date(n).toISOString();const sleeps=p.has('empty')?[]:Array.from({length:35},(_,i)=>({id:i?'sleep-'+i:'sleep',baby_id:'baby',starttime:iso(now-(i*24+12)*3600000),endtime:iso(now-(i*24+2)*3600000),durationminutes:600,sleep_type:'sleep',rate:'5',deleted_at:null,note:p.has('long')?'Et langt notat som skal være lesbart på små skjermer. '+ 'x'.repeat(65):'A short note'}));const feeds=p.has('empty')?[]:Array.from({length:5},(_,i)=>({id:'feed-'+i,baby_id:'baby',feedtype:['bottle','breast','food'][i%3],amountml:120,side:'left',starttime:iso(now-i*7200000),note:'A synthetic feeding note'}));`;
@@ -599,7 +600,7 @@ async function main() {
         const ready=async(extra='')=>{await visit('/','home-fixture&home-actions&'+extra);await page.waitForFunction(()=>{const e=document.querySelector('.home-sleep-actions > .sleep-action');return e&&!e.disabled;});};
         await ready();assert.ok((await page.locator('.sleep-wave [data-wave-live]').textContent()).includes('18'),'live timer shown in Sleep Wave');assert.equal(await page.locator('.home-live-state .sleep-timer').count(),0);
         assert.equal(await page.locator('.sleep-wave').count(),1);
-        assert.equal(await page.locator('.today-stats a[href^="/history?today="]').count(),3);
+        assert.equal(await page.locator('.today-stats a[href^="/log?today="]').count(),3);
         await check('home-awake',true);
         await change.click();await page.waitForSelector('[role="dialog"]');await check('home-start-sheet',true);
         await page.getByRole('button',{name:lang==='en'?'Choose time':'Velg tidspunkt',exact:true}).click();await check('home-start-explicit-time',true);
@@ -653,7 +654,7 @@ async function main() {
                 if(reason==='hidden')await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'))});
                 if(reason==='blur')await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
                 if(reason==='unmount'){
-                  await page.locator('.bottom-nav a[href="/history"]').evaluate(e=>e.click());
+                  await page.locator('.bottom-nav a[href="/log"]').evaluate(e=>e.click());
                   // A lazy route can retain Home while its chunk loads. Test
                   // actual unmount rather than assuming it occurs within 30ms.
                   await action.waitFor({state:'detached'});
@@ -766,8 +767,44 @@ async function main() {
         await check('settings-notification-error',true);
         console.log(context+' settings checked');continue;
       }
+      if(process.argv.includes('--navigation-only')){
+        await visit('/');
+        const nav = page.locator('.bottom-nav a');
+        const labels = lang === 'en' ? ['Home', 'Log', 'Settings'] : ['Hjem', 'Logg', 'Innstillinger'];
+        assert.deepEqual(await nav.evaluateAll(links => links.map(link => link.lastElementChild.textContent)), labels,
+          'primary tabs have localized labels');
+        assert.deepEqual(await nav.evaluateAll(links => links.map(link => link.getAttribute('href'))),
+          ['/', '/log', '/settings']);
+        assert.ok(await nav.evaluateAll(links => links.every(link => {
+          const rect = link.getBoundingClientRect();
+          return rect.width >= 44 && rect.height >= 44;
+        })), 'primary targets are at least 44 by 44 pixels');
+        for (const destination of ['/log', '/settings', '/']) {
+          await page.locator('.bottom-nav a[href="'+destination+'"]').click();
+          await page.waitForURL(url => url.pathname === destination);
+        }
+        await visit('/history', 'today=feed');
+        assert.equal(new URL(page.url()).pathname, '/log');
+        assert.equal(new URL(page.url()).searchParams.get('today'), 'feed');
+        await page.reload();
+        await page.waitForSelector('.history-page');
+        await visit('/analysis');
+        assert.equal(new URL(page.url()).pathname, '/');
+        await visit('/unknown-route');
+        assert.equal(new URL(page.url()).pathname, '/');
+        await visit('/about');
+        assert.equal(new URL(page.url()).pathname, '/settings/about');
+        for (const section of ['family', 'notifications', 'appearance', 'plus', 'account', 'about']) {
+          await visit('/settings/'+section);
+          await page.reload();
+          await page.waitForSelector(section === 'about' ? '.about-page' : '.settings-page');
+          assert.equal(await page.locator('.bottom-nav a[aria-current="page"]').getAttribute('href'), '/settings');
+        }
+        await check('navigation');
+        continue;
+      }
       if(process.argv.includes('--analysis-only')){
-        await visit('/analysis','probability-fixture');await page.waitForSelector('.sleep-probability-estimate');
+        await visit('/','view=analysis&probability-fixture');await page.waitForSelector('.sleep-probability-estimate');
         const probability=page.locator('.sleep-probability-card'),clock=probability.locator('input[type="time"]');
         await clock.fill('10:00');
         assert.match(await probability.locator('.sleep-probability-estimate').innerText(),/19/);
@@ -780,11 +817,11 @@ async function main() {
         assert.ok((await insightRows.evaluateAll(rows => rows.map(row => row.dataset.insight))).every(id =>
           ['typical-rhythm', 'median-wake-window', 'typical-naps', 'night-share', 'typical-longest-stretch', 'weekly-sleep-change'].includes(id)));
         await check('analysis-insights-populated',true);
-        await visit('/analysis','empty');await page.waitForSelector('.sleep-probability-card');
+        await visit('/','view=analysis&empty');await page.waitForSelector('.sleep-probability-card');
         assert.equal(await page.locator('.sleep-probability-estimate').count(),0);
         assert.match(await page.locator('.sleep-probability-card [role=status]').innerText(),lang==='en'?/Not enough sleep history/:/historikk/);
         await check('analysis-probability-empty',true);
-        await visit('/analysis');await page.waitForSelector('.analysis-tab-content');
+        await visit('/','view=analysis');await page.waitForSelector('.analysis-tab-content');
         for(let i=0;i<6;i++){await page.locator('.analysis-tab').nth(i).click();await check('analysis-'+i,true);}
         const basis = page.locator('.data-basis');
         assert.equal(await basis.locator('.data-basis-days li').count(),30);
@@ -809,7 +846,7 @@ async function main() {
         if(view==='feed'){for(const i of [1,2]){await page.locator('.feed-type-button').nth(i).click();await check('feed-type-'+i);}}
         if(view==='sleep'){await page.waitForSelector('.sound-activity-event');await page.locator('.sound-activity-event').first().click();await check('sound-event-detail');await page.locator('.sound-activity-list summary').click();await check('sound-event-list');}
       }
-      await visit('/analysis');await page.waitForSelector('.analysis-tab-content');
+      await visit('/','view=analysis');await page.waitForSelector('.analysis-tab-content');
       for(let i=0;i<6;i++){await page.locator('.analysis-tab').nth(i).click();await check('analysis-'+i,true);}
       await visit('/settings');await page.waitForSelector('.family-settings select');await check('settings-baby',true);
       await page.locator('.add-child-heading button').click();await check('add-child');
@@ -822,7 +859,7 @@ async function main() {
       await page.evaluate(()=>window.recovery());await check('auth-reset');
       await visit('/','view=auth&web');await check('auth-web');
       await visit('/','view=onboarding');await check('onboarding-create',true);await page.locator('.onboarding-tabs button').nth(1).click();await check('onboarding-join');
-      for(const [name,route,extra] of [['home-empty','/','empty'],['history-empty','/history','empty'],['analysis-empty','/analysis','empty'],
+      for(const [name,route,extra] of [['home-empty','/','empty'],['history-empty','/history','empty'],['analysis-empty','/','view=analysis&empty'],
         ['sound-empty','/','view=sleep&empty'],['sound-error','/','view=sleep&error'],['settings-errors','/settings','error'],
         ['auth-loading','/','view=gate&loading'],['auth-error','/','view=gate&error'],['sound-denied','/','active&sound=blocked'],['sound-failed','/','active&sound=error'],['splash','/','view=splash']]){
         await visit(route,extra);await check(name);

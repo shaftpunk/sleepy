@@ -2,9 +2,11 @@ import PredictionReminderLifecycle from "./components/PredictionReminderLifecycl
 import { lazy, Suspense, useEffect, useState } from "react";
 import {
   BrowserRouter,
+  Navigate,
   NavLink,
   Route,
   Routes,
+  useLocation,
 } from "react-router-dom";
 
 import "./App.css";
@@ -19,13 +21,8 @@ import NativeSoundLifecycle from "./components/NativeSoundLifecycle";
 import SleepLiveActivityLifecycle from "./components/SleepLiveActivityLifecycle";
 import HouseholdContextSelector from "./households/HouseholdContextSelector";
 
-// Route-level code splitting: the default route (Home) no longer needs to
-// download/parse the Analysis page's code (5 tabs plus the age-guide/
-// personal-profile/prediction analytics, its heaviest surface) just to
-// render. Each page becomes its own chunk, fetched on first visit.
 const Home = lazy(() => import("./pages/Home"));
 const History = lazy(() => import("./pages/History"));
-const Analysis = lazy(() => import("./pages/Analysis"));
 const Settings = lazy(() => import("./pages/Settings"));
 const About = lazy(() => import("./pages/About"));
 
@@ -38,6 +35,11 @@ function getAliveBackground(date = new Date()): AliveBackground {
   if (hour >= 8 && hour < 16) return "day";
   if (hour >= 16 && hour < 18) return "evening";
   return "night";
+}
+
+function LegacyHistoryRedirect() {
+  const { search, hash } = useLocation();
+  return <Navigate to={{ pathname: "/log", search, hash }} replace />;
 }
 
 function App() {
@@ -61,7 +63,7 @@ function App() {
     };
   }, []);
 
-  function navIcon(name: "home" | "history" | "analysis" | "settings", glyph: string) {
+  function navIcon(name: "home" | "log" | "settings", glyph: string) {
     return isOutrun ? <PixelIcon name={name} /> : glyph;
   }
 
@@ -82,32 +84,37 @@ function App() {
           <Suspense fallback={<div className="empty-card">{t("common.loading")}</div>}>
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/analysis" element={<Analysis />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/about" element={<About />} />
+              <Route path="/log" element={<History />} />
+              <Route path="/settings">
+                <Route index element={<Settings key="index" />} />
+                <Route path="family" element={<Settings key="family" />} />
+                <Route path="notifications" element={<Settings key="notifications" initialTab="notifications" />} />
+                <Route path="appearance" element={<Settings key="appearance" initialTab="account" />} />
+                <Route path="plus" element={<Settings key="plus" initialTab="account" />} />
+                <Route path="account" element={<Settings key="account" initialTab="account" />} />
+                <Route path="about" element={<About />} />
+              </Route>
+              <Route path="/history" element={<LegacyHistoryRedirect />} />
+              <Route path="/analysis" element={<Navigate to="/" replace />} />
+              <Route path="/about" element={<Navigate to="/settings/about" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
         </div>
 
         <nav className="bottom-nav">
-          <NavLink to="/">
-            <span className="nav-icon">{navIcon("home", "⌂")}</span>
+          <NavLink to="/" end>
+            <span className="nav-icon" aria-hidden="true">{navIcon("home", "⌂")}</span>
             <span>{t("nav.home")}</span>
           </NavLink>
 
-          <NavLink to="/history">
-            <span className="nav-icon">{navIcon("history", "◷")}</span>
-            <span>{t("nav.history")}</span>
-          </NavLink>
-
-          <NavLink to="/analysis">
-            <span className="nav-icon">{navIcon("analysis", "⌁")}</span>
-            <span>{t("nav.analysis")}</span>
+          <NavLink to="/log">
+            <span className="nav-icon" aria-hidden="true">{navIcon("log", "?")}</span>
+            <span>{t("nav.log")}</span>
           </NavLink>
 
           <NavLink to="/settings">
-            <span className="nav-icon">{navIcon("settings", "⚙")}</span>
+            <span className="nav-icon" aria-hidden="true">{navIcon("settings", "⚙")}</span>
             <span>{t("nav.settings")}</span>
           </NavLink>
         </nav>

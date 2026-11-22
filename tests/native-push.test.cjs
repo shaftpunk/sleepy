@@ -223,9 +223,18 @@ test('foreground events are received and taps only route to allowlisted pages', 
   f.events.get('pushNotificationReceived')({ data: {} });
   f.events.get('pushNotificationActionPerformed')({ notification: { data: { url: 'https://evil.example' } } });
   assert.equal(f.service.consumeNativePushPath(), undefined);
-  f.events.get('pushNotificationActionPerformed')({ notification: { data: { url: '/history' } } });
-  assert.equal(f.service.consumeNativePushPath(), '/history');
-  assert.equal(f.service.consumeNativePushPath(), undefined);
+  const tap = url => f.events.get('pushNotificationActionPerformed')({ notification: { data: { url } } });
+  for (const path of ['/', '/log', '/history', '/settings', '/analysis']) {
+    tap(path);
+    assert.equal(f.service.consumeNativePushPath(), path, 'a tap before the router subscribes is queued');
+    assert.equal(f.service.consumeNativePushPath(), undefined);
+  }
+  const received = [];
+  const unsubscribe = f.service.subscribeNativePush(() => received.push(f.service.consumeNativePushPath()));
+  tap('/log');
+  tap('/history');
+  unsubscribe();
+  assert.deepEqual(received, ['/log', '/history']);
 });
 test('web enable still uses permission, service worker, PushManager and push_subscriptions', async () => {
   let requested = 0, subscribed = 0, written = 0;

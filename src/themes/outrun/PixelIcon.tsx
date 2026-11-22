@@ -6,6 +6,7 @@
 
 export type PixelIconName =
   | "home"
+  | "log"
   | "feed"
   | "analysis"
   | "history"
@@ -18,8 +19,8 @@ type Props = {
 };
 
 const PATHS: Record<PixelIconName, string> = {
-  // A simple bed: headboard + mattress block + legs.
-  home: "M2 7H14V12H2V7Z M1 12H2V13H1V12Z M14 12H15V13H14V12Z M3 5H5V7H3V5Z",
+  home: "M1 7L8 1L15 7H13V14H9V10H7V14H3V7Z",
+  log: "M2 3H4V5H2Z M6 3H14V5H6Z M2 7H4V9H2Z M6 7H14V9H6Z M2 11H4V13H2Z M6 11H14V13H6Z",
   // A bottle: neck + body.
   feed: "M6 2H10V4H11V13H5V4H6V2Z M7 5H9V6H7V5Z",
   // A bar chart: three bars of increasing height.

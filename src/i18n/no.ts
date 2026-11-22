@@ -156,6 +156,7 @@ const no = {
   },
 
   nav: {
+    log: "Logg",
     home: "Hjem",
     history: "Historikk",
     analysis: "Analyse",

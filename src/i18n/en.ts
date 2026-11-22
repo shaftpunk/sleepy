@@ -157,6 +157,7 @@ const en = {
   },
 
   nav: {
+    log: "Log",
     home: "Home",
     history: "History",
     analysis: "Analysis",
