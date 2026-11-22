@@ -6,7 +6,7 @@ import { getRecentDiaperChanges, type DiaperChange } from "../services/diaperSer
 import { subscribeToSleepChanges } from "../services/sleepRealtime";
 import { subscribeToFeedChanges } from "../services/feedRealtime";
 import SleepyIcon from "../components/SleepyIcon";
-import sleepingBunny from "../assets/sleeping-bunny.png";
+import sleepingFox from "../assets/sleeping-fox.png";
 import FeedModal from "../components/FeedModal";
 import SleepModal from "../components/SleepModal";
 import DiaperModal from "../components/DiaperModal";
@@ -207,8 +207,16 @@ function HomeActivity() {
 
   return <>
     <section className="home-current" aria-labelledby="home-current-title">
-      {isDefault && <img className="home-current-animal" src={sleepingBunny} alt="" draggable={false} />}
-      <h2 id="home-current-title">{isDefault && <SleepyIcon name={activeSleep ? "sleep" : "calendar"} />}{t(activeSleep ? "common.sleeping" : "home.nextSleepTitle")}</h2>
+      {isDefault && <>
+        <svg className="home-orb-ring" aria-hidden="true" viewBox="0 0 200 200">
+          <defs><linearGradient id="orb-light" x2="1" y2="1" gradientUnits="objectBoundingBox">
+            <stop stopColor="var(--ring-start)" /><stop offset=".55" stopColor="var(--ring-middle)" /><stop offset="1" stopColor="var(--ring-end)" stopOpacity=".12" />
+          </linearGradient></defs>
+          <path d="M 28 163 A 96 96 0 1 1 172 163" fill="none" stroke="url(#orb-light)" strokeWidth="4" strokeLinecap="round" />
+        </svg>
+        <img className="home-current-animal" src={sleepingFox} alt="" draggable={false} />
+      </>}
+      <h2 id="home-current-title">{t(activeSleep ? "common.sleeping" : "home.nextSleepTitle")}</h2>
       {loading ? <p>{t("common.loading")}</p> : activeSleep ? <>
         <p className="home-current-value">{formatHomeDuration(Math.floor(Math.max(0, now - Date.parse(activeSleep.starttime)) / 60000), lang)}</p>
         <button type="button" className="home-started" onClick={() => setEditingSleep(activeSleep)}>
