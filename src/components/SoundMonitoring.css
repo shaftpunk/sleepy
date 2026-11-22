@@ -26,3 +26,7 @@
   will-change: transform;
 }
 [data-visual-theme="outrun"] .sound-panel { border-radius: 0; border-width: 2px; }
+
+.home-sound-controls { font-size: .875rem; color: var(--ui-muted); }
+.home-sound-controls > summary { min-height: 44px; padding: 10px 8px; cursor: pointer; text-align: center; }
+.home-sound-controls .sound-panel { margin-top: 6px; }

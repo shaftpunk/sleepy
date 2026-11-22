@@ -166,6 +166,8 @@ const en = {
 
   home: {
     changeBaby: "{{name}} – switch or manage baby",
+    deleteDiaper: "Delete diaper change",
+    mostLikely: "Most likely {{time}}",
     nextSleepTitle: "Next Sleep",
     nextSleepBetween: "Likely asleep between",
     nextSleepAwake: "Awake for {{duration}}",

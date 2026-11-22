@@ -49,12 +49,12 @@ function mock(url) {
   if(url.endsWith('/householdContextService.ts'))return `${params}export async function getHouseholdCandidates(user,baby){await new Promise(r=>setTimeout(r,window.__contextDelay||0));if(window.__contextFailure)throw Error('Synthetic offline');return window.__candidates||(p.has('multiple')?[{id:'A',name:'Household A',role:'viewer'},{id:'B',name:'Household B',role:'parent'}]:[{id:'household',name:'Synthetic household',role:'owner'}])};export const subscribeHouseholdContext=()=>()=>{};`;
   if(url.endsWith('/entitlementService.ts'))return `import features from '/src/entitlements/features.json';export async function resolveHouseholdEntitlements(householdId){const tier=window.__tier||'free',delay=window.__resolutionDelay||0;await new Promise(r=>setTimeout(r,delay));if(window.__resolutionFailure)throw Error('Synthetic unavailable RPC');return {householdId,tier,isPlus:tier==='plus',features:Object.keys(features).filter(f=>tier==='plus'||features[f].requiredTier==='free'),verificationState:'verified',verifiedAt:new Date().toISOString(),validUntil:null,recheckAt:new Date(Date.now()+300000).toISOString(),policyVersion:1}};`;
   if (url === '/src/auth/AuthProvider.tsx') return `${params}export const useAuth=()=>({user:{id:'user',email:'parent.with.a.long.synthetic.email@example.invalid',user_metadata:{full_name:'Alexandra Strande Engevik'}},session:{user:{id:'user'}},loading:p.has('loading'),signOut:async()=>{}});`;
-  if (url === '/src/services/diaperService.ts' && (process.argv.includes('--diaper-history')||process.argv.includes('--today-summary'))) return `
+  if (url === '/src/services/diaperService.ts' && (process.argv.includes('--diaper-history')||process.argv.includes('--today-summary')||process.argv.includes('--minimal-home'))) return `
     export const diaperTypes=['wet','dirty','both'];
     export async function countDiaperChangesBetween(...args){window.__diaperCountQuery=args;return new URLSearchParams(location.search).has("empty")?0:5;}
     const rows=[['wet','10:00','baby'],['dirty','09:00','baby'],['both','11:00','baby'],['other','11:30','another']];
     export async function getRecentDiaperChanges(babyId,limit){
-      if(babyId!=='baby')throw Error('Wrong selected baby');
+      if(babyId!=='baby')return [];
       if(limit===1){
         if(new URLSearchParams(location.search).has('empty'))return [];
         return [window.__savedDiaper||{id:'both',type:'both',baby_id:babyId,changed_at:'2026-11-21T11:00:00Z'}];
@@ -572,18 +572,11 @@ async function main() {
       }
       if(process.argv.includes('--home-refinement')){
         await visit('/','home-fixture&long');
-        const card = page.locator('[aria-labelledby="home-last-slept"]');
-        await card.locator('.home-edit').click();
+        await page.locator('button.home-recent-row').first().click();
         assert.equal(await page.locator('input[type=datetime-local]').count(),2);
         await page.keyboard.press('Escape');
-        await card.locator('.secondary-button').click();
-        await page.waitForSelector('[role=dialog]');
-        await page.keyboard.press('Escape');
-        await page.locator('.today-stats a[href$=sleep]').click();
-        await page.waitForSelector('#history-sessions .history-item');
-        assert.ok(page.url().endsWith('today=sleep'));
         await visit('/','home-fixture&active&long&home-refinement');
-        await page.locator('.sleep-wave .home-edit').click();
+        await page.locator('.home-started').click();
         assert.equal(await page.locator('input[type=datetime-local]').count(),1);
         await page.locator('[role=dialog] .primary-button').click();
         await page.waitForFunction(()=>window.__corrected==='active' && window.__homeActive.endtime===null);
@@ -598,9 +591,8 @@ async function main() {
       if(process.argv.includes('--home-only')){
         const action=page.locator('.home-sleep-actions > .sleep-action'),change=page.locator('.home-change-time');
         const ready=async(extra='')=>{await visit('/','home-fixture&home-actions&'+extra);await page.waitForFunction(()=>{const e=document.querySelector('.home-sleep-actions > .sleep-action');return e&&!e.disabled;});};
-        await ready();assert.ok((await page.locator('.sleep-wave [data-wave-live]').textContent()).includes('18'),'live timer shown in Sleep Wave');assert.equal(await page.locator('.home-live-state .sleep-timer').count(),0);
-        assert.equal(await page.locator('.sleep-wave').count(),1);
-        assert.equal(await page.locator('.today-stats a[href^="/log?today="]').count(),3);
+        await ready();
+        assert.equal(await page.locator('.sleep-wave, .today-stats').count(), 0);
         await check('home-awake',true);
         await change.click();await page.waitForSelector('[role="dialog"]');await check('home-start-sheet',true);
         await page.getByRole('button',{name:lang==='en'?'Choose time':'Velg tidspunkt',exact:true}).click();await check('home-start-explicit-time',true);
@@ -610,10 +602,14 @@ async function main() {
         await page.keyboard.down('Enter');await page.keyboard.up('Enter');
         assert.deepEqual(await page.evaluate(()=>window.__sleepActions),[{kind:'start',minutes:0}]);
         assert.equal(await action.evaluate(e=>e===document.activeElement),true,'state transition should preserve keyboard action focus');
-        await ready('active&sound=listening');await page.waitForSelector('progress');
-        assert.equal(await page.locator('.home-wake-time').count(),1);await check('home-sleeping-short',true);
-        assert.ok((await page.locator('.home-sound-controls > summary').textContent()).includes(lang==='en'?'Sound monitoring active':'Lydm\u00e5ling aktiv'));
-        await page.locator('.home-sound-controls > summary').click();await check('home-sound-expanded');
+        await ready('active&sound=listening');
+        assert.match(await page.locator('.home-current-value').innerText(), /42/);
+        await page.locator('.home-started').click();
+        await page.waitForSelector('progress');
+        assert.equal(await page.locator('.home-wake-time').count(), 1);
+        await page.keyboard.press('Escape');
+        await check('home-sleeping-short',true);
+        assert.equal(await page.locator('.home-sound-controls').count(), 0);
         await action.click();await page.waitForTimeout(180);assert.deepEqual(await page.evaluate(()=>window.__sleepActions),[{kind:'stop',minutes:0}]);
         for(const ending of [false,true]){
           await ready(ending?'active':'');await action.evaluate(e=>e.scrollIntoView({block:'center'}));let r=await action.boundingBox();
@@ -712,13 +708,16 @@ async function main() {
           assert.deepEqual(await page.evaluate(()=>window.__sleepActions),[{kind:ending?'stop':'start',minutes:10}]);
         }
         for(const classification of ['LONG_SLEEP_LIKE','UNCERTAIN']){
-          await ready('active&classification='+classification);await page.waitForTimeout(60);
+          await ready('active&classification='+classification);
+          await page.locator('.home-started').click();
+          await page.waitForTimeout(60);
           assert.equal(await page.locator('progress,.home-wake-time').count(),0);
-          const text=await page.locator('.home-sleep-insight').textContent();
+          const text=await page.getByRole('dialog').textContent();
           assert.equal(/Likely night sleep|Trolig natts\u00f8vn/.test(text),classification==='LONG_SLEEP_LIKE');
+          await page.keyboard.press('Escape');
           await check('home-'+classification,true);
         }
-        await ready('empty');assert.equal(await page.locator('.sleep-wave').count(),1);await check('home-no-history');
+        await ready('empty');assert.equal(await page.locator('button.home-recent-row').count(),0);await check('home-no-history');
         await ready('action-error');await change.click();await page.getByRole('dialog').getByRole('button',{name:lang==='en'?'Now':'Nå',exact:true}).click();
         await page.getByRole('dialog').getByRole('alert').waitFor();
         assert.ok(!/duplicate key|unique constraint/.test(await page.getByRole('dialog').textContent()));
@@ -766,6 +765,54 @@ async function main() {
         assert.ok(!/Synthetic|duplicate key|unique constraint|PostgreSQL/.test(content));
         await check('settings-notification-error',true);
         console.log(context+' settings checked');continue;
+      }
+      if (process.argv.includes('--minimal-home')) {
+        await visit('/', 'home-actions');
+        await page.locator('.sleep-action').waitFor();
+        await page.waitForFunction(() => !document.querySelector('.sleep-action').disabled);
+        const home = page.locator('.home-minimal');
+        assert.equal(await home.locator('.home-recent-row').count(), 3);
+        assert.equal(await home.locator('.sleep-wave, .home-today, .family-message-card').count(), 0);
+        assert.deepEqual(await home.locator('.home-quick-actions :is(.secondary-button,.sleep-action)').allTextContents(),
+          lang === 'en' ? ['Diaper', 'Feed', 'Sleep'] : ['Bleie', 'Mating', 'S\u00f8vn']);
+        if (width >= 375) assert.ok(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1), 'awake Home fits the viewport');
+        for (const row of [0, 1, 2]) {
+          const edit = home.locator('button.home-recent-row').nth(row);
+          await edit.click();
+          await page.locator('[role="dialog"]').waitFor();
+          await page.keyboard.press('Escape');
+          await page.locator('[role="dialog"]').waitFor({ state: 'hidden' });
+        }
+        await home.locator('.sleep-action').click();
+        await home.locator('.home-started').waitFor();
+        await home.locator('.sleep-action').click();
+        await home.locator('.home-started').waitFor({ state: 'hidden' });
+        assert.deepEqual(await page.evaluate(() => window.__sleepActions), [
+          { kind: 'start', minutes: 0 }, { kind: 'stop', minutes: 0 },
+        ]);
+        await home.locator('select').selectOption('baby-2');
+        assert.equal(await home.locator('select').inputValue(), 'baby-2');
+        await visit('/', 'active&sound=listening');
+        await home.locator('.home-started').waitFor();
+        assert.equal(await page.locator('.home-sound-controls').count(), 0);
+        assert.equal(await home.locator('.home-quick-actions .secondary-button').count(), 0);
+        assert.equal(await home.locator('.home-current-value').count(), 1);
+        if (width >= 375) assert.ok(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1), 'sleeping Home fits the viewport');
+        await home.locator('.home-started').click();
+        await page.locator('[role="dialog"]').waitFor();
+        await page.keyboard.press('Escape');
+        await visit('/', 'next-sleep-fixture');
+        await home.locator('.home-current-value').waitFor();
+        await visit('/', 'empty');
+        await page.waitForFunction(() => !document.querySelector('.sleep-action').disabled);
+        assert.equal(await home.locator('button.home-recent-row').count(), 0);
+        assert.equal(await home.locator('.home-current-value').count(), 0);
+        await check('minimal-home');
+        await visit('/settings', 'active&sound=listening');
+        await page.locator('#settings-tab-sleep').click();
+        await page.locator('.sound-settings .home-sound-controls > summary').click();
+        await page.locator('.sound-settings .sound-panel').waitFor();
+        continue;
       }
       if(process.argv.includes('--navigation-only')){
         await visit('/');

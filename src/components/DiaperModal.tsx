@@ -2,11 +2,12 @@ import "./DiaperModal.css";
 ﻿import { useId, useRef, useState } from "react";
 import { useModalAccessibility } from "../hooks/useModalAccessibility";
 import { useTranslation } from "../i18n";
-import { createDiaperChange, diaperTypes, updateDiaperChange, type DiaperChange, type DiaperType } from "../services/diaperService";
+import { createDiaperChange, deleteDiaperChange, diaperTypes, updateDiaperChange, type DiaperChange, type DiaperType } from "../services/diaperService";
 
-export default function DiaperModal({ babyId, change, onClose, onSaved }: {
+export default function DiaperModal({ babyId, change, allowDelete, onClose, onSaved }: {
   babyId: string;
   change?: DiaperChange;
+  allowDelete?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -22,15 +23,19 @@ export default function DiaperModal({ babyId, change, onClose, onSaved }: {
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  async function save() {
-    if (!type || !time || busy.current) return;
+  async function save(removing = false) {
+    if ((!removing && (!type || !time)) || busy.current) return;
     busy.current = true;
     setSaving(true);
     setFailed(false);
     try {
-      const changedAt = new Date(time).toISOString();
-      if (change) await updateDiaperChange(change.id, babyId, type, changedAt);
-      else await createDiaperChange(babyId, type, changedAt);
+      if (removing && change) {
+        await deleteDiaperChange(change.id, babyId);
+      } else if (type) {
+        const changedAt = new Date(time).toISOString();
+        if (change) await updateDiaperChange(change.id, babyId, type, changedAt);
+        else await createDiaperChange(babyId, type, changedAt);
+      }
       onSaved();
     } catch {
       setFailed(true);
@@ -60,6 +65,10 @@ export default function DiaperModal({ babyId, change, onClose, onSaved }: {
         <button className="primary-button" type="submit" disabled={!type || saving}>
           {t(saving ? "common.saving" : "common.save")}
         </button>
+        {allowDelete && change && <button type="button" className="secondary-button" disabled={saving}
+          onClick={() => { if (window.confirm(t("diaper.delete"))) void save(true); }}>
+          {t("home.deleteDiaper")}
+        </button>}
       </form>
     </div>
   </div>;

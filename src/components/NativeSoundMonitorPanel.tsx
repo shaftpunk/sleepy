@@ -8,14 +8,14 @@ import type { SleepRecord } from "../services/sleepService";
 import "./SoundMonitoring.css";
 import NativeSoundLevelMeter from "./NativeSoundLevelMeter";
 
-export default function NativeSoundMonitorPanel({ sleep }: { sleep: SleepRecord | null }) {
+export default function NativeSoundMonitorPanel({ sleep, showControls = true }: { sleep: SleepRecord | null; showControls?: boolean }) {
   const { t } = useTranslation(); const { user } = useAuth();
   const babyId = useAppStore(s => s.currentBabyId);
   const { enabled, sensitivity } = useSoundStore();
   const state = useSyncExternalStore(subscribeNativeSound, nativeSoundSnapshot);
   const eligible = Boolean(enabled && user && babyId && sleep?.baby_id === babyId && !sleep.endtime && !sleep.deleted_at);
   useEffect(() => { if (state.active && sleep?.endtime) void validateNativeSoundSleep().catch(() => {}); }, [state.active, sleep?.endtime]);
-  if (!enabled && !state.active && !state.queueCount) return null;
+  if (!showControls || (!enabled && !state.active && !state.queueCount)) return null;
   const keys = { off: "sound.native_off", starting: "sound.native_starting", listening: "sound.native_listening",
     detected: "sound.native_detected", paused: "sound.native_paused", blocked: "sound.native_blocked",
     unavailable: "sound.native_unavailable", error: "sound.native_error", validating: "sound.native_validating",

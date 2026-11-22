@@ -1,7 +1,8 @@
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 
 import {
   createManualSleep,
+  deleteSleep,
   updateSleep,
   updateActiveSleepStart,
   type SleepRecord,
@@ -14,6 +15,8 @@ import { useModalAccessibility } from "../hooks/useModalAccessibility";
 
 type Props = {
   sleep?: SleepRecord | null;
+  allowDelete?: boolean;
+  activeDetails?: ReactNode;
   onClose: () => void;
   onSaved: () => void;
 };
@@ -29,6 +32,8 @@ function localDateTime(date: string | Date) {
 
 export default function SleepModal({
   sleep,
+  allowDelete,
+  activeDetails,
   onClose,
   onSaved,
 }: Props) {
@@ -82,7 +87,8 @@ export default function SleepModal({
 
   const active = Boolean(sleep && !sleep.endtime);
 
-  async function save() {
+  async function save(removing = false) {
+    if (saving) return;
     if (!currentBabyId) {
       setError(t("errors.noBabySelected"));
       return;
@@ -91,6 +97,13 @@ export default function SleepModal({
     try {
       setSaving(true);
       setError("");
+
+      if (removing && sleep?.endtime) {
+        await deleteSleep(sleep.id);
+        await onSaved();
+        onClose();
+        return;
+      }
 
       const starttime =
         new Date(start).toISOString();
@@ -245,6 +258,7 @@ export default function SleepModal({
 
         </>}
 
+        {active && activeDetails}
         {sleep?.endtime && !sleep.deleted_at && <SleepSoundActivity key={sleep.id} sleep={sleep} />}
 
         {error && (
@@ -255,7 +269,7 @@ export default function SleepModal({
 
         <button
           className="primary-button"
-          onClick={save}
+          onClick={() => void save()}
           disabled={
             saving ||
             !currentBabyId
@@ -267,6 +281,10 @@ export default function SleepModal({
               ? t("common.saveChanges")
               : t("sleep.addTitle")}
         </button>
+        {allowDelete && sleep?.endtime && <button type="button" className="secondary-button" disabled={saving}
+          onClick={() => { if (window.confirm(t("common.confirmDeleteSleep"))) void save(true); }}>
+          {t("common.deleteSleepAria")}
+        </button>}
       </div>
     </div>
   );

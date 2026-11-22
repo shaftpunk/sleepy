@@ -165,6 +165,8 @@ const no = {
 
   home: {
     changeBaby: "{{name}} – bytt eller administrer baby",
+    deleteDiaper: "Slett bleieskift",
+    mostLikely: "Mest sannsynlig {{time}}",
     nextSleepTitle: "Neste søvn",
     nextSleepBetween: "Sovner trolig mellom",
     nextSleepAwake: "Våken i {{duration}}",

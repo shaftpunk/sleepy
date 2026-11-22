@@ -6,6 +6,7 @@ import { useAuth } from "../auth/AuthProvider";
 import NotificationSettings from "../components/NotificationSettings";
 import SleepEventNotificationSettings from "../components/SleepEventNotificationSettings";
 import SoundMonitoringSettings from "../components/SoundMonitoringSettings";
+import FamilyMessageModal from "../components/FamilyMessageModal";
 import FamilySettings from "../components/FamilySettings";
 import AddChildSettings from "../components/AddChildSettings";
 import { useTranslation } from "../i18n";
@@ -100,6 +101,7 @@ export default function Settings({ initialTab = "baby" }: { initialTab?: Setting
     setBirthDateMessage(null);
   }
 
+  const [messageBabyId, setMessageBabyId] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const accountName =
@@ -302,6 +304,13 @@ export default function Settings({ initialTab = "baby" }: { initialTab?: Setting
       <AddChildSettings />
 
       <FamilySettings />
+      {selectedBaby && <section className="settings-card">
+        <button type="button" className="secondary-button" onClick={() => setMessageBabyId(selectedBaby.id)}>
+          {t("familyMessage.send")}
+        </button>
+      </section>}
+      {selectedBaby && messageBabyId === selectedBaby.id && <FamilyMessageModal
+        babyId={selectedBaby.id} babyName={selectedBaby.name} onClose={() => setMessageBabyId(null)} />}
       </>}
 
       {activeTab === "sleep" && <>

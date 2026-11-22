@@ -109,12 +109,12 @@ test('haptics are optional on web, missing plugins, and rejecting or synchronous
     feedback.selectionFeedback(); await Promise.resolve(); assert.equal(calls, native && available ? 1 : 0);
   }
 });
-test('Home keeps the shared predictors, Today calculator, authoritative writes and a synchronous duplicate guard', () => {
+test('Home keeps the shared predictor, authoritative writes and a synchronous duplicate guard', () => {
   const home = fs.readFileSync('src/pages/Home.tsx', 'utf8');
-  // Next Sleep is computed by the hook shared with History's planner.
-  assert.ok(home.includes('useSleepForecasts(') && fs.readFileSync('src/hooks/useSleepForecasts.ts', 'utf8').includes('calculateNextSleep('));
-  for (const name of ['getActiveSleepEstimate', 'computeTodayTotals', 'await startSleep(', 'await stopSleep(', 'sleepActionBusy.current = true']) assert.ok(home.includes(name));
-  assert.doesNotMatch(home, /<SleepStartOptions|<SleepStopOptions|stars\(todayStats/);
+  // Home and History call the same engine with the same minute and age inputs.
+  assert.ok(home.includes('calculateNextSleep(') && fs.readFileSync('src/hooks/useSleepForecasts.ts', 'utf8').includes('calculateNextSleep('));
+  for (const name of ['await startSleep(', 'await stopSleep(', 'sleepActionBusy.current = true']) assert.ok(home.includes(name));
+  assert.doesNotMatch(home, /<SleepStartOptions|<SleepStopOptions|<SleepWaveCard|computeTodayTotals/);
   const action = fs.readFileSync('src/components/SleepPrimaryAction.tsx', 'utf8');
   for (const behavior of ['onPointerCancel', 'onLostPointerCapture', 'onPointerMove', 'visibilitychange', 'gesture.dispose()', 'suppressClick', 'busy.current = true', 'SleepTimeSheet']) assert.ok(action.includes(behavior));
 });

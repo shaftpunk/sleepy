@@ -11,11 +11,14 @@ import NativeSoundMonitorPanel from "./NativeSoundMonitorPanel";
 
 // Native capture has app-level lifetime; the existing Web/PWA panel below keeps
 // its foreground/route-scoped microphone lifetime.
-export default function SoundMonitorPanel({ sleep }: { sleep: SleepRecord | null }) {
-  return isNativeSoundIOS() ? <NativeSoundMonitorPanel sleep={sleep} /> : <WebSoundMonitorPanel sleep={sleep} />;
+type Props = { sleep: SleepRecord | null; showControls?: boolean };
+
+export default function SoundMonitorPanel({ sleep, showControls = true }: Props) {
+  if (isNativeSoundIOS()) return <NativeSoundMonitorPanel sleep={sleep} showControls={showControls} />;
+  return <WebSoundMonitorPanel sleep={sleep} showControls={showControls} />;
 }
 
-function WebSoundMonitorPanel({ sleep }: { sleep: SleepRecord | null }) {
+function WebSoundMonitorPanel({ sleep, showControls }: Props) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const babyId = useAppStore((state) => state.currentBabyId);
@@ -70,7 +73,7 @@ function WebSoundMonitorPanel({ sleep }: { sleep: SleepRecord | null }) {
     };
   }, [eligible, sleepId, babyId, userId, sensitivity, nativeIOS, owner]);
 
-  if (!enabled && !failed && pending === 0) return null;
+  if (!showControls || (!enabled && !failed && pending === 0)) return null;
   const status = eligible && state.owner === owner ? state.status : "off";
   return <details className="home-sound-controls">
     <summary>{t(eligible && ["listening", "detected"].includes(status) ? "home.soundMonitoringActive" : "sound.title")}</summary>

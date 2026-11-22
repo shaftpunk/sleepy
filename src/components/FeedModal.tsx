@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 
 import {
   createFeed,
+  deleteFeed,
   updateFeed,
   type FeedRecord,
   type FeedSide,
@@ -15,6 +16,8 @@ import { useTranslation } from "../i18n";
 
 type Props = {
   feed?: FeedRecord | null;
+  nextSide?: FeedSide | null;
+  allowDelete?: boolean;
   onClose: () => void;
   onSaved: () => void;
 };
@@ -30,6 +33,8 @@ function localDateTime(date?: string) {
 
 export default function FeedModal({
   feed,
+  nextSide,
+  allowDelete,
   onClose,
   onSaved,
 }: Props) {
@@ -73,7 +78,10 @@ export default function FeedModal({
   const [saving, setSaving] =
     useState(false);
 
-  async function handleSave() {
+  const [deleteFailed, setDeleteFailed] = useState(false);
+
+  async function handleSave(removing = false) {
+    if (saving) return;
     if (!currentBabyId) {
       console.error(
         "Cannot save feeding: no baby selected.",
@@ -83,6 +91,14 @@ export default function FeedModal({
 
     try {
       setSaving(true);
+
+      setDeleteFailed(false);
+      if (removing && feed) {
+        await deleteFeed(feed.id);
+        await onSaved();
+        onClose();
+        return;
+      }
 
       const values = {
         baby_id: currentBabyId,
@@ -118,6 +134,7 @@ export default function FeedModal({
       await onSaved();
       onClose();
     } catch (error) {
+      if (removing) setDeleteFailed(true);
       console.error(
         "Failed to save feeding:",
         error,
@@ -237,6 +254,7 @@ export default function FeedModal({
         {feedType === "breast" && (
           <div className="form-field">
             <span>{t("feeding.side")}</span>
+            {!feed && nextSide && <p className="muted">{t("home.nextFeedSide", { side: (sideLabel(nextSide, lang) ?? "").toLowerCase() })}</p>}
 
             <div className="side-buttons">
               {sideOptions.map(
@@ -277,7 +295,7 @@ export default function FeedModal({
 
         <button
           className="primary-button"
-          onClick={handleSave}
+          onClick={() => void handleSave()}
           disabled={
             saving ||
             !time ||
@@ -290,6 +308,11 @@ export default function FeedModal({
               ? t("common.saveChanges")
               : t("feeding.saveButton")}
         </button>
+        {allowDelete && feed && <button type="button" className="secondary-button" disabled={saving}
+          onClick={() => { if (window.confirm(t("common.confirmDeleteFeed"))) void handleSave(true); }}>
+          {t("common.deleteFeedingAria")}
+        </button>}
+        {deleteFailed && <p className="form-error" role="alert">{t("errors.generic")}</p>}
       </div>
     </div>
   );

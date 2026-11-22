@@ -158,10 +158,9 @@ test('planner renders in Norwegian and English, distinguishes actual and predict
 
 test('History wiring: shared forecast hook, three sections in order, older history collapsed, nothing persisted',()=>{
   const page=fs.readFileSync('src/pages/History.tsx','utf8'),home=fs.readFileSync('src/pages/Home.tsx','utf8');
-  for(const source of [page,home]){
-    assert.ok(source.includes('useSleepForecasts('));
-    assert.ok(!source.includes('calculateDailySleepForecast'));assert.ok(!source.includes('calculateNextSleep('));
-  }
+  assert.ok(page.includes('useSleepForecasts('));
+  assert.ok(home.includes('calculateNextSleep('));
+  assert.doesNotMatch(home, /useSleepForecasts|calculateDailySleepForecast/);
   assert.ok(page.indexOf('<DailySleepPlanner')<page.indexOf('history.last24Title'));
   assert.ok(page.indexOf('history.last24Title')<page.indexOf('history.moreHistory'));
   assert.match(page,/aria-expanded=\{moreOpen\}/);assert.match(page,/hidden=\{!moreOpen\}/);
