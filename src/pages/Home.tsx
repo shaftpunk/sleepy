@@ -5,6 +5,8 @@ import { getLastFeed, type FeedRecord } from "../services/feedService";
 import { getRecentDiaperChanges, type DiaperChange } from "../services/diaperService";
 import { subscribeToSleepChanges } from "../services/sleepRealtime";
 import { subscribeToFeedChanges } from "../services/feedRealtime";
+import SleepyIcon from "../components/SleepyIcon";
+import sleepingBunny from "../assets/sleeping-bunny.png";
 import FeedModal from "../components/FeedModal";
 import SleepModal from "../components/SleepModal";
 import DiaperModal from "../components/DiaperModal";
@@ -27,16 +29,19 @@ export default function Home() {
   const babies = useAppStore(state => state.babies);
   const setCurrentBabyId = useAppStore(state => state.setCurrentBabyId);
   const { t } = useTranslation();
+  const isDefault = useAppStore(state => state.visualTheme === "default");
 
   return <main className="home-page home-minimal">
-    <header className="home-header">
+    <header className={isDefault && babies.length > 0 ? "home-header home-header-profile" : "home-header"}>
       <h1>{t("common.appName")}</h1>
       {babies.length > 0 && <label className="home-baby-select">
         <span className="sr-only">{t("home.changeBaby", { name: babies.find(baby => baby.id === currentBabyId)?.name ?? "" })}</span>
+        {isDefault && <span className="home-baby-avatar"><SleepyIcon name="baby" /></span>}
         <select value={currentBabyId ?? ""} onChange={event => setCurrentBabyId(event.target.value)}>
           {!currentBabyId && <option value="" disabled>&mdash;</option>}
           {babies.map(baby => <option key={baby.id} value={baby.id}>{baby.name}</option>)}
         </select>
+        {isDefault && <SleepyIcon name="chevron" className="home-baby-chevron" />}
       </label>}
     </header>
     <HomeActivity key={currentBabyId} />
@@ -45,6 +50,7 @@ export default function Home() {
 
 function HomeActivity() {
   const { t, lang } = useTranslation();
+  const isDefault = useAppStore(state => state.visualTheme === "default");
   const currentBabyId = useAppStore(state => state.currentBabyId);
   const currentBaby = useAppStore(state => state.babies.find(baby => baby.id === currentBabyId));
   const [activeSleep, setActiveSleep] = useState<SleepRecord | null>(null);
@@ -201,11 +207,12 @@ function HomeActivity() {
 
   return <>
     <section className="home-current" aria-labelledby="home-current-title">
-      <h2 id="home-current-title">{t(activeSleep ? "common.sleeping" : "home.nextSleepTitle")}</h2>
+      {isDefault && <img className="home-current-animal" src={sleepingBunny} alt="" draggable={false} />}
+      <h2 id="home-current-title">{isDefault && <SleepyIcon name={activeSleep ? "sleep" : "calendar"} />}{t(activeSleep ? "common.sleeping" : "home.nextSleepTitle")}</h2>
       {loading ? <p>{t("common.loading")}</p> : activeSleep ? <>
         <p className="home-current-value">{formatHomeDuration(Math.floor(Math.max(0, now - Date.parse(activeSleep.starttime)) / 60000), lang)}</p>
         <button type="button" className="home-started" onClick={() => setEditingSleep(activeSleep)}>
-          {t("home.startedAt", { time: clock(Date.parse(activeSleep.starttime)) })} <span aria-hidden="true">&#9998;</span>
+          {t("home.startedAt", { time: clock(Date.parse(activeSleep.starttime)) })} <SleepyIcon name="edit" />
         </button>
       </> : nextSleep.status === "ready" && nextSleep.earliestStart != null && nextSleep.latestStart != null ? <>
         <p className="home-current-value">{clock(nextSleep.earliestStart)}&ndash;{clock(nextSleep.latestStart)}</p>
@@ -218,11 +225,11 @@ function HomeActivity() {
         babyName={currentBaby?.name ?? t("common.appName")} disabled={loading || saving || !currentBabyId || Boolean(activeSleep && activeSleep.baby_id !== currentBabyId)}
         saving={saving} awakeActions={<>
           <button type="button" className="secondary-button" disabled={loading || !currentBabyId} onClick={() => openDiaper()}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v6c0 4-4 7-9 8-5-1-9-4-9-8zm0 4c4 0 7 3 7 9m11-9c-4 0-7 3-7 9M3 8h5m8 0h5" /></svg>
+            <SleepyIcon name="diaper" />
             {t("diaper.label")}
           </button>
           <button type="button" className="secondary-button" disabled={loading || !currentBabyId} onClick={() => setFeedEditor({ feed: null })}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7V5a2 2 0 0 1 4 0v2m-6 0h8v4H8zM9 11h6l2 3v6H7v-6zm1 4h2m-2 3h2" /></svg>
+            <SleepyIcon name="feed" />
             {t("diaper.feed")}
           </button>
         </>} onCommit={handleSleep} />
@@ -232,16 +239,16 @@ function HomeActivity() {
 
     <section className="home-recent" aria-labelledby="home-recent-title">
       <h2 id="home-recent-title">{t("common.recent")}</h2>
-      <RecentRow label={t("common.sleep")} editLabel={t("sleep.editTitle")} onEdit={lastSleep && completedSleepEnd ? () => setEditingSleep(lastSleep) : undefined}>
+      <RecentRow kind="sleep" label={t("common.sleep")} editLabel={t("sleep.editTitle")} onEdit={lastSleep && completedSleepEnd ? () => setEditingSleep(lastSleep) : undefined}>
         {lastSleep && completedSleepEnd && <>
           <strong>{formatSleepRange(Date.parse(lastSleep.starttime), Date.parse(completedSleepEnd), now, lang)}</strong>
           <span>{formatHomeDuration(lastSleep.durationminutes ?? (Date.parse(completedSleepEnd) - Date.parse(lastSleep.starttime)) / 60000, lang)}</span>
         </>}
       </RecentRow>
-      <RecentRow label={t("diaper.feed")} editLabel={t("feeding.editTitle")} onEdit={lastFeed ? () => setFeedEditor({ feed: lastFeed }) : undefined}>
+      <RecentRow kind="feed" label={t("diaper.feed")} editLabel={t("feeding.editTitle")} onEdit={lastFeed ? () => setFeedEditor({ feed: lastFeed }) : undefined}>
         {lastFeed && <><strong>{clock(Date.parse(lastFeed.starttime))}</strong><span>{feedDescription(lastFeed)}</span></>}
       </RecentRow>
-      <RecentRow label={t("diaper.label")} editLabel={t("diaper.edit")} onEdit={lastDiaper ? () => openDiaper(lastDiaper) : undefined}>
+      <RecentRow kind="diaper" label={t("diaper.label")} editLabel={t("diaper.edit")} onEdit={lastDiaper ? () => openDiaper(lastDiaper) : undefined}>
         {lastDiaper && <><strong>{clock(Date.parse(lastDiaper.changed_at))}</strong><span>{t(lastDiaper.type === "both" ? "diaper.historyBoth" : `diaper.${lastDiaper.type}`)}</span></>}
       </RecentRow>
     </section>
@@ -260,17 +267,20 @@ function HomeActivity() {
   </>;
 }
 
-function RecentRow({ label, editLabel, onEdit, children }: {
+function RecentRow({ kind, label, editLabel, onEdit, children }: {
+  kind: "sleep" | "feed" | "diaper";
   label: string;
   editLabel: string;
   onEdit?: () => void;
   children: ReactNode;
 }) {
-  if (!onEdit) return <div className="home-recent-row"><span>{label}</span><span>&mdash;</span></div>;
+  const icon = <SleepyIcon className="home-recent-icon" name={kind} />;
+  if (!onEdit) return <div className="home-recent-row">{icon}<span>{label}</span><span>&mdash;</span></div>;
   return <button type="button" className="home-recent-row" onClick={onEdit}>
+    {icon}
     <span><span className="sr-only">{editLabel}: </span>{label}</span>
     <span className="home-recent-value">{children}</span>
-    <span aria-hidden="true">&#9998;</span>
+    <SleepyIcon name="edit" />
   </button>;
 }
 

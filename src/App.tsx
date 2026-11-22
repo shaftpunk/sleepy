@@ -11,10 +11,11 @@ import {
 
 import "./App.css";
 import "./mobile.css";
-import "./styles/premium-theme.css";
+import "./styles/default-theme.css";
 
 import { useAppStore } from "./stores/appStore";
 import { useTranslation } from "./i18n";
+import SleepyIcon from "./components/SleepyIcon";
 import PixelIcon from "./themes/outrun/PixelIcon";
 import NativePushNavigation from "./components/NativePushNavigation";
 import NativeSoundLifecycle from "./components/NativeSoundLifecycle";
@@ -68,8 +69,8 @@ function App() {
     };
   }, []);
 
-  function navIcon(name: "home" | "log" | "settings", glyph: string) {
-    return isOutrun ? <PixelIcon name={name} /> : glyph;
+  function navIcon(name: "home" | "log" | "settings") {
+    return isOutrun ? <PixelIcon name={name} /> : <SleepyIcon name={name} />;
   }
 
   return (
@@ -110,17 +111,17 @@ function App() {
 
         <nav className="bottom-nav">
           <NavLink to="/" end>
-            <span className="nav-icon" aria-hidden="true">{navIcon("home", "⌂")}</span>
+            <span className="nav-icon" aria-hidden="true">{navIcon("home")}</span>
             <span>{t("nav.home")}</span>
           </NavLink>
 
           <NavLink to="/log">
-            <span className="nav-icon" aria-hidden="true">{navIcon("log", "?")}</span>
+            <span className="nav-icon" aria-hidden="true">{navIcon("log")}</span>
             <span>{t("nav.log")}</span>
           </NavLink>
 
           <NavLink to="/settings">
-            <span className="nav-icon" aria-hidden="true">{navIcon("settings", "⚙")}</span>
+            <span className="nav-icon" aria-hidden="true">{navIcon("settings")}</span>
             <span>{t("nav.settings")}</span>
           </NavLink>
         </nav>

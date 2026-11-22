@@ -1,3 +1,4 @@
+import SleepyIcon from "./SleepyIcon";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "../i18n";
 import { createSleepHold, withinSleepHoldTarget } from "../lib/holdSleepAction";
@@ -83,14 +84,12 @@ export default function SleepPrimaryAction({ ending, after, babyName, disabled, 
         if (suppressClick.current) { suppressClick.current = false; return; }
         suppressClick.current = false; void commit(0);
       }}>
-      {!ending && <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M3 11h9l-9 9h9m2-16h7l-7 7h7" />
-      </svg>}
+      {!ending && <SleepyIcon name="sleep" />}
       {saving ? t("common.saving") : offset > 0 ? t("home.actionMinutesAgo", { minutes: offset }) : t(ending ? "home.stopSleep" : "common.sleep")}
     </button>
     <p className="home-hold-hint sr-only" id={hint}>{t("home.holdToAdjust")}</p>
     <span className="sr-only" role="status">{offset > 0 ? t("home.actionMinutesAgo", { minutes: offset }) : ""}</span>
-    <button type="button" className="text-button home-change-time" title={t(ending ? "home.whenWoke" : "home.whenAsleep", { name: babyName })} aria-label={`${t("home.changeTime")}: ${t(ending ? "home.whenWoke" : "home.whenAsleep", { name: babyName })}`} disabled={disabled} onClick={() => setSheet(true)}>{t("home.changeTime")}</button>
+    <button type="button" className="text-button home-change-time" title={t(ending ? "home.whenWoke" : "home.whenAsleep", { name: babyName })} aria-label={`${t("home.changeTime")}: ${t(ending ? "home.whenWoke" : "home.whenAsleep", { name: babyName })}`} disabled={disabled} onClick={() => setSheet(true)}><SleepyIcon name="clock" />{t("home.changeTime")}</button>
     {sheet && <SleepTimeSheet babyName={babyName} ending={ending} after={after} disabled={disabled}
       onClose={() => setSheet(false)} onCommit={commit} />}
   </div>;

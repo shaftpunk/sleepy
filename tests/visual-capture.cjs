@@ -35,7 +35,7 @@ for (const theme of ['light', 'dark']) {
     [`home-${theme}-empty`, '/', `${q}&skin=default&empty`, false],
     [`home-${theme}-alive`, '/', `${q}&skin=alive&wave-fixture`, false],
     [`home-${theme}-outrun`, '/', `${q}&skin=outrun&wave-fixture`, false],
-    [`log-${theme}`, '/log', `${q}&skin=default`, true],
+    [`log-${theme}`, '/log', `${q}&skin=default&log-fixture`, false],
     [`log-${theme}-empty`, '/log', `${q}&skin=default&empty`, false],
     [`analysis-${theme}`, '/analysis', `${q}&skin=default&probability-fixture`, false],
     [`settings-${theme}`, '/settings', `${q}&skin=default`, false],

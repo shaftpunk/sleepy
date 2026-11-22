@@ -44,8 +44,8 @@ export default function Root() {
   }, [visualTheme]);
 
   // Colour scheme on <html> (a separate attribute, so existing [data-theme]
-  // rules don't start matching <html>) lets the premium canvas cover iOS
-  // overscroll. Premium also tints the browser/status chrome; Alive and Outrun
+  // rules don't start matching <html>) lets the Default canvas cover iOS
+  // overscroll. Default also tints the browser/status chrome; Alive and Outrun
   // keep their previous behaviour (no theme-color).
   useEffect(() => {
     document.documentElement.dataset.appearance = theme;
@@ -57,7 +57,9 @@ export default function Root() {
       meta.dataset.sleepy = "";
       document.head.appendChild(meta);
     }
-    meta.content = theme === "light" ? "#fbf3ef" : "#342238";
+    meta.content = getComputedStyle(document.documentElement).getPropertyValue(
+      theme === "light" ? "--default-light" : "--default-dark",
+    ).trim();
   }, [theme, visualTheme]);
 
   // Optional theme styles and assets are loaded only when selected, keeping

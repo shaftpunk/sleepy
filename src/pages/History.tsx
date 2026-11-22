@@ -1,5 +1,6 @@
 ﻿import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import SleepyIcon from "../components/SleepyIcon";
 import DiaperModal from "../components/DiaperModal";
 import FeedModal from "../components/FeedModal";
 import SleepModal from "../components/SleepModal";
@@ -22,11 +23,7 @@ type Editor =
   | { kind: "feed"; record?: FeedRecord }
   | { kind: "diaper"; record?: DiaperChange };
 
-const iconPaths = {
-  sleep: "M20 15A8 8 0 0 1 9 4a8 8 0 1 0 11 11Z",
-  feed: "M10 7V5a2 2 0 0 1 4 0v2m-6 0h8v4H8zM9 11h6l2 3v6H7v-6zm1 4h2m-2 3h2",
-  diaper: "M3 6h18v6c0 4-4 7-9 8-5-1-9-4-9-8zm0 4c4 0 7 3 7 9m11-9c-4 0-7 3-7 9",
-};
+type EventKind = "sleep" | "feed" | "diaper";
 
 export default function History() {
   const babyId = useAppStore(state => state.currentBabyId);
@@ -206,7 +203,7 @@ function LogDay({ babyId, day, today, adding, closeAdd, restoreFocus }: {
         {timeline.map(event => <li key={event.kind + ":" + event.record.id}>
           <button type="button" className="log-row" data-kind={event.kind} data-event-id={event.record.id} onClick={() => open(event)}>
             <time dateTime={new Date(event.time).toISOString()}>{formatClock(event.time, lang)}</time>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d={iconPaths[event.kind]} /></svg>
+            <SleepyIcon name={event.kind} />
             <span><strong>{labels[event.kind]}</strong><span>{details(event)}</span></span>
             <span aria-hidden="true">&rsaquo;</span>
           </button>
@@ -232,8 +229,8 @@ function LogDay({ babyId, day, today, adding, closeAdd, restoreFocus }: {
 }
 
 function AddEntry({ labels, onChoose, onClose }: {
-  labels: Record<keyof typeof iconPaths, string>;
-  onChoose: (kind: keyof typeof iconPaths) => void;
+  labels: Record<EventKind, string>;
+  onChoose: (kind: EventKind) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();

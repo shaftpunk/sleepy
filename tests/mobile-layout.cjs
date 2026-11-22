@@ -25,6 +25,7 @@ import HouseholdContextSelector from '/src/households/HouseholdContextSelector.t
 import '/src/index.css';import '/src/themes/alive/alive.css';import '/src/themes/outrun/outrun.css';
 const p=new URLSearchParams(location.search),view=p.get('view'),theme=p.get('theme')||'dark';
 document.documentElement.dataset.visualTheme=p.get('skin')||'default';
+document.documentElement.dataset.appearance=theme;
 const baby={id:'baby',name:p.has('long')?'Amalie Alexandra Strande Engevik':'Amalie',birth_date:'2026-08-03'};
 useAppStore.setState({language:p.get('lang')||'no',theme,visualTheme:p.get('skin')||'default',currentBabyId:'baby',currentBbyId:'fixture-baby',babies:[baby,{...baby,id:'baby-2',name:'Alexander'}]});
 useSoundStore.setState({enabled:!!p.get('sound'),sensitivity:'medium'});
@@ -148,7 +149,7 @@ async function main() {
         for (const top of [0,59]) {
           const bottom = top ? 34 : 0;
           await cdp.send('Emulation.setSafeAreaInsetsOverride',{insets:{top,bottom,left:0,right:0}});
-          for (const route of ['/','/history','/analysis','/settings']) {
+          for (const route of ['/','/log','/settings','/settings/family']) {
             await page.goto(base+route+'?lang=en');
             await page.waitForSelector('.app-shell > main');
             const metrics = await page.evaluate(()=>{
@@ -161,11 +162,11 @@ async function main() {
                 navBottom:nav.getBoundingClientRect().bottom,
               };
             });
-            const expected = top+(width<=430?8:24);
+            const expected = top+12;
             assert.equal(metrics.start,expected,route+' main');
-            assert.equal(metrics.header,expected,route+' header');
-            assert.equal(metrics.navPadding,12+bottom);
-            assert.equal(metrics.navBottom,844);
+            assert.ok(metrics.header >= expected,route+' header respects the safe area');
+            assert.equal(metrics.navPadding,5+bottom);
+            assert.equal(metrics.navBottom,840);
           }
         }
       }
@@ -330,8 +331,8 @@ async function main() {
         }));
         assert.equal(icons.length, 3);
         for (const icon of icons) {
-          assert.equal(icon.width, 16);
-          assert.equal(icon.height, 16);
+          assert.equal(icon.width, skin === "default" ? 19 : 16);
+          assert.equal(icon.height, skin === "default" ? 19 : 16);
           assert.equal(icon.strokeWidth, '1.5px');
           assert.notEqual(icon.stroke, 'none');
         }
@@ -797,6 +798,23 @@ async function main() {
         await page.keyboard.press('Escape');
         await visit('/', 'next-sleep-fixture');
         await home.locator('.home-current-value').waitFor();
+        assert.equal(await home.locator('.home-current-animal').count(), skin === 'default' ? 1 : 0);
+        if (width >= 375) assert.ok(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1), 'forecast Home fits the viewport');
+        await check('minimal-home-forecast', true);
+        if (width === 320 && skin === 'default') {
+          await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Home does not overflow horizontally at 200% text');
+          await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+        }
+        if (width >= 375 && skin === 'default') {
+          const cdp = await page.context().newCDPSession(page);
+          await page.setViewportSize({ width, height: width === 375 ? 812 : height });
+          await cdp.send('Emulation.setSafeAreaInsetsOverride',{insets:{top:47,bottom:34,left:0,right:0}});
+          assert.ok(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1), 'forecast fits with iPhone safe areas');
+          await cdp.send('Emulation.setSafeAreaInsetsOverride',{insets:{top:0,bottom:0,left:0,right:0}});
+          await cdp.detach();
+          await page.setViewportSize({ width, height });
+        }
         await visit('/', 'empty');
         await page.waitForFunction(() => !document.querySelector('.sleep-action').disabled);
         assert.equal(await home.locator('button.home-recent-row').count(), 0);

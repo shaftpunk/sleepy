@@ -118,3 +118,11 @@ button.home-recent-row { cursor: pointer; }
   outline: 2px solid var(--focus-ring, currentColor);
   outline-offset: 2px;
 }
+
+.home-recent-icon { display: none; }
+.home-recent-row > svg:not(.home-recent-icon), .home-started > svg {
+  width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5;
+  stroke-linecap: round; stroke-linejoin: round; vertical-align: middle;
+}
+
+.home-quick-actions .home-change-time > svg { display: none; }
