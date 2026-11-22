@@ -37,6 +37,11 @@ function getAliveBackground(date = new Date()): AliveBackground {
   return "night";
 }
 
+function ShellHouseholdSelector() {
+  const { pathname } = useLocation();
+  return /^\/settings(?:\/|$)/i.test(pathname) ? null : <HouseholdContextSelector />;
+}
+
 function LegacyHistoryRedirect() {
   const { search, hash } = useLocation();
   return <Navigate to={{ pathname: "/log", search, hash }} replace />;
@@ -80,18 +85,19 @@ function App() {
         <PredictionReminderLifecycle />
         <SleepLiveActivityLifecycle />
         <div className="app-shell">
-          <HouseholdContextSelector />
+          <ShellHouseholdSelector />
           <Suspense fallback={<div className="empty-card">{t("common.loading")}</div>}>
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/log" element={<History />} />
               <Route path="/settings">
-                <Route index element={<Settings key="index" />} />
-                <Route path="family" element={<Settings key="family" />} />
-                <Route path="notifications" element={<Settings key="notifications" initialTab="notifications" />} />
-                <Route path="appearance" element={<Settings key="appearance" initialTab="account" />} />
-                <Route path="plus" element={<Settings key="plus" initialTab="account" />} />
-                <Route path="account" element={<Settings key="account" initialTab="account" />} />
+                <Route index element={<Settings />} />
+                <Route path="family" element={<Settings section="family" />} />
+                <Route path="notifications" element={<Settings section="notifications" />} />
+                <Route path="notifications/sound" element={<Settings section="sound" />} />
+                <Route path="appearance" element={<Settings section="appearance" />} />
+                <Route path="plus" element={<Settings section="plus" />} />
+                <Route path="account" element={<Settings section="account" />} />
                 <Route path="about" element={<About />} />
               </Route>
               <Route path="/history" element={<LegacyHistoryRedirect />} />

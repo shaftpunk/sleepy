@@ -206,3 +206,76 @@
 .plus-test-actions { display: grid; gap: 0.5rem; }
 .plus-test-actions button { width: 100%; min-height: 48px; white-space: normal; }
 .plus-test-notice { font-weight: 600; }
+
+.settings-index, .settings-detail { display: grid; gap: 14px; }
+.settings-index h1, .settings-screen-header h1 { margin: 0; font-size: 1.4rem; line-height: 1.2; overflow-wrap: anywhere; }
+.settings-index-list { margin: 0; padding: 0; list-style: none; }
+.settings-index-row {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 52px;
+  padding-inline: 4px;
+  border-bottom: 1px solid var(--control-border, var(--settings-border));
+  color: inherit;
+  font-weight: 600;
+}
+.settings-index-row svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.settings-index-row > :last-child { color: var(--settings-muted); font-size: 1.2rem; }
+.settings-inline-link { grid-template-columns: minmax(0, 1fr) auto; }
+.settings-screen-header { display: flex; align-items: center; gap: 10px; }
+.settings-back {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  min-height: 44px;
+  border-radius: var(--settings-control-radius);
+  background: var(--control-bg, var(--settings-control));
+  color: inherit;
+  font-size: 1.5rem;
+}
+.settings-detail :is(.settings-card, .family-settings, .notification-settings__card) { padding: 12px; gap: 10px; }
+.settings-detail :is(.setting-title, .settings-context, .muted, .settings-account p) { margin: 0; }
+.settings-detail .notification-settings { padding: 0; background: transparent; border: 0; }
+.settings-detail .settings-member-roles { display: grid; gap: 6px; margin: 0; }
+.settings-member-roles > div { display: flex; justify-content: space-between; }
+.settings-member-roles dd { margin: 0; }
+.settings-detail-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.settings-detail-actions > button { flex: 1 1 8rem; }
+.settings-preference-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding-block: 6px;
+  border-bottom: 1px solid var(--control-border, var(--settings-border));
+}
+.settings-text-link {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: inherit;
+  text-decoration: underline;
+}
+.settings-account { overflow-wrap: anywhere; }
+.settings-about-content.about-page { gap: 12px; }
+.settings-page :is(a, button, select, summary):focus-visible {
+  outline: 2px solid var(--focus-ring, currentColor);
+  outline-offset: 2px;
+}
+.settings-detail summary { min-height: 44px; padding-block: 10px; cursor: pointer; }
+.settings-detail .notification-settings > div > label:has(> input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}

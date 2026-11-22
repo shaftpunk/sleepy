@@ -48,8 +48,8 @@ const failure = `const blocked=async()=>{throw Error('duplicate key value violat
 function mock(url) {
   if(process.argv.includes('--entitlements-only')&&url==='/src/auth/AuthProvider.tsx')return `import React from '/node_modules/.vite/deps/react.js';const {useSyncExternalStore}=React;let user='user';const listeners=new Set();window.__setUser=id=>{user=id;for(const f of listeners)f()};export const useAuth=()=>{const id=useSyncExternalStore(f=>{listeners.add(f);return()=>listeners.delete(f)},()=>user);return {user:id?{id}:null,loading:false}};`;
   if(url.endsWith('/householdContextService.ts'))return `${params}export async function getHouseholdCandidates(user,baby){await new Promise(r=>setTimeout(r,window.__contextDelay||0));if(window.__contextFailure)throw Error('Synthetic offline');return window.__candidates||(p.has('multiple')?[{id:'A',name:'Household A',role:'viewer'},{id:'B',name:'Household B',role:'parent'}]:[{id:'household',name:'Synthetic household',role:'owner'}])};export const subscribeHouseholdContext=()=>()=>{};`;
-  if(url.endsWith('/entitlementService.ts'))return `import features from '/src/entitlements/features.json';export async function resolveHouseholdEntitlements(householdId){const tier=window.__tier||'free',delay=window.__resolutionDelay||0;await new Promise(r=>setTimeout(r,delay));if(window.__resolutionFailure)throw Error('Synthetic unavailable RPC');return {householdId,tier,isPlus:tier==='plus',features:Object.keys(features).filter(f=>tier==='plus'||features[f].requiredTier==='free'),verificationState:'verified',verifiedAt:new Date().toISOString(),validUntil:null,recheckAt:new Date(Date.now()+300000).toISOString(),policyVersion:1}};`;
-  if (url === '/src/auth/AuthProvider.tsx') return `${params}export const useAuth=()=>({user:{id:'user',email:'parent.with.a.long.synthetic.email@example.invalid',user_metadata:{full_name:'Alexandra Strande Engevik'}},session:{user:{id:'user'}},loading:p.has('loading'),signOut:async()=>{}});`;
+  if(url.endsWith('/entitlementService.ts'))return `import features from '/src/entitlements/features.json';export async function resolveHouseholdEntitlements(householdId){const tier=window.__tier||(new URLSearchParams(location.search).has('plus-entitled')?'plus':'free'),delay=window.__resolutionDelay||0;await new Promise(r=>setTimeout(r,delay));if(window.__resolutionFailure)throw Error('Synthetic unavailable RPC');return {householdId,tier,isPlus:tier==='plus',features:Object.keys(features).filter(f=>tier==='plus'||features[f].requiredTier==='free'),verificationState:'verified',verifiedAt:new Date().toISOString(),validUntil:null,recheckAt:new Date(Date.now()+300000).toISOString(),policyVersion:1}};`;
+  if (url === '/src/auth/AuthProvider.tsx') return `${params}export const useAuth=()=>({user:{id:'user',email:'parent.with.a.long.synthetic.email@example.invalid',user_metadata:{full_name:'Alexandra Strande Engevik'}},session:{user:{id:'user'}},loading:p.has('loading'),signOut:async()=>{window.__signedOut=true;}});`;
   if (url === '/src/services/diaperService.ts' && (logOnly||process.argv.includes('--today-summary')||process.argv.includes('--minimal-home'))) return `
     export const diaperTypes=['wet','dirty','both'];
     export async function countDiaperChangesBetween(...args){window.__diaperCountQuery=args;return new URLSearchParams(location.search).has("empty")?0:5;}
@@ -93,10 +93,15 @@ export async function updateFeed(id,row){if(!p.has("log-fixture"))return blocked
 export async function deleteFeed(id){if(!p.has("log-fixture"))return blocked();feeds.splice(feeds.findIndex(row=>row.id===id),1);}`;
   if (url.endsWith('/sleepRealtime.ts')) return `export const subscribeToSleepChanges=()=>()=>{};`;
   if (url.endsWith('/feedRealtime.ts')) return `export const subscribeToFeedChanges=(_id,refresh)=>{window.__feedRefresh=refresh;return ()=>{};};`;
-  if (url.endsWith('/householdService.ts')) return params + failure + `export async function getMyHouseholds(){if(p.has('error'))throw Error('Synthetic long failure message. '+ 'x'.repeat(70));return [{id:'household',name:'Strande Engevik – familie med et langt navn',role:'owner'}]};export const getMyBabies=async()=>[];export {blocked as updateBabyBirthDate,blocked as createBabyForHousehold,blocked as createHouseholdWithBaby};`;
+  if (url.endsWith('/householdService.ts')) return params + failure + `export async function getMyHouseholds(){if(p.has('error'))throw Error('Synthetic long failure message. '+ 'x'.repeat(70));return [{id:'household',name:'Strande Engevik – familie med et langt navn',role:'owner'}]};export const getMyBabies=async()=>[];export const getHouseholdMemberRoles=async()=>['owner','parent','viewer'];export {blocked as updateBabyBirthDate,blocked as createBabyForHousehold,blocked as createHouseholdWithBaby};`;
   if (url.endsWith('/invitationService.ts')) return `export const createHouseholdInvitation=async()=>({token:'synthetic-layout-only-'+ 'A'.repeat(65),expires_at:new Date().toISOString()}),acceptHouseholdInvitation=async()=>({household_name:'Synthetic family'});`;
   if (url.endsWith('/pushService.ts')) return `export const hasPushSubscription=async()=>true,attributePushSubscription=async()=>{},enablePushNotifications=async()=>{},disablePushNotifications=async()=>{},sendTestNotification=async()=>{};`;
-  if (url.endsWith('/nativePushService.ts')) return `export const isNativeIOS=()=>true,nativePushState=()=> 'enabled',subscribeNativePush=()=>()=>{};`;
+  if (url.endsWith('/nativePushService.ts')) return params+`export const isNativeIOS=()=>true,nativePushState=()=>p.has('denied')?'denied':'enabled',subscribeNativePush=()=>()=>{};`;
+  if (process.argv.includes('--settings-only')) {
+    if(url.endsWith('/predictionReminder.ts')) return params+ `export const preferenceChanged='reminder-fixture', reminderAvailable=()=>true, reminderKey=(user,baby)=>'fixture:'+user+':'+baby, requestReminderPermission=async()=>!p.has('denied'), reconcileReminder=async()=>{};`;
+    if(url.endsWith('/PurchaseEvidenceContext.tsx')) return  `export const usePurchaseEvidence=()=>({status:'none',refreshedAt:'fixture'});`;
+    if(url.endsWith('/revenueCatService.ts')) return params+ `export const revenueCatAvailable=()=>true;export const getRevenueCatOffering=async()=>{if(p.has('missing-offering'))throw Error('internal code');return {availablePackages:[{identifier:'$rc_monthly',product:{priceString:'49 kr'}},{identifier:'$rc_annual',product:{priceString:'399 kr'}}]};};export const refreshRevenueCatState=async()=>{},reconcileRevenueCatState=async()=>({state:'verified'}),getRevenueCatDiagnostics=async()=>null,purchaseRevenueCatPackage=async()=>({status:'cancelled',issue:null}),restoreRevenueCatPurchases=async()=>{window.__restored=true;return {status:'restored',issue:null,reconciliation:{state:'sandboxVerified'}};};`;
+  }
   if (url.endsWith('/notificationSettingsService.ts')) return params + failure + `export const getNotificationSettings=async()=>{if(p.has('error'))throw Error('duplicate key value violates unique constraint synthetic_settings_test');return {feeding_reminder_enabled:true,feeding_reminder_minutes:180}},getSleepEventNotificationSettings=async()=>({notify_sleep_started:true,notify_sleep_ended:true});export {blocked as updateFeedingReminder,blocked as updateFeedingReminderMinutes,blocked as updateSleepEventNotificationSettings};`;
   if (url.endsWith('/appleAuthService.ts')) return params + failure + `export const appleSignInSupported=()=>!p.has('web');export {blocked as signInWithApple};`;
   if (url.endsWith('/nativeSoundMonitoring.ts')) return `${params}const state={active:p.get('sound')==='listening',running:p.get('sound')==='listening',status:p.get('sound')||'off',queueCount:0,level:.6,rms:.1,syncFailed:false};export const nativeSoundSupported=()=>true,nativeSoundSnapshot=()=>state,subscribeNativeSound=()=>()=>{},startNativeSound=async()=>{},stopNativeSound=async()=>{},synchronizeNativeSoundEvents=async()=>{},validateNativeSoundSleep=async()=>{};`;
@@ -674,46 +679,85 @@ async function main() {
         await check('home-failed-action',true);await page.keyboard.press('Escape');
         console.log(context+' Home checked');continue;
       }
-      if(process.argv.includes('--settings-only')){
-        await visit('/settings');await page.waitForSelector('.family-settings select');
-        const tabs=page.getByRole('tab');
-        assert.equal(await tabs.count(),4);
-        assert.deepEqual(await tabs.allTextContents(),lang==='en'?['Baby','Sleep','Notifications','Account']:['Baby','S\u00f8vn','Varsler','Konto']);
-        await check('settings-baby',true);
-        await page.locator('.add-child-heading button').click();await check('settings-add-baby');
-        await page.locator('.family-settings > .primary-button').click();await page.waitForSelector('.invitation-code');await check('settings-invitation');
-        await tabs.nth(0).focus();await page.keyboard.press('ArrowRight');
-        assert.equal(await tabs.nth(1).getAttribute('aria-selected'),'true');
-        const toggle=page.getByRole('switch');assert.equal(await toggle.isChecked(),true);
-        await check('settings-sleep',true);await toggle.uncheck();
-        await page.reload();await tabs.nth(1).click();assert.equal(await toggle.isChecked(),false);
-        await toggle.check();assert.equal(await toggle.isChecked(),true);
-        await page.evaluate(()=>{window.__sleepyBridgeFailure=true;});
-        await toggle.uncheck();await page.waitForSelector('[role="alert"]');
-        assert.ok(!(await page.getByRole('alert').textContent()).includes('Synthetic'));
-        await check('settings-live-activity-error',true);
-        await page.evaluate(()=>{window.__sleepyBridgeFailure=false;});
-        await toggle.check();await page.waitForSelector('[role="alert"]',{state:'detached'});
-        assert.equal(await page.locator('.sound-settings select').count(),1);
-        await tabs.nth(2).click();await page.waitForSelector('.notification-settings__card');
-        assert.equal(await page.locator('.sound-settings').count(),0);
-        assert.equal(await page.locator('.notification-settings__test').count(),0);
+      if (process.argv.includes('--settings-only')) {
+        await visit('/settings');
+        const nav = page.locator('.bottom-nav a[aria-current="page"]');
+        const index = page.locator('.settings-index-list a');
+        const sections = ['family','notifications','appearance','plus','account','about'];
+        assert.deepEqual(await index.evaluateAll(links => links.map(link=>link.pathname)),
+          sections.map(section=>'/settings/'+section));
+        assert.equal(await page.locator('main input, main select, .plus-test-panel').count(),0);
+        await check('settings-index',true);
+        await index.first().click();
+        await page.waitForURL('**/settings/family');
+        await page.locator('.family-settings select').first().waitFor();
+        await page.locator('.settings-member-roles').waitFor();
+        await page.locator('#settings-baby').selectOption('baby-2');
+        await page.waitForFunction(()=>document.querySelector('#settings-baby').value==='baby-2');
+        await page.locator('.add-child-heading button').click();
+        await check('settings-family');
+        await page.locator('.family-settings > .primary-button').click();
+        await page.waitForSelector('.invitation-code');
+        await page.locator('.settings-detail-actions button').first().click();
+        await page.locator('input[autocomplete=off]').last().waitFor();
+
+        await visit('/settings/notifications','denied');
+        await page.waitForSelector('.notification-settings__card');
+        assert.match(await page.locator('main').innerText(),lang==='en'?/Notifications denied/:/Varsler.*avvist|iPhone-innstillinger/i);
+        const likely = page.locator('.notification-settings label').filter({hasText:lang==='en'?/likely sleep/i:/forventet/i}).locator('input[type=checkbox]');
+        await likely.click();
+        assert.equal(await likely.isChecked(), false);
+        await visit('/settings/notifications');
+        await likely.check();
+        assert.equal(await likely.isChecked(), true);
+        await likely.uncheck();
+        const activity = page.getByRole('switch');
+        await activity.uncheck();
+        await page.reload();
+        await activity.waitFor();
+        assert.equal(await activity.isChecked(),false);
+        await activity.check();
         await check('settings-notifications',true);
-        await tabs.nth(3).click();await page.waitForSelector('.appearance-card');
-        assert.equal(await page.getByRole('button',{name:'Norsk',exact:true}).count(),1);
-        assert.equal(await page.getByRole('button',{name:'English',exact:true}).count(),1);
-        assert.ok((await page.locator('.settings-about').textContent()).includes('14'));
-        assert.ok(!(await page.locator('main').textContent()).includes('2.2.0'));
-        await check('settings-account',true);
-        await visit('/settings','error');await page.waitForSelector('.family-settings .settings-error');
-        await check('settings-baby-error');
-        await tabs.nth(2).click();await page.waitForSelector('.notification-settings__message');
-        await page.locator('.notification-toggle input').first().click();
-        await page.waitForTimeout(40);
-        assert.equal(await page.locator('.notification-toggle input').first().isChecked(),true,'failed notification update must restore its prior state');
-        const content=await page.locator('main').textContent();
-        assert.ok(!/Synthetic|duplicate key|unique constraint|PostgreSQL/.test(content));
-        await check('settings-notification-error',true);
+        await page.locator('a[href="/settings/notifications/sound"]').click();
+        await page.locator('.sound-settings select').waitFor();
+        assert.equal(await nav.getAttribute('href'),'/settings');
+
+        await visit('/settings/appearance');
+        const preferences = page.locator('.settings-preference-list select');
+        await preferences.first().selectOption(theme==='dark'?'light':'dark');
+        assert.equal(await preferences.first().inputValue(), theme==='dark'?'light':'dark');
+        await preferences.nth(1).selectOption(lang==='en'?'no':'en');
+        assert.equal(await preferences.nth(1).inputValue(),lang==='en'?'no':'en');
+        for (const skin of ['alive','outrun','default']) await preferences.last().selectOption(skin);
+        await check('settings-appearance',true);
+
+        await visit('/settings/plus');
+        await page.getByRole('button',{name:/49 kr/}).waitFor();
+        await page.locator('.settings-detail-actions button').first().click();
+        await page.waitForFunction(()=>document.querySelector('main').textContent.match(/cancelled|avbrutt/i));
+        await page.getByRole('button',{name:lang==='en'?/Restore purchases/i:/Gjenopprett/i}).click();
+        assert.equal(await page.evaluate(()=>window.__restored),true);
+        assert.doesNotMatch(await page.locator('main').innerText(),/RevenueCat|sandbox|test purchase|testkj.p/i);
+        await visit('/settings/plus','missing-offering');
+        await page.locator('main .text-button').waitFor();
+        assert.equal(await page.getByRole('button',{name:/49 kr/}).count(),0);
+        await visit('/settings/plus','plus-entitled');
+        await page.locator('a[href="https://apps.apple.com/account/subscriptions"]').waitFor();
+        await check('settings-plus',true);
+
+        await visit('/settings/account');
+        assert.match(await page.locator('.settings-account').innerText(),/parent.with.a.long.synthetic.email@example.invalid/);
+        await page.locator('main button').click();
+        assert.equal(await page.evaluate(()=>window.__signedOut),true);
+        await visit('/settings/about');
+        await page.waitForFunction(()=>document.querySelector('.settings-about')?.textContent.includes('14'));
+        assert.equal(await page.locator('.settings-about-content a').count(),0);
+        for (const section of [...sections,'notifications/sound']) {
+          await visit('/settings/'+section);
+          await page.reload();
+          await page.locator('.settings-detail').waitFor();
+          assert.equal(await nav.getAttribute('href'),'/settings');
+        }
         console.log(context+' settings checked');continue;
       }
       if (process.argv.includes('--minimal-home')) {
@@ -758,8 +802,7 @@ async function main() {
         assert.equal(await home.locator('button.home-recent-row').count(), 0);
         assert.equal(await home.locator('.home-current-value').count(), 0);
         await check('minimal-home');
-        await visit('/settings', 'active&sound=listening');
-        await page.locator('#settings-tab-sleep').click();
+        await visit('/settings/notifications/sound', 'active&sound=listening');
         await page.locator('.sound-settings .home-sound-controls > summary').click();
         await page.locator('.sound-settings .sound-panel').waitFor();
         continue;
@@ -883,7 +926,7 @@ async function main() {
         assert.equal(new URL(page.url()).pathname, '/');
         await visit('/about');
         assert.equal(new URL(page.url()).pathname, '/settings/about');
-        for (const section of ['family', 'notifications', 'appearance', 'plus', 'account', 'about']) {
+        for (const section of ['family', 'notifications', 'appearance', 'plus', 'account', 'about', 'notifications/sound']) {
           await visit('/settings/'+section);
           await page.reload();
           await page.waitForSelector(section === 'about' ? '.about-page' : '.settings-page');
@@ -937,10 +980,10 @@ async function main() {
       }
       await visit('/','view=analysis');await page.waitForSelector('.analysis-tab-content');
       for(let i=0;i<6;i++){await page.locator('.analysis-tab').nth(i).click();await check('analysis-'+i,true);}
-      await visit('/settings');await page.waitForSelector('.family-settings select');await check('settings-baby',true);
+      await visit('/settings/family');await page.waitForSelector('.family-settings select');await check('settings-baby',true);
       await page.locator('.add-child-heading button').click();await check('add-child');
       await page.locator('.family-settings > .primary-button').click();await page.waitForSelector('.invitation-code');await check('invitation-code');
-      for(let i=1;i<4;i++){await page.locator('.settings-tab').nth(i).click();await page.waitForTimeout(40);await check('settings-'+i,true);}
+      for (const section of ['notifications','appearance','plus','account']) { await visit('/settings/'+section); await check('settings-'+section,true); }
       await visit('/about');await check('about',true);
       await visit('/','view=auth');await check('auth-apple',true);
       await page.locator('.auth-link-button').first().click();await check('auth-register');
@@ -949,7 +992,7 @@ async function main() {
       await visit('/','view=auth&web');await check('auth-web');
       await visit('/','view=onboarding');await check('onboarding-create',true);await page.locator('.onboarding-tabs button').nth(1).click();await check('onboarding-join');
       for(const [name,route,extra] of [['home-empty','/','empty'],['history-empty','/history','empty'],['analysis-empty','/','view=analysis&empty'],
-        ['sound-empty','/','view=sleep&empty'],['sound-error','/','view=sleep&error'],['settings-errors','/settings','error'],
+        ['sound-empty','/','view=sleep&empty'],['sound-error','/','view=sleep&error'],['settings-errors','/settings/family','error'],
         ['auth-loading','/','view=gate&loading'],['auth-error','/','view=gate&error'],['sound-denied','/','active&sound=blocked'],['sound-failed','/','active&sound=error'],['splash','/','view=splash']]){
         await visit(route,extra);await check(name);
       }

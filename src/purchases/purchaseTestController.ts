@@ -4,7 +4,7 @@ import { purchaseDiagnostic, type PurchaseDiagnostic } from "./revenueCatDiagnos
 
 type Action = "monthly" | "annual" | "restore" | "refresh";
 type Services = {
-  diagnostics: (userId: string) => Promise<RevenueCatDiagnostics>;
+  diagnostics?: (userId: string) => Promise<RevenueCatDiagnostics>;
   refresh: () => Promise<unknown>;
   reconcile: () => Promise<ServerReconciliation>;
   purchase: (plan: "monthly" | "annual", context: PurchaseContext) => Promise<PurchaseResult>;
@@ -29,6 +29,7 @@ export function createPurchaseTestController(userId: string, context: PurchaseCo
     state = { ...state, ...next }; listeners.forEach(fn => fn());
   }
   async function inspect() {
+    if (!services.diagnostics) return;
     try { const diagnostics = await services.diagnostics(userId); publish({ diagnostics, diagnosticError: false }); }
     catch { publish({ diagnostics: null, diagnosticError: true }); }
   }

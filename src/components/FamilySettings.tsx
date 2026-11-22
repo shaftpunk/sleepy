@@ -230,23 +230,7 @@ export default function FamilySettings() {
   return (
     <section className="settings-section family-settings">
 
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">
-            {t("family.eyebrow")}
-          </p>
-
-          <h2>
-            {t("family.heading")}
-          </h2>
-        </div>
-      </div>
-
-
-      <p className="page-description">
-        {t("family.description")}
-      </p>
-
+      <h2 className="setting-title">{t("family.heading")}</h2>
 
       {households.length === 0 ? (
         <p>

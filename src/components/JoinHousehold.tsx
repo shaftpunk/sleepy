@@ -89,11 +89,7 @@ export default function JoinHousehold({
         err
       );
 
-      setError(
-        err instanceof Error
-          ? err.message
-          : t("family.errorCouldNotJoin")
-      );
+      setError(t("family.errorCouldNotJoin"));
 
     } finally {
       setLoading(false);

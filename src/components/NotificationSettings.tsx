@@ -281,35 +281,16 @@ export default function NotificationSettings({
 
   return (
     <section className="notification-settings">
-      {isNativeIOS() && <p role="status">{t(`notifications.native_${nativeState}`)}</p>}
-      <div className="notification-settings__header">
-        <div>
-          <h2>{t("notifications.pushNotifications")}</h2>
-        </div>
-
-        <div
-          className={
-            pushEnabled
-              ? "notification-status notification-status--enabled"
-              : "notification-status"
-          }
-        >
-          <span className="notification-status__dot" />
-
-          {pushEnabled
-            ? t("notifications.enabled")
-            : t("notifications.disabled")}
-        </div>
-      </div>
-
+      {(isNativeIOS() ? nativeState === "denied" : typeof Notification !== "undefined" && Notification.permission === "denied") &&
+        <p role="status">{t(isNativeIOS() ? "notifications.native_denied" : "settings.webNotificationDenied")}</p>}
       <div className="notification-settings__card">
         <div className="notification-setting-row">
           <div>
             <strong>{t("notifications.pushNotifications")}</strong>
-
-            <p>
-              {t("notifications.pushDescription")}
-            </p>
+            <div className={pushEnabled ? "notification-status notification-status--enabled" : "notification-status"}>
+              <span className="notification-status__dot" aria-hidden="true" />
+              {t(pushEnabled ? "notifications.enabled" : "notifications.disabled")}
+            </div>
           </div>
 
           {pushEnabled ? (

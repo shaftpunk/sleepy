@@ -1,3 +1,4 @@
+import type { HouseholdRole } from "../households/context";
 import { supabase } from "../lib/supabase";
 import { useAppStore, type Baby } from "../stores/appStore";
 import { translate, type TranslationKey } from "../i18n";
@@ -135,4 +136,11 @@ export async function createHouseholdWithBaby(
     household_id: string;
     baby_id: string;
   };
+}
+
+export async function getHouseholdMemberRoles(householdId: string): Promise<HouseholdRole[]> {
+  const { data, error } = await supabase.from("household_members").select("role").eq("household_id", householdId);
+  if (error) throw error;
+  return (data ?? []).flatMap(({ role }) =>
+    role === "owner" || role === "parent" || role === "caregiver" || role === "viewer" ? [role] : []);
 }

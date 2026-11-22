@@ -1,490 +1,284 @@
-import { ReminderSetting } from "../components/PredictionReminderLifecycle";
-import { useState } from "react";
-
-import { useAppStore } from "../stores/appStore";
+﻿import { useEffect, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { useAppStore, type Baby, type VisualTheme } from "../stores/appStore";
 import { useAuth } from "../auth/AuthProvider";
+import { useHouseholdContext } from "../households/HouseholdContextProvider";
+import HouseholdContextSelector from "../households/HouseholdContextSelector";
+import type { HouseholdRole } from "../households/context";
 import NotificationSettings from "../components/NotificationSettings";
 import SleepEventNotificationSettings from "../components/SleepEventNotificationSettings";
 import SoundMonitoringSettings from "../components/SoundMonitoringSettings";
 import FamilyMessageModal from "../components/FamilyMessageModal";
 import FamilySettings from "../components/FamilySettings";
 import AddChildSettings from "../components/AddChildSettings";
-import { useTranslation } from "../i18n";
-import { isValidBirthDateInput } from "../analytics/localDate";
-import { updateBabyBirthDate } from "../services/householdService";
+import JoinHousehold from "../components/JoinHousehold";
+import { ReminderSetting } from "../components/PredictionReminderLifecycle";
 import LiveActivitySettings from "../components/LiveActivitySettings";
-import AppVersion from "../components/AppVersion";
-import SleepyPlusTestPanel from "../components/SleepyPlusTestPanel";
+import SleepyPlusSettings from "../components/SleepyPlusSettings";
+import { useTranslation, type Language, type TranslationKey } from "../i18n";
+import { isValidBirthDateInput } from "../analytics/localDate";
+import { getHouseholdMemberRoles, getMyBabies, updateBabyBirthDate } from "../services/householdService";
+import { sessionGeneration, isSessionGenerationCurrent } from "../auth/sessionLifecycle";
 import "./Settings.css";
 
-const purchaseTestPanelEnabled =
-  import.meta.env.VITE_ENABLE_PURCHASE_TEST_PANEL === 'true';
+const sections = [
+  ["family", "settings.familyTitle", "M4 11l8-7 8 7v9H4zm5 9v-5h6v5"],
+  ["notifications", "settings.tabNotifications", "M18 8a6 6 0 0 0-12 0c0 8-2 7-2 9h16c0-2-2-1-2-9m-8 12a2 2 0 0 0 4 0"],
+  ["appearance", "settings.appearanceTitle", "M20 15A8 8 0 0 1 9 4a8 8 0 1 0 11 11Z"],
+  ["plus", "settings.plusTitle", "M12 4l2.4 5.6 6.1.5-4.7 4 1.5 6-5.3-3.2L6.7 20l1.5-6-4.7-4 6.1-.5Z"],
+  ["account", "settings.accountTitle", "M8 8a4 4 0 1 1 8 0 4 4 0 0 1-8 0Zm-3 12a7 7 0 0 1 14 0"],
+  ["about", "settings.aboutTitle", "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-1v5m0-8h.01"],
+] as const;
 
-type SettingsTab = "baby" | "sleep" | "notifications" | "account";
+type Section = "family" | "notifications" | "appearance" | "plus" | "account" | "sound";
 
-export default function Settings({ initialTab = "baby" }: { initialTab?: SettingsTab }) {
+export function SettingsScreen({ title, back = "/settings", children }: { title: string; back?: string; children: ReactNode }) {
+  const { t, lang } = useTranslation();
+  return <main className="settings-page settings-detail" lang={lang === "no" ? "nb" : "en"}>
+    <header className="settings-screen-header">
+      <Link className="settings-back" to={back} aria-label={t(back === "/settings" ? "nav.settings" : "settings.tabNotifications")}>&lsaquo;</Link>
+      <h1>{title}</h1>
+    </header>
+    {children}
+  </main>;
+}
+
+export default function Settings({ section }: { section?: Section }) {
+  const { t, lang } = useTranslation();
+  if (!section) return <main className="settings-page settings-index" lang={lang === "no" ? "nb" : "en"}>
+    <h1>{t("settings.pageTitle")}</h1>
+    <ul className="settings-index-list">
+      {sections.map(([path, title, icon]) => <li key={path}>
+        <Link className="settings-index-row" to={path}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d={icon} /></svg>
+          <span>{t(title)}</span>
+          <span aria-hidden="true">&rsaquo;</span>
+        </Link>
+      </li>)}
+    </ul>
+  </main>;
+  if (section === "sound") return <SettingsScreen title={t("sound.title")} back="/settings/notifications">
+    <SoundMonitoringSettings />
+  </SettingsScreen>;
+
+  const title = sections.find(([path]) => path === section)![1];
+  const Panel = { family: FamilySection, notifications: NotificationsSection, appearance: AppearanceSection,
+    plus: SleepyPlusSettings, account: AccountSection }[section];
+  return <SettingsScreen title={t(title)}><Panel /></SettingsScreen>;
+}
+
+function FamilySection() {
   const { t } = useTranslation();
-  const { signOut, user } = useAuth();
-  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
-
-  // Still read (not shown in the UI anymore, see below) because
-  // NotificationSettings/notification_settings and push_subscriptions are
-  // still keyed by this legacy id, not the Sleepy 3.0 baby_id.
-  const currentBbyId = useAppStore(
-    (state) => state.currentBbyId,
-  );
-
-  const theme = useAppStore(
-    (state) => state.theme,
-  );
-
-  const toggleTheme = useAppStore(
-    (state) => state.toggleTheme,
-  );
-
-  const babies = useAppStore(
-    (state) => state.babies,
-  );
-
-  const currentBabyId = useAppStore(
-    (state) => state.currentBabyId,
-  );
-
-  const setCurrentBabyId = useAppStore(
-    (state) => state.setCurrentBabyId,
-  );
-
-  const language = useAppStore(
-    (state) => state.language,
-  );
-
-  const setLanguage = useAppStore(
-    (state) => state.setLanguage,
-  );
-
-  const setBabies = useAppStore(
-    (state) => state.setBabies,
-  );
-
-  const visualTheme = useAppStore(
-    (state) => state.visualTheme,
-  );
-
-  const setVisualTheme = useAppStore(
-    (state) => state.setVisualTheme,
-  );
-
-  const selectedBaby =
-    babies.find(
-      (baby) => baby.id === currentBabyId,
-    ) ?? null;
-
-  const [birthDateInput, setBirthDateInput] = useState(
-    selectedBaby?.birth_date ?? "",
-  );
-
-  const [birthDateError, setBirthDateError] = useState<string | null>(null);
-  const [birthDateMessage, setBirthDateMessage] = useState<string | null>(null);
-  const [savingBirthDate, setSavingBirthDate] = useState(false);
-
-  // Changing the selected profile must show THAT baby's own birth date, not
-  // whatever was left over in the input from the previous profile. Adjusted
-  // during render (React's recommended pattern for "reset state when a key
-  // prop changes") rather than in an effect, which would commit the stale
-  // value for one frame before resetting it.
-  const [renderedBabyId, setRenderedBabyId] = useState(currentBabyId);
-
-  if (renderedBabyId !== currentBabyId) {
-    setRenderedBabyId(currentBabyId);
-    setBirthDateInput(selectedBaby?.birth_date ?? "");
-    setBirthDateError(null);
-    setBirthDateMessage(null);
-  }
-
+  const babies = useAppStore(state => state.babies);
+  const babyId = useAppStore(state => state.currentBabyId);
+  const setBaby = useAppStore(state => state.setCurrentBabyId);
+  const household = useHouseholdContext();
+  const selected = babies.find(baby => baby.id === babyId);
+  const selectedHousehold = household.candidates.find(candidate => candidate.id === household.householdId);
   const [messageBabyId, setMessageBabyId] = useState<string | null>(null);
-  const [loggingOut, setLoggingOut] = useState(false);
-  const [logoutError, setLogoutError] = useState<string | null>(null);
-  const accountName =
-    (typeof user?.user_metadata?.full_name === "string" &&
-      user.user_metadata.full_name.trim()) ||
-    (typeof user?.user_metadata?.name === "string" &&
-      user.user_metadata.name.trim()) ||
-    user?.email ||
-    t("settings.accountUnknownUser");
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState(false);
+  const [familyRevision, setFamilyRevision] = useState(0);
 
-  async function handleLogout() {
-    setLogoutError(null);
-
+  async function refreshAfterJoin(generation: number) {
+    if (!isSessionGenerationCurrent(generation)) return;
     try {
-      setLoggingOut(true);
-      await signOut();
-    } catch (error) {
-      console.error("Settings update failed", error);
-      setLogoutError(
-        t("settings.logoutError"),
-      );
-      setLoggingOut(false);
+      const next = await getMyBabies();
+      if (!isSessionGenerationCurrent(generation)) return;
+      const state = useAppStore.getState();
+      state.setBabies(next);
+      const added = next.find(baby => !state.babies.some(previous => previous.id === baby.id));
+      const nextBaby = added ?? (!next.some(baby => baby.id === state.currentBabyId) ? next[0] : undefined);
+      if (nextBaby) state.setCurrentBabyId(nextBaby.id);
+      household.refresh();
+      setFamilyRevision(value => value + 1);
+      setJoining(false);
+    } catch {
+      if (isSessionGenerationCurrent(generation)) setJoinError(true);
     }
   }
 
-  async function handleSaveBirthDate() {
-    if (!currentBabyId) return;
+  const generation = sessionGeneration();
+  return <>
+    <HouseholdContextSelector />
+    {selectedHousehold && household.candidates.length === 1 && <p className="settings-context">{t("family.activeHousehold")}: {selectedHousehold.name}</p>}
+    <section className="settings-card">
+      <label htmlFor="settings-baby" className="setting-title">{t("settings.babyTitle")}</label>
+      {babies.length ? <select id="settings-baby" className="settings-select" value={babyId ?? ""}
+        onChange={event => setBaby(event.target.value)}>
+        {!babyId && <option value="" disabled>&mdash;</option>}
+        {babies.map(baby => <option key={baby.id} value={baby.id}>{baby.name}</option>)}
+      </select> : <p className="muted">{t("settings.noBabiesFound")}</p>}
+    </section>
+    {selected && <BirthDate key={selected.id} baby={selected} />}
+    {selectedHousehold && !household.loading && <FamilyMembers
+      key={[household.userId, selectedHousehold.id, familyRevision].join(":")} householdId={selectedHousehold.id} />}
+    <AddChildSettings />
+    <FamilySettings key={familyRevision} />
+    <div className="settings-detail-actions">
+      <button type="button" className="secondary-button" aria-expanded={joining} onClick={() => {
+        setJoinError(false);
+        setJoining(value => !value);
+      }}>{t("family.joinHeading")}</button>
+      {selected && <button type="button" className="secondary-button"
+        onClick={() => setMessageBabyId(selected.id)}>{t("familyMessage.send")}</button>}
+    </div>
+    {joining && <JoinHousehold onJoined={() => void refreshAfterJoin(generation)} />}
+    {joinError && <p role="alert">{t("errors.generic")} <button type="button" className="text-button"
+      onClick={() => void refreshAfterJoin(generation)}>{t("common.retry")}</button></p>}
+    {selected && messageBabyId === selected.id && <FamilyMessageModal babyId={selected.id} babyName={selected.name}
+      onClose={() => setMessageBabyId(null)} />}
+  </>;
+}
 
-    setBirthDateMessage(null);
+const memberRoles = [
+  ["owner", "settings.roleOwner"], ["parent", "family.roleParent"],
+  ["caregiver", "family.roleCaregiver"], ["viewer", "family.roleViewer"],
+] as const;
 
-    if (!isValidBirthDateInput(birthDateInput, Date.now())) {
-      setBirthDateError(
-        birthDateInput
-          ? t("settings.birthDateFuture")
-          : t("settings.birthDateInvalid"),
-      );
+function FamilyMembers({ householdId }: { householdId: string }) {
+  const { t } = useTranslation();
+  const [roles, setRoles] = useState<HouseholdRole[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let current = true;
+    const generation = sessionGeneration();
+    void getHouseholdMemberRoles(householdId).then(values => {
+      if (current && isSessionGenerationCurrent(generation)) setRoles(values);
+    }).catch(() => {
+      if (current && isSessionGenerationCurrent(generation)) setFailed(true);
+    });
+    return () => { current = false; };
+  }, [householdId]);
+  return <section className="settings-card settings-card--stack">
+    <h2 className="setting-title">{t("settings.membersTitle")}</h2>
+    {failed ? <p className="muted">{t("settings.membersUnavailable")}</p> : roles ? (
+      roles.length ? <dl className="settings-member-roles">
+        {memberRoles.map(([role, label]) => {
+          const count = roles.filter(value => value === role).length;
+          return count > 0 && <div key={role}><dt>{t(label)}</dt><dd>{count}</dd></div>;
+        })}
+      </dl> : <p className="muted">{t("settings.membersUnavailable")}</p>
+    ) : <p role="status">{t("common.loading")}</p>}
+  </section>;
+}
+
+function BirthDate({ baby }: { baby: Baby }) {
+  const { t } = useTranslation();
+  const [value, setValue] = useState(baby.birth_date ?? "");
+  const [error, setError] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  async function save() {
+    if (saving) return;
+    if (!isValidBirthDateInput(value, Date.now())) {
+      setError(true);
+      setMessage(t(value ? "settings.birthDateFuture" : "settings.birthDateInvalid"));
       return;
     }
-
-    const normalized = birthDateInput || null;
-
+    const generation = sessionGeneration();
+    setSaving(true);
+    setMessage(null);
+    setError(false);
     try {
-      setSavingBirthDate(true);
-      setBirthDateError(null);
-
-      await updateBabyBirthDate(currentBabyId, normalized);
-
-      setBabies(
-        babies.map((baby) =>
-          baby.id === currentBabyId
-            ? { ...baby, birth_date: normalized }
-            : baby,
-        ),
-      );
-
-      setBirthDateMessage(t("settings.birthDateSaved"));
-    } catch (error) {
-      console.error("Settings update failed", error);
-      setBirthDateError(
-        t("errors.generic"),
-      );
+      await updateBabyBirthDate(baby.id, value || null);
+      if (!isSessionGenerationCurrent(generation)) return;
+      const state = useAppStore.getState();
+      state.setBabies(state.babies.map(item => item.id === baby.id ? { ...item, birth_date: value || null } : item));
+      setMessage(t("settings.birthDateSaved"));
+    } catch {
+      setError(true);
+      setMessage(t("errors.generic"));
     } finally {
-      setSavingBirthDate(false);
+      setSaving(false);
     }
   }
+  return <section className="settings-card settings-card--stack">
+    <label className="setting-title" htmlFor="settings-birth-date">{t("settings.birthDateLabel")}</label>
+    <div className="settings-control-row">
+      <input type="date" id="settings-birth-date" className="settings-select" value={value} disabled={saving}
+        onChange={event => { setValue(event.target.value); setMessage(null); }} />
+      <button type="button" className="secondary-button" disabled={saving} onClick={() => void save()}>
+        {t(saving ? "common.saving" : "settings.birthDateSave")}
+      </button>
+    </div>
+    {message && <p className={error ? "settings-error" : "muted"} role={error ? "alert" : "status"}>{message}</p>}
+  </section>;
+}
 
-  return (
-    <main className="settings-page" lang={language === "no" ? "nb" : "en"}>
-      <header className="page-header">
-        <p className="eyebrow">{t("common.appName")}</p>
+function NotificationsSection() {
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const baby = useAppStore(state => state.babies.find(item => item.id === state.currentBabyId));
+  const legacyBabyId = useAppStore(state => state.currentBbyId);
+  return <>
+    <NotificationSettings bbyid={legacyBabyId}>
+      {user && baby && <ReminderSetting key={user.id + baby.id} user={user.id} baby={baby.id} />}
+      {baby && <SleepEventNotificationSettings key={baby.id} babyId={baby.id} babyName={baby.name} />}
+    </NotificationSettings>
+    <LiveActivitySettings />
+    <Link className="settings-index-row settings-inline-link" to="/settings/notifications/sound">
+      <span>{t("sound.title")}</span><span aria-hidden="true">&rsaquo;</span>
+    </Link>
+  </>;
+}
 
-        <h1>{t("settings.pageTitle")}</h1>
+const themes: Record<VisualTheme, TranslationKey> = {
+  default: "settings.visualThemeDefault", alive: "settings.visualThemeAlive", outrun: "settings.visualThemeOutrun",
+};
 
-        <p className="page-description">
-          {t("settings.pageDescription")}
-        </p>
-      </header>
+function AppearanceSection() {
+  const { t } = useTranslation();
+  const theme = useAppStore(state => state.theme);
+  const toggleTheme = useAppStore(state => state.toggleTheme);
+  const language = useAppStore(state => state.language);
+  const setLanguage = useAppStore(state => state.setLanguage);
+  const visualTheme = useAppStore(state => state.visualTheme);
+  const setVisualTheme = useAppStore(state => state.setVisualTheme);
+  return <div className="settings-preference-list">
+    <label className="settings-preference-row">
+      <span>{t("settings.appearanceTitle")}</span>
+      <select value={theme} onChange={event => { if (event.target.value !== theme) toggleTheme(); }}>
+        <option value="light">{t("settings.themeLight")}</option><option value="dark">{t("settings.themeDark")}</option>
+      </select>
+    </label>
+    <label className="settings-preference-row">
+      <span>{t("settings.languageTitle")}</span>
+      <select value={language} onChange={event => setLanguage(event.target.value as Language)}>
+        <option value="no" lang="nb">Norsk</option><option value="en" lang="en">English</option>
+      </select>
+    </label>
+    <label className="settings-preference-row">
+      <span>{t("settings.visualThemeTitle")}</span>
+      <select value={visualTheme} onChange={event => setVisualTheme(event.target.value as VisualTheme)}>
+        {Object.entries(themes).map(([value, key]) => <option key={value} value={value}>{t(key)}</option>)}
+      </select>
+    </label>
+  </div>;
+}
 
-      <div
-        className="settings-tab-bar"
-        role="tablist"
-        aria-label={t("settings.pageTitle")}
-      >
-        {(
-          [
-            ["baby", t("settings.tabBaby")],
-            ["sleep", t("settings.tabSleep")],
-            ["notifications", t("settings.tabNotifications")],
-            ["account", t("settings.tabAccount")],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            id={`settings-tab-${key}`}
-            aria-controls="settings-panel"
-            tabIndex={activeTab === key ? 0 : -1}
-            onKeyDown={(event) => {
-              const tabs = Array.from(event.currentTarget.parentElement!.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
-              const index = tabs.indexOf(event.currentTarget);
-              const next = event.key === "ArrowRight" ? (index + 1) % tabs.length
-                : event.key === "ArrowLeft" ? (index + tabs.length - 1) % tabs.length
-                : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : -1;
-              if (next >= 0) { event.preventDefault(); tabs[next].focus(); tabs[next].click(); }
-            }}
-            role="tab"
-            aria-selected={activeTab === key}
-            className={activeTab === key ? "settings-tab active" : "settings-tab"}
-            onClick={() => setActiveTab(key)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <div id="settings-panel" className="settings-tab-content" role="tabpanel" aria-labelledby={`settings-tab-${activeTab}`} tabIndex={0}>
-      {activeTab === "baby" && <>
-      <h2 className="settings-section-title">{t("settings.tabBaby")}</h2>
-      <section className="settings-card">
-        <div className="setting-copy">
-          <p className="setting-title">
-            {t("settings.babyTitle")}
-          </p>
-
-          <p className="muted">
-            {t("settings.babyProfileNote")}
-          </p>
-        </div>
-
-        {babies.length > 0 ? (
-          <select
-            className="settings-select"
-            aria-label={t("settings.babyTitle")}
-            value={currentBabyId ?? ""}
-            onChange={(event) =>
-              setCurrentBabyId(
-                event.target.value,
-              )
-            }
-          >
-            {babies.map((baby) => (
-              <option
-                key={baby.id}
-                value={baby.id}
-              >
-                {baby.name}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <p className="muted">
-            {t("settings.noBabiesFound")}
-          </p>
-        )}
-      </section>
-
-      {currentBabyId && (
-        <section className="settings-card settings-card--stack">
-          <div className="setting-copy">
-            <p className="setting-title">
-              {t("settings.birthDateLabel")}
-            </p>
-
-          </div>
-
-          <div className="settings-control-row">
-            <label className="birth-date-field">
-              <input
-                type="date"
-                className="settings-select"
-                aria-label={t("settings.birthDateLabel")}
-                value={birthDateInput}
-                max={new Date().toISOString().slice(0, 10)}
-                onChange={(event) => {
-                  setBirthDateInput(event.target.value);
-                  setBirthDateError(null);
-                  setBirthDateMessage(null);
-                }}
-              />
-            </label>
-
-          <button
-            className="secondary-button"
-            disabled={savingBirthDate}
-            onClick={handleSaveBirthDate}
-          >
-            {savingBirthDate ? t("common.saving") : t("settings.birthDateSave")}
-          </button>
-          </div>
-
-          {birthDateError && (
-            <p className="settings-error" role="alert">{birthDateError}</p>
-          )}
-          {birthDateMessage && (
-            <p className="muted" role="status">{birthDateMessage}</p>
-          )}
-        </section>
-      )}
-
-      <AddChildSettings />
-
-      <FamilySettings />
-      {selectedBaby && <section className="settings-card">
-        <button type="button" className="secondary-button" onClick={() => setMessageBabyId(selectedBaby.id)}>
-          {t("familyMessage.send")}
-        </button>
-      </section>}
-      {selectedBaby && messageBabyId === selectedBaby.id && <FamilyMessageModal
-        babyId={selectedBaby.id} babyName={selectedBaby.name} onClose={() => setMessageBabyId(null)} />}
-      </>}
-
-      {activeTab === "sleep" && <>
-        <h2 className="settings-section-title">{t("settings.sleepTracking")}</h2>
-        <LiveActivitySettings />
-        <SoundMonitoringSettings />
-      </>}
-
-      {activeTab === "notifications" && <>
-      <NotificationSettings
-        bbyid={currentBbyId}
-      >
-
-      {user && currentBabyId && <ReminderSetting key={user.id+currentBabyId} user={user.id} baby={currentBabyId} />}
-      {currentBabyId && selectedBaby && (
-        <SleepEventNotificationSettings
-          key={currentBabyId}
-          babyId={currentBabyId}
-          babyName={selectedBaby.name}
-        />
-      )}
-      </NotificationSettings>
-
-      </>}
-
-      {activeTab === "account" && <>
-      <section className="settings-card account-card">
-        <div className="account-identity" aria-hidden="true">
-          {accountName.slice(0, 1).toLocaleUpperCase()}
-        </div>
-
-        <div className="setting-copy">
-          <p className="setting-title">
-            {t("settings.accountTitle")}
-          </p>
-
-          <p className="account-name">{accountName}</p>
-
-          {user?.email && user.email !== accountName && (
-            <p className="muted account-email">{user.email}</p>
-          )}
-
-          {logoutError && (
-            <p className="settings-error" role="alert">{logoutError}</p>
-          )}
-        </div>
-
-      </section>
-      {purchaseTestPanelEnabled && <SleepyPlusTestPanel />}
-      <section className="settings-card appearance-card">
-        <div className="appearance-row">
-          <div className="setting-copy">
-            <p className="setting-title">
-              {t("settings.appearanceTitle")}
-            </p>
-
-            <p className="muted">
-              {t("settings.currentTheme", {
-                theme: theme === "dark" ? t("settings.themeDark") : t("settings.themeLight"),
-              })}
-            </p>
-          </div>
-
-          <button
-            className="secondary-button"
-            onClick={toggleTheme}
-          >
-            {theme === "dark"
-              ? t("settings.useLightMode")
-              : t("settings.useDarkMode")}
-          </button>
-        </div>
-
-        <div className="appearance-row">
-          <div className="setting-copy">
-            <p className="setting-title">
-              {t("settings.visualThemeTitle")}
-            </p>
-
-            <p className="muted">
-              {t("settings.visualThemeNote")}
-            </p>
-          </div>
-
-          <div className="side-buttons">
-            <button
-              type="button"
-              className={
-                visualTheme === "default"
-                  ? "side-button active"
-                  : "side-button"
-              }
-              onClick={() => setVisualTheme("default")}
-            >
-              {t("settings.visualThemeDefault")}
-            </button>
-
-            <button
-              type="button"
-              className={
-                visualTheme === "alive"
-                  ? "side-button active"
-                  : "side-button"
-              }
-              onClick={() => setVisualTheme("alive")}
-            >
-              {t("settings.visualThemeAlive")}
-            </button>
-
-            <button
-              type="button"
-              className={
-                visualTheme === "outrun"
-                  ? "side-button active"
-                  : "side-button"
-              }
-              onClick={() => setVisualTheme("outrun")}
-            >
-              {t("settings.visualThemeOutrun")}
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section className="settings-card">
-        <div className="setting-copy">
-          <p className="setting-title">
-            {t("settings.languageTitle")}
-          </p>
-
-          <p className="muted">
-            {t("settings.languageNote")}
-          </p>
-        </div>
-
-        <div className="side-buttons">
-          <button
-            type="button"
-            className={
-              language === "no"
-                ? "side-button active"
-                : "side-button"
-            }
-            onClick={() => setLanguage("no")}
-          >
-            Norsk
-          </button>
-
-          <button
-            type="button"
-            className={
-              language === "en"
-                ? "side-button active"
-                : "side-button"
-            }
-            onClick={() => setLanguage("en")}
-          >
-            English
-          </button>
-        </div>
-      </section>
-      <AppVersion />
-      <section className="settings-card settings-card--stack">
-        <button
-          type="button"
-          className="secondary-button"
-          disabled={loggingOut}
-          onClick={handleLogout}
-        >
-          {loggingOut ? t("settings.loggingOut") : t("settings.logoutButton")}
-        </button>
-      </section>
-      </>}
-      </div>
-    </main>
-  );
+function AccountSection() {
+  const { t } = useTranslation();
+  const { signOut, user } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const name = [user?.user_metadata?.full_name, user?.user_metadata?.name]
+    .find(value => typeof value === "string" && value.trim());
+  async function logout() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    setFailed(false);
+    try { await signOut(); }
+    catch { setFailed(true); setLoggingOut(false); }
+  }
+  return <>
+    <div className="settings-account">
+      <strong>{name || user?.email || t("settings.accountUnknownUser")}</strong>
+      {name && user?.email && name !== user.email && <p className="muted">{user.email}</p>}
+    </div>
+    <button type="button" className="secondary-button" disabled={loggingOut} onClick={() => void logout()}>
+      {t(loggingOut ? "settings.loggingOut" : "settings.logoutButton")}
+    </button>
+    {failed && <p role="alert">{t("settings.logoutError")}</p>}
+  </>;
 }

@@ -7,72 +7,64 @@ const read = file => fs.readFileSync(file, 'utf8');
 const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
 
-function renderSettings(flag, tab = 'account') {
+function load(file, globals = {}, imports = {}) {
   const exports = {};
-  let panelMounts = 0;
-  const state = { babies: [], currentBabyId: null, language: 'en', theme: 'light', visualTheme: 'default' };
-  const source = read('src/pages/Settings.tsx').replace(/import\.meta\.env/g, '__env');
-  const code = ts.transpileModule(source, { compilerOptions: {
+  const source = read(file).replace(/import\.meta\.env/g, '__env');
+  vm.runInNewContext(ts.transpileModule(source, { compilerOptions: {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX,
-  } }).outputText;
-  vm.runInNewContext(code, { exports, __env: { VITE_ENABLE_PURCHASE_TEST_PANEL: flag }, require(name) {
-    if (name === 'react') return { useState: initial => [initial === 'baby' ? tab : initial, () => {}] };
-    if (name === 'react/jsx-runtime') return require(name);
-    if (name === '../stores/appStore') return { useAppStore: select => select(state) };
-    if (name === '../auth/AuthProvider') return { useAuth: () => ({ user: { email: 'family@example.com' }, signOut() {} }) };
-    if (name === '../i18n') return { useTranslation: () => ({ t: key => key }) };
-    if (name === '../components/SleepyPlusTestPanel') return { __esModule: true, default: () => {
-      panelMounts++;
-      return React.createElement('section', { className: 'plus-test-panel' }, 'purchase-test-surface');
-    } };
-    if (name.startsWith('../components/')) return { __esModule: true, default: () => React.createElement('div', null, name) };
-    if (name === '../analytics/localDate' || name === '../services/householdService' || name.endsWith('.css')) return {};
-    throw Error(`Unexpected Settings dependency: ${name}`);
-  } });
-  return { html: renderToStaticMarkup(React.createElement(exports.default)), panelMounts };
-}
-
-for (const flag of [undefined, 'false', 'true', 'TRUE', '1', true, ' true ']) {
-  test(`Account purchase test panel requires exactly string true: ${String(flag)} (${typeof flag})`, () => {
-    const { html, panelMounts } = renderSettings(flag);
-    assert.equal(panelMounts, flag === 'true' ? 1 : 0);
-    assert.equal(html.includes('purchase-test-surface'), flag === 'true');
-    for (const control of ['family@example.com', 'settings.appearanceTitle', 'settings.visualThemeTitle',
-      'settings.languageTitle', 'settings.logoutButton', '../components/AppVersion']) assert.ok(html.includes(control), control);
-    assert.equal((html.match(/role="tab"/g) ?? []).length, 4);
+  } }).outputText, {
+    exports, __env: {}, URL, ...globals,
+    require(name) {
+      if (name in imports) return imports[name];
+      if (name === 'react' || name === 'react/jsx-runtime') return require(name);
+      if (name.endsWith('.css')) return {};
+      return { __esModule: true, default: () => React.createElement('div', null, name) };
+    },
   });
-}
-
-test('purchase panel stays in Account and normal Settings tabs remain available', () => {
-  for (const [tab, control] of [['baby', 'AddChildSettings'], ['sleep', 'SoundMonitoringSettings'], ['notifications', 'NotificationSettings']]) {
-    const { html, panelMounts } = renderSettings('true', tab);
-    assert.equal(panelMounts, 0);
-    assert.ok(html.includes(`../components/${control}`));
-  }
-});
-
-function load(file, globals = {}) {
-  const exports = {};
-  vm.runInNewContext(ts.transpileModule(read(file), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText,
-    { exports, ...globals });
   return exports;
 }
 
-test('Settings defines exactly four localized top-level tabs with baby/family, sound and account controls reachable', () => {
-  const source = read('src/pages/Settings.tsx');
-  const tabs = [...source.matchAll(/\["(\w+)", t\("settings\.(tab\w+)"\)\]/g)];
-  assert.deepEqual(tabs.map(match => match[1]), ['baby', 'sleep', 'notifications', 'account']);
-  for (const [lang, expected] of [['en', ['Baby', 'Sleep', 'Notifications', 'Account']], ['no', ['Baby', 'Søvn', 'Varsler', 'Konto']]]) {
-    const strings = load(`src/i18n/${lang}.ts`).default;
-    assert.deepEqual(tabs.map(match => strings.settings[match[2]]), expected);
-    assert.doesNotMatch(JSON.stringify(strings.settings), /2\.2\.0|migration|migrering/);
+const translate = { useTranslation: () => ({ lang:'en', t:key=>key }) };
+const link = { Link: ({ to, children, ...props }) => React.createElement('a', { href: to, ...props }, children) };
+
+test('Settings index has exactly six destinations and no inline controls or diagnostics', () => {
+  const Settings = load('src/pages/Settings.tsx', {}, { '../i18n':translate, 'react-router-dom':link }).default;
+  const html = renderToStaticMarkup(React.createElement(Settings));
+  assert.deepEqual([...html.matchAll(/href="([^"]+)"/g)].map(match=>match[1]),
+    ['family','notifications','appearance','plus','account','about']);
+  assert.doesNotMatch(html, /RevenueCat|sandbox|Analysis|input|select|plus-test-panel|role="tab"/i);
+});
+
+test('about shows the version and only configured HTTPS destinations', () => {
+  const mocks = {
+    '../i18n': translate,
+    './Settings': { SettingsScreen: ({ children }) => React.createElement('main', null, children) },
+  };
+  const render = env => renderToStaticMarkup(React.createElement(load('src/pages/About.tsx', {__env:env}, mocks).default));
+  assert.match(render({}), /AppVersion/);
+  assert.doesNotMatch(render({}), /href=|Analysis/);
+  const html = render({ VITE_SLEEPY_PRIVACY_URL:'https://example.test/privacy', VITE_SLEEPY_TERMS_URL:'javascript:alert(1)',
+    VITE_SLEEPY_SUPPORT_URL:'http://example.test/insecure' });
+  assert.match(html, /href="https:\/\/example.test\/privacy"/);
+  assert.doesNotMatch(html, /alert\(1\)|insecure|settings.terms|settings.support/);
+});
+
+test('production entitlement status and internal tools are separate', () => {
+  for (const flag of [undefined,'true','TRUE','1',true]) {
+    for (const [verificationState,isPlus,key] of [['verified',false,'plusFree'],['verified',true,'plusActive'],['unknown',false,'plusUnknown']]) {
+      const mocks = {
+        '../i18n':translate, 'react-router-dom':link, '../auth/AuthProvider':{useAuth:()=>({user:null,loading:false})},
+        '../households/HouseholdContextProvider':{useHouseholdContext:()=>({})},
+        '../entitlements/EntitlementProvider':{useEntitlements:()=>({verificationState,isPlus})},
+        '../services/revenueCatService':{revenueCatAvailable:()=>true},
+      };
+      const Plus = load('src/components/SleepyPlusSettings.tsx', {__env:{VITE_ENABLE_PURCHASE_TEST_PANEL:flag}}, mocks).default;
+      const html = renderToStaticMarkup(React.createElement(Plus));
+      assert.ok(html.includes('settings.' + key));
+      assert.equal(html.includes('settings.internalPurchases'),flag === 'true');
+      assert.doesNotMatch(html,/RevenueCat|sandbox|evidence|plus-test-panel/);
+    }
   }
-  const baby = source.slice(source.indexOf('{activeTab === "baby"'), source.indexOf('{activeTab === "sleep"'));
-  assert.match(baby, /<AddChildSettings/); assert.match(baby, /<FamilySettings/); assert.match(baby, /handleSaveBirthDate/);
-  const sleep = source.slice(source.indexOf('{activeTab === "sleep"'), source.indexOf('{activeTab === "notifications"'));
-  assert.match(sleep, /<LiveActivitySettings/); assert.match(sleep, /<SoundMonitoringSettings/);
-  const account = source.slice(source.indexOf('{activeTab === "account"'));
-  for (const control of ['toggleTheme', 'setVisualTheme', 'setLanguage', 'AppVersion', 'handleLogout']) assert.ok(account.includes(control));
 });
 
 test('production Settings has no test-notification action and backend error details cannot reach its error labels', () => {
@@ -116,4 +108,26 @@ test('version comes from native bundle or web package, without another version c
   assert.doesNotMatch(source, /2\.2\.0/);
   const swift = read('ios/App/App/SleepLiveActivity.swift');
   assert.match(swift, /CFBundleShortVersionString/); assert.match(swift, /CFBundleVersion/);
+});
+
+test('family member roster reads only roles in the supplied household under caller RLS', async () => {
+  const calls = [];
+  let denied = false;
+  const { getHouseholdMemberRoles } = load('src/services/householdService.ts', {}, {
+    '../lib/supabase': { supabase: { from(table) {
+      calls.push(table);
+      return { select(fields) {
+        calls.push(fields);
+        return { async eq(column, value) {
+          calls.push([column, value]);
+          return denied ? { error: new Error('forbidden') }
+            : { data: [{ role: 'owner' }, { role: 'viewer' }, { role: 'unexpected' }] };
+        } };
+      } };
+    } } },
+  });
+  assert.deepEqual(Array.from(await getHouseholdMemberRoles('family')), ['owner', 'viewer']);
+  assert.deepEqual(calls, ['household_members', 'role', ['household_id', 'family']]);
+  denied = true;
+  await assert.rejects(getHouseholdMemberRoles('inaccessible'), /forbidden/);
 });

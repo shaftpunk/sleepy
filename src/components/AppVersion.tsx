@@ -14,7 +14,7 @@ export default function AppVersion() {
     return () => { active = false; };
   }, []);
   return <section className="settings-card settings-card--stack settings-about">
-    <h2 className="setting-title">{t("settings.aboutTitle")}</h2>
+    <h2 className="setting-title">{t("settings.versionTitle")}</h2>
     {liveActivitiesSupported() ? native && <p className="muted">
       Sleepy {native.version}{native.build && <> · {t("settings.appBuild", { build: native.build })}</>}
     </p> : <p className="muted">{t("settings.webVersion", { version: packageInfo.version })}</p>}
