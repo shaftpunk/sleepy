@@ -125,7 +125,7 @@ async function main() {
     // started after local midnight: on the real clock the quality assertion
     // failed between 00:00 and ~01:03 Oslo. A fixed midday start (time still
     // flows, so hold gestures behave normally) makes every run deterministic.
-    if(process.argv.includes('--home-only')||process.argv.includes('--home-refinement'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
+    if(process.argv.includes('--home-only')||process.argv.includes('--home-refinement')||process.argv.includes('--minimal-home'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
     if(process.argv.includes('--today-summary'))await page.clock.setFixedTime(new Date('2026-11-21T12:00:00Z'));
     if(process.argv.includes('--last-slept-only'))await page.clock.setFixedTime(new Date('2026-11-16T11:08:00Z'));
     const errors = [], failures = [], screens = [];
@@ -766,6 +766,24 @@ async function main() {
         await page.locator('.sleep-action').waitFor();
         await page.waitForFunction(() => !document.querySelector('.sleep-action').disabled);
         const home = page.locator('.home-minimal');
+        async function checkOrb(sleeping) {
+          if (skin !== 'default') return;
+          const fox = home.locator('.home-current-animal');
+          assert.equal(await fox.count(), 1);
+          assert.match(await fox.getAttribute('src'), sleeping ? /sleeping-fox/ : /awake-fox/);
+          const stop = home.locator('.home-orb-ring stop').first();
+          assert.equal(await stop.evaluate(el => getComputedStyle(el).animationDuration), sleeping ? '7.5s' : '5s');
+          await page.emulateMedia({ reducedMotion: 'reduce' });
+          assert.equal(await stop.evaluate(el => getComputedStyle(el).animationName), 'none');
+          assert.equal(await home.locator('.home-orb-ring stop').count(), 3);
+          await page.emulateMedia({ reducedMotion: 'no-preference' });
+          const duration = home.locator(sleeping ? '.home-current-value' : '.home-awake-duration');
+          const before = await duration.textContent();
+          await page.clock.fastForward(60000);
+          assert.notEqual(await duration.textContent(), before);
+          if (sleeping) assert.equal(await home.locator('.home-current h2').innerText(), lang === 'en' ? 'Sleeping for' : 'Sover i');
+        }
+        await checkOrb(false);
         assert.equal(await home.locator('.home-recent-row').count(), 3);
         assert.equal(await home.locator('.sleep-wave, .home-today, .family-message-card').count(), 0);
         assert.deepEqual(await home.locator('.home-quick-actions :is(.secondary-button,.sleep-action)').allTextContents(),
@@ -780,8 +798,10 @@ async function main() {
         }
         await home.locator('.sleep-action').click();
         await home.locator('.home-started').waitFor();
+        await checkOrb(true);
         await home.locator('.sleep-action').click();
         await home.locator('.home-started').waitFor({ state: 'hidden' });
+        await checkOrb(false);
         assert.deepEqual(await page.evaluate(() => window.__sleepActions), [
           { kind: 'start', minutes: 0 }, { kind: 'stop', minutes: 0 },
         ]);
@@ -819,6 +839,7 @@ async function main() {
         await page.waitForFunction(() => !document.querySelector('.sleep-action').disabled);
         assert.equal(await home.locator('button.home-recent-row').count(), 0);
         assert.equal(await home.locator('.home-current-value').count(), 0);
+        assert.equal(await home.locator('.home-awake-duration').count(), 0);
         await check('minimal-home');
         await visit('/settings/notifications/sound', 'active&sound=listening');
         await page.locator('.sound-settings .home-sound-controls > summary').click();

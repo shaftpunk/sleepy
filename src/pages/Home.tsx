@@ -6,6 +6,7 @@ import { getRecentDiaperChanges, type DiaperChange } from "../services/diaperSer
 import { subscribeToSleepChanges } from "../services/sleepRealtime";
 import { subscribeToFeedChanges } from "../services/feedRealtime";
 import SleepyIcon from "../components/SleepyIcon";
+import awakeFox from "../assets/awake-fox.png";
 import sleepingFox from "../assets/sleeping-fox.png";
 import FeedModal from "../components/FeedModal";
 import SleepModal from "../components/SleepModal";
@@ -208,15 +209,19 @@ function HomeActivity() {
   return <>
     <section className="home-current" aria-labelledby="home-current-title">
       {isDefault && <>
-        <svg className="home-orb-ring" aria-hidden="true" viewBox="0 0 200 200">
+        <svg className="home-orb-ring" data-sleeping={Boolean(activeSleep)} aria-hidden="true" viewBox="0 0 200 200">
           <defs><linearGradient id="orb-light" x2="1" y2="1" gradientUnits="objectBoundingBox">
-            <stop stopColor="var(--ring-start)" /><stop offset=".55" stopColor="var(--ring-middle)" /><stop offset="1" stopColor="var(--ring-end)" stopOpacity=".12" />
+            <stop stopColor="var(--orb-lavender)" /><stop offset=".55" stopColor="var(--orb-pink)" /><stop offset="1" stopColor="var(--orb-edge)" stopOpacity=".45" />
           </linearGradient></defs>
           <path d="M 28 163 A 96 96 0 1 1 172 163" fill="none" stroke="url(#orb-light)" strokeWidth="4" strokeLinecap="round" />
         </svg>
-        <img className="home-current-animal" src={sleepingFox} alt="" draggable={false} />
+        <img className="home-current-animal" src={activeSleep ? sleepingFox : awakeFox} alt="" draggable={false} />
       </>}
-      <h2 id="home-current-title">{t(activeSleep ? "common.sleeping" : "home.nextSleepTitle")}</h2>
+      {isDefault && !loading && !activeSleep && completedSleepEnd && <>
+        <span className="home-awake-label">{t("home.awakeFor")}</span>
+        <strong className="home-awake-duration">{formatHomeDuration(Math.floor(Math.max(0, now - Date.parse(completedSleepEnd)) / 60000), lang)}</strong>
+      </>}
+      <h2 id="home-current-title">{t(activeSleep ? (isDefault ? "home.sleepingFor" : "common.sleeping") : "home.nextSleepTitle")}</h2>
       {loading ? <p>{t("common.loading")}</p> : activeSleep ? <>
         <p className="home-current-value">{formatHomeDuration(Math.floor(Math.max(0, now - Date.parse(activeSleep.starttime)) / 60000), lang)}</p>
         <button type="button" className="home-started" onClick={() => setEditingSleep(activeSleep)}>
