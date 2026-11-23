@@ -157,6 +157,11 @@ const en = {
   },
 
   sleepInsights: {
+    rhythm: "Sleep rhythm",
+    rhythmDescription: "Blocks show recorded sleep. Blank spaces may be unlogged.",
+    rhythmSummary: "Recorded sleep",
+    rhythmMore: "Show 7 more days",
+    rhythmNow: "Now",
     title: "Sleep insights",
     last7: "Last 7 days",
     last30: "Last 30 days",

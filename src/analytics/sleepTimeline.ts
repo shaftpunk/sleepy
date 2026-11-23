@@ -1,5 +1,6 @@
 import { calculateSleepProbability } from "./sleepProbability";
 import { dayKeyOf, minutesSinceLocalMidnight, minutesToClockLabel, startOfLocalDay } from "./time";
+import { clockMinute, minuteBefore, offsetTransitions } from "./time";
 import type { ActiveSleep, SleepSession } from "./types";
 
 export const SLEEP_TIMELINE_STEP_MINUTES = 15;
@@ -31,30 +32,6 @@ export function timelinePositionToTime(clientX: number, left: number, width: num
   return minutesToClockLabel(Math.min(1440 - SLEEP_TIMELINE_STEP_MINUTES, minute));
 }
 
-// Locate actual UTC-offset boundaries inside a local day. Splitting there avoids
-// drawing a spring-forward gap as sleep or giving a fall-back segment negative
-// width on a fixed 00–24 local-clock axis. Calendar midnights bound every row.
-function offsetTransitions(start: number, end: number): number[] {
-  const transitions: number[] = [];
-  let cursor = start;
-  while (cursor < end - 1) {
-    const next = Math.min(end - 1, cursor + 30 * 60000);
-    if (new Date(cursor).getTimezoneOffset() !== new Date(next).getTimezoneOffset()) {
-      let low = cursor, high = next;
-      const offset = new Date(cursor).getTimezoneOffset();
-      while (high - low > 1) {
-        const middle = Math.floor((low + high) / 2);
-        if (new Date(middle).getTimezoneOffset() === offset) low = middle;
-        else high = middle;
-      }
-      transitions.push(high);
-    }
-    cursor = next;
-  }
-  return transitions;
-}
-const clockMinute = (instant: number) => minutesSinceLocalMidnight(instant) + new Date(instant).getMilliseconds() / 60000;
-const minuteBefore = (instant: number) => Math.round((clockMinute(instant - 1) + 1 / 60000) * 1000000) / 1000000;
 export function buildSleepTimelineRows(sessions: SleepSession[], now: number): SleepTimelineRow[] {
   if (!Number.isFinite(now)) return [];
   const today = startOfLocalDay(now);

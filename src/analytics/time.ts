@@ -46,13 +46,20 @@ export function lastNLocalDayKeys(now: number, n: number): string[] {
 }
 
 export type DayMinutesFragment = { dayKey: string; minutes: number };
+type LocalDayFragment = { dayKey: string; startMs: number; endMs: number; midnightEndMs: number };
 
 // Splits a session's duration across every local calendar day it spans, so a
 // session starting at 22:00 and ending at 06:00 the next day contributes ~2h
 // to the start day and ~6h to the following day, instead of crediting the
 // whole duration to whichever day it started on.
 export function splitMinutesByLocalDay(startMs: number, endMs: number): DayMinutesFragment[] {
-  const fragments: DayMinutesFragment[] = [];
+  return splitIntervalByLocalDay(startMs, endMs).map(fragment => ({
+    dayKey: fragment.dayKey, minutes: (fragment.endMs - fragment.startMs) / 60000,
+  }));
+}
+
+export function splitIntervalByLocalDay(startMs: number, endMs: number): LocalDayFragment[] {
+  const fragments: LocalDayFragment[] = [];
   let cursor = startMs;
 
   while (cursor < endMs) {
@@ -69,7 +76,7 @@ export function splitMinutesByLocalDay(startMs: number, endMs: number): DayMinut
 
     fragments.push({
       dayKey: dayKeyOf(cursor),
-      minutes: (chunkEnd - cursor) / 60000,
+      startMs: cursor, endMs: chunkEnd, midnightEndMs: nextMidnight,
     });
 
     cursor = chunkEnd;
@@ -122,3 +129,28 @@ export function average(numbers: number[]): number {
   if (numbers.length === 0) return NaN;
   return numbers.reduce((a, b) => a + b, 0) / numbers.length;
 }
+
+// Locate actual UTC-offset boundaries inside a local day. Splitting there avoids
+// drawing a spring-forward gap as sleep or giving a fall-back segment negative
+// width on a fixed 00–24 local-clock axis. Calendar midnights bound every row.
+export function offsetTransitions(start: number, end: number): number[] {
+  const transitions: number[] = [];
+  let cursor = start;
+  while (cursor < end - 1) {
+    const next = Math.min(end - 1, cursor + 30 * 60000);
+    if (new Date(cursor).getTimezoneOffset() !== new Date(next).getTimezoneOffset()) {
+      let low = cursor, high = next;
+      const offset = new Date(cursor).getTimezoneOffset();
+      while (high - low > 1) {
+        const middle = Math.floor((low + high) / 2);
+        if (new Date(middle).getTimezoneOffset() === offset) low = middle;
+        else high = middle;
+      }
+      transitions.push(high);
+    }
+    cursor = next;
+  }
+  return transitions;
+}
+export const clockMinute = (instant: number) => minutesSinceLocalMidnight(instant) + new Date(instant).getMilliseconds() / 60000;
+export const minuteBefore = (instant: number) => Math.round((clockMinute(instant - 1) + 1 / 60000) * 1000000) / 1000000;

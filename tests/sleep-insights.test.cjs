@@ -12,8 +12,10 @@ function load(name, imports = {}) {
   return exports;
 }
 
+const time = load('time');
+const rhythm = load('sleepRhythm', { './time': time });
 const { buildSleepInsights, sleepInsightsWindow } = load('sleepInsights', {
-  './time': load('time'),
+  './time': time, './sleepRhythm': rhythm,
   './normalize': load('normalize'),
 });
 const row = (id, start, end, baby = 'baby') => ({
@@ -73,4 +75,56 @@ test('15 Monday-based weeks share one scale and retain seven slots, including ga
   assert.equal(weeks.at(-1)[0].minutes, 420);
   assert.equal(scaleMinutes, 420);
   assert.equal(sleepInsightsWindow(now).startMs, Date.parse('2026-08-17T00:00:00+02:00'));
+});
+
+test('rhythm splits overnight blocks at local midnight, clips active sleep and preserves empty days', () => {
+  const now = Date.parse('2026-11-25T15:45:00+01:00');
+  const { rhythm: days } = buildSleepInsights([
+    row('night', '2026-11-24T23:15:00+01:00', '2026-11-25T02:30:00+01:00'),
+    row('nap', '2026-11-25T15:00:00+01:00', null),
+    row('other', '2026-11-22T11:00:00+01:00', '2026-11-22T12:00:00+01:00', 'other'),
+  ], 'baby', now);
+  const pieces = block => JSON.parse(JSON.stringify(block.pieces));
+  assert.equal(days.length, 7);
+  assert.equal(days[0].dayKey, '2026-11-25');
+  assert.deepEqual(pieces(days[0].blocks[0]), [{ startMinute: 0, endMinute: 150 }]);
+  assert.deepEqual(pieces(days[1].blocks[0]), [{ startMinute: 1395, endMinute: 1440 }]);
+  const active = days[0].blocks[1];
+  assert.equal(active.endMs, now);
+  assert.equal(active.active, true);
+  assert.deepEqual(pieces(active), [{ startMinute: 900, endMinute: 945 }]);
+  assert.equal(days[3].blocks.length, 0);
+  assert.equal(rhythm.visibleRhythmDays(days, 14).length, 7);
+});
+
+test('rhythm uses the 24-hour local clock through both DST transitions', () => {
+  for (const [key, startHour, endHour, expected, duration] of [
+    ['2026-03-29', '01:30', '04:30', [[90,120],[180,270]], 120],
+    ['2026-10-25', '01:30', '04:30', [[90,180],[120,270]], 240],
+  ]) {
+    const now = Date.parse(key + 'T12:00:00');
+    const { rhythm: days } = buildSleepInsights([
+      row('dst', key + 'T' + startHour + ':00', key + 'T' + endHour + ':00'),
+    ], 'baby', now);
+    const block = days[0].blocks[0];
+    assert.deepEqual(Array.from(block.pieces, piece => [piece.startMinute, piece.endMinute]), expected);
+    assert.equal((block.endMs - block.startMs) / 60000, duration);
+  }
+});
+
+test('expansion keeps earlier rows, stops at oldest evidence and caps at 105 rolling days', () => {
+  const now = Date.parse('2026-11-25T12:00:00+01:00');
+  const old = row('old', '2026-11-04T12:00:00+01:00', '2026-11-04T13:00:00+01:00');
+  const { rhythm: days } = buildSleepInsights([old], 'baby', now);
+  const shown = count => rhythm.visibleRhythmDays(days, count);
+  assert.deepEqual([7, 14, 21, 28].map(count => shown(count).length), [7, 14, 21, 22]);
+  assert.deepEqual(shown(7), shown(21).slice(0, 7));
+  assert.equal(shown(35).at(-1).dayKey, '2026-11-04');
+  const first = new Date(rhythm.sleepRhythmStart(now));
+  assert.equal(first.getHours(), 0);
+  const readEdge = row('edge', first.toISOString(), new Date(first.getTime() + 3600000).toISOString());
+  const capped = buildSleepInsights([readEdge, row('too-old', '2026-08-01T12:00:00+02:00', '2026-08-01T13:00:00+02:00')], 'baby', now).rhythm;
+  assert.equal(capped.length, 105);
+  assert.equal(rhythm.visibleRhythmDays(capped, 112).length, 105);
+  assert.equal(capped.at(-1).blocks[0].id, 'edge');
 });

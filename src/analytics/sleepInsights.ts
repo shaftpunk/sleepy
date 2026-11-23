@@ -1,3 +1,4 @@
+import { buildSleepRhythm } from "./sleepRhythm";
 import { normalizeSleepRows } from "./normalize";
 import { dayKeyOf, lastNLocalDayKeys, splitMinutesByLocalDay, startOfLocalDay } from "./time";
 import type { RawSleepRow } from "./types";
@@ -57,5 +58,6 @@ export function buildSleepInsights(rows: InsightSleepRow[], babyId: string, now:
     last30: historical.slice(-30).map(day),
     weeks,
     scaleMinutes,
+    rhythm: buildSleepRhythm(sessions, active, now),
   };
 }

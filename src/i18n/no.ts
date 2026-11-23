@@ -156,6 +156,11 @@ const no = {
   },
 
   sleepInsights: {
+    rhythm: "Søvnrytme",
+    rhythmDescription: "Blokkene viser registrert søvn. Tomrom kan mangle registreringer.",
+    rhythmSummary: "Registrert søvn",
+    rhythmMore: "Vis 7 dager til",
+    rhythmNow: "Nå",
     title: "Søvninnsikt",
     last7: "Siste 7 dager",
     last30: "Siste 30 dager",

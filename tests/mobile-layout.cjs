@@ -86,7 +86,7 @@ function mock(url) {
     if(p.has('home-fixture')&&!p.has('empty')){sleeps.splice(0,sleeps.length,...Array.from({length:24},(_,i)=>({...sleeps[0],id:'history-'+i,baby_id:'baby',starttime:iso(now-(63+i*120)*60000),endtime:iso(now-(18+i*120)*60000),durationminutes:45,sleep_type:'sleep',rate:'4.8',deleted_at:null})));}
     if(p.has('last-slept-fixture')&&sleeps[0])Object.assign(sleeps[0],{starttime:iso(now-223*60000),endtime:iso(now-151*60000),durationminutes:72});
     export const getActiveSleep=async()=>window.__homeActive!==undefined?window.__homeActive:p.has('active')?{...sleeps[0],id:'active',baby_id:'baby',sleep_type:'sleep',starttime:p.has('wave-fixture')||p.has('home-fixture')||p.has('last-slept-fixture')?iso(now-42*60000):sleeps[0].starttime,endtime:null}:null,
-    getLastCompletedSleep=async()=>window.__homeLast||(p.has('hold-room')?{...sleeps[0],endtime:iso(now-2*3600000)}:sleeps[0])||null,getRecentSleeps=async()=>sleeps.slice(0,8),getAllSleeps=async()=>sleeps,getSleepsFromDate=async()=>sleeps,getSleepsOverlappingPeriod=async(id,from,to)=>p.has("log-fixture")?[...sleeps,{...sleeps[0],id:"overnight",starttime:"2026-11-20T22:40:00.000Z",endtime:"2026-11-21T00:20:00.000Z",durationminutes:100},{...sleeps[0],id:"active",starttime:window.__logActiveStart??"2026-11-21T17:00:00.000Z",endtime:null}].filter(row=>row.baby_id===id&&row.starttime<to&&(!row.endtime||row.endtime>from)):window.__waveRows??sleeps;
+    getLastCompletedSleep=async()=>window.__homeLast||(p.has('hold-room')?{...sleeps[0],endtime:iso(now-2*3600000)}:sleeps[0])||null,getRecentSleeps=async()=>sleeps.slice(0,8),getAllSleeps=async()=>sleeps,getSleepsFromDate=async()=>sleeps,getSleepsOverlappingPeriod=async(id,from,to)=>(p.has("insights-fixture")&&(window.__insightsReads=(window.__insightsReads||0)+1),p.has("log-fixture")?[...sleeps,{...sleeps[0],id:"overnight",starttime:"2026-11-20T22:40:00.000Z",endtime:"2026-11-21T00:20:00.000Z",durationminutes:100},{...sleeps[0],id:"active",starttime:window.__logActiveStart??"2026-11-21T17:00:00.000Z",endtime:null}].filter(row=>row.baby_id===id&&row.starttime<to&&(!row.endtime||row.endtime>from)):window.__waveRows??sleeps);
     export async function startSleep(babyId,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'start',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));return window.__homeActive={...sleeps[0],id:'started',baby_id:babyId,starttime:iso(Date.now()-minutes*60000),endtime:null};}
     export async function stopSleep(id,start,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'stop',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));window.__homeActive=null;return window.__homeLast={...sleeps[0],id,starttime:start,endtime:iso(Date.now()-minutes*60000)};}
     export async function updateActiveSleepStart(row,starttime){if(p.has('log-fixture')){window.__logActiveStart=starttime;return;}if(!p.has('home-refinement'))return blocked();window.__homeActive={...row,starttime};window.__corrected=row.id;}
@@ -977,12 +977,33 @@ async function main() {
         await page.locator('.sleep-insights-weeks').waitFor();
         assert.ok(await page.locator('.sleep-insights-trend g > path').count() > 0);
         assert.ok(await page.locator('.sleep-insights-trend g > circle').count() < 30);
+        const rhythm = page.locator('.sleep-rhythm');
+        const rhythmRows = rhythm.locator('.sleep-rhythm-days > li');
+        const more = rhythm.getByRole('button', {name: lang === 'en' ? 'Show 7 more days' : 'Vis 7 dager til'});
+        assert.equal(await rhythm.getByRole('heading').textContent(), lang === 'en' ? 'Sleep rhythm' : 'S\u00f8vnrytme');
+        assert.equal(await rhythmRows.count(), 7);
+        assert.equal(await rhythmRows.first().locator('.sleep-rhythm-label').textContent(), lang === 'en' ? 'Today' : 'I dag');
+        const firstBlock = rhythmRows.first().locator('.sleep-rhythm-block').first();
+        await firstBlock.click();
+        assert.equal(await rhythmRows.first().locator('output').innerText(), await firstBlock.getAttribute('aria-label'));
+        await firstBlock.click();
+        const reads = await page.evaluate(() => window.__insightsReads);
+        const moreSize = await more.boundingBox();
+        assert.ok(moreSize.height >= 44);
+        await more.click();
+        assert.equal(await rhythmRows.count(), 14);
+        await more.click();
+        assert.equal(await rhythmRows.count(), 21);
+        assert.equal(await page.evaluate(() => window.__insightsReads), reads);
         await check('sleep-insights-populated', true);
         const days = page.locator('.sleep-insights-days');
         assert.ok(await days.locator('strong').count() > 0);
         await page.locator('.sleep-insights-header select').selectOption('baby-2');
         await days.waitFor();
         assert.equal(await days.locator('strong').count(), 0);
+        assert.equal(await rhythmRows.count(), 7);
+        assert.equal(await more.count(), 0);
+        assert.equal(await rhythm.locator('.sleep-rhythm-block').count(), 0);
         await page.locator('.sleep-insights-header a').click();
         await page.locator('.log-date input').waitFor();
         assert.equal(new URL(page.url()).pathname, '/log');

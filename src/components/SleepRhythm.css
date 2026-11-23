@@ -1,0 +1,87 @@
+.sleep-rhythm {
+  --rhythm-label-width: 4.1rem;
+  --rhythm-column-gap: 8px;
+  --rhythm-grid: color-mix(in srgb, var(--ui-muted) 23%, transparent);
+  --rhythm-tint: color-mix(in srgb, var(--lavender, var(--ui-muted)) 9%, transparent);
+}
+
+.sleep-rhythm-axis {
+  position: relative;
+  height: 1.15rem;
+  margin-inline-start: calc(var(--rhythm-label-width) + var(--rhythm-column-gap));
+  color: var(--ui-muted);
+  font-size: .6875rem;
+  font-variant-numeric: tabular-nums;
+}
+.sleep-rhythm-axis span { position: absolute; transform: translateX(-50%); }
+.sleep-rhythm-axis span:first-child { transform: none; }
+.sleep-rhythm-axis span:last-child { transform: translateX(-100%); }
+.sleep-rhythm-days { margin: 0; padding: 0; list-style: none; }
+.sleep-rhythm-days > li {
+  display: grid;
+  grid-template-columns: var(--rhythm-label-width) minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--rhythm-column-gap);
+  min-height: 32px;
+}
+.sleep-rhythm-days > li:nth-child(7n + 8) {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--ui-border, var(--control-border));
+}
+.sleep-rhythm-label { color: var(--ui-muted); font-size: .8125rem; }
+.sleep-rhythm-track {
+  position: relative;
+  height: 32px;
+  isolation: isolate;
+}
+.sleep-rhythm-track::before {
+  position: absolute;
+  inset: 5px 0;
+  content: "";
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(to right, var(--rhythm-grid) 0 1px, transparent 1px 12.5%),
+    linear-gradient(to right, var(--rhythm-tint) 25%, transparent 25% 83.333%, var(--rhythm-tint) 83.333%),
+    color-mix(in srgb, var(--ui-muted) 6%, transparent);
+}
+.sleep-rhythm-block {
+  position: absolute;
+  top: -6px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--lavender, var(--ui-text));
+  cursor: pointer;
+}
+.sleep-rhythm-block::before {
+  position: absolute;
+  inset: 16px 0;
+  border-radius: 4px;
+  background: currentColor;
+  content: "";
+}
+.sleep-rhythm-block:is(:focus-visible, [aria-pressed="true"]) { z-index: 1; }
+.sleep-rhythm-block:is(:focus-visible, [aria-pressed="true"])::before { outline: 2px solid var(--ui-text); outline-offset: 1px; }
+.sleep-rhythm-detail {
+  grid-column: 2;
+  padding-block: 3px 7px;
+  color: var(--ui-text);
+  font-size: .8125rem;
+  font-variant-numeric: tabular-nums;
+}
+.sleep-rhythm-more {
+  min-height: 44px;
+  margin-top: 4px;
+  padding: 0 8px;
+  background: transparent;
+  border: 0;
+  color: var(--lavender, var(--ui-text));
+  font: inherit;
+  font-size: .875rem;
+  cursor: pointer;
+}
+@media (max-width: 359px) {
+  .sleep-rhythm-axis span:nth-child(even) { display: none; }
+}

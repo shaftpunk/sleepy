@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { parseLocalDateOnly } from "../analytics/localDate";
-import { buildSleepInsights, sleepInsightsWindow, type InsightDay } from "../analytics/sleepInsights";
+import { buildSleepInsights, type InsightDay } from "../analytics/sleepInsights";
+import { sleepRhythmStart } from "../analytics/sleepRhythm";
+import SleepRhythm from "../components/SleepRhythm";
 import SleepyIcon from "../components/SleepyIcon";
 import { LOCALES, useTranslation } from "../i18n";
 import { formatDuration } from "../lib/format";
@@ -39,7 +41,7 @@ function SleepHistory({ babyId }: { babyId: string }) {
   const [rows, setRows] = useState<SleepRecord[]>();
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const { startMs } = sleepInsightsWindow(now);
+  const startMs = sleepRhythmStart(now);
 
   useEffect(() => {
     let current = true;
@@ -48,7 +50,7 @@ function SleepHistory({ babyId }: { babyId: string }) {
       const version = ++request;
       const time = Date.now();
       setNow(time);
-      const from = new Date(sleepInsightsWindow(time).startMs).toISOString();
+      const from = new Date(sleepRhythmStart(time)).toISOString();
       const to = new Date(time).toISOString();
       try {
         const history: SleepRecord[] = [];
@@ -86,7 +88,7 @@ function SleepHistory({ babyId }: { babyId: string }) {
   </section>;
   if (!rows) return <p role="status">{t("common.loading")}</p>;
 
-  const { last7, last30, weeks, scaleMinutes } = buildSleepInsights(rows, babyId, now);
+  const { last7, last30, weeks, scaleMinutes, rhythm } = buildSleepInsights(rows, babyId, now);
   const dates = new Intl.DateTimeFormat(LOCALES[lang], { day: "numeric", month: "short" });
   const label = (key: string) => dates.format(parseLocalDateOnly(key)!);
   const today = last7[0].dayKey;
@@ -95,6 +97,7 @@ function SleepHistory({ babyId }: { babyId: string }) {
   const caption = (day: InsightDay) => label(day.dayKey) + ": " + describe(day);
 
   return <>
+    <SleepRhythm days={rhythm} />
     <section className="sleep-insights-card">
       <h2>{t("sleepInsights.last7")}</h2>
       <p>{t("sleepInsights.recorded")}</p>
