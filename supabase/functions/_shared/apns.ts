@@ -19,21 +19,48 @@ export async function apnsAuthorization(): Promise<string> {
   return jwt;
 }
 
+async function postApns(
+  token: string, host: string, topic: string, pushType: "alert" | "liveactivity", payload: unknown,
+): Promise<{ status: number; reason?: string }> {
+  const authorization = await apnsAuthorization();
+  const client = Deno.createHttpClient({ http2: true, http1: false });
+  try {
+    const response = await fetch(`https://${host}/3/device/${token}`, {
+      method: "POST", client, signal: AbortSignal.timeout(15000),
+      headers: { authorization: `bearer ${authorization}`, "apns-topic": topic,
+        "apns-push-type": pushType, "apns-priority": "10", "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const body = await response.text();
+    let reason: string | undefined;
+    if (pushType === "liveactivity" && !response.ok) {
+      try { reason = JSON.parse(body).reason; } catch { /* No usable APNs reason. */ }
+    }
+    return { status: response.status, reason };
+  } finally { client.close(); }
+}
+
 export async function sendApns(deviceToken: string, payload: { title: string; body: string; url: string }): Promise<number> {
   const topic = Deno.env.get("APNS_TOPIC");
   if (topic !== "no.strandeconsulting.sleepy") throw new Error("APNs topic must match Sleepy's bundle ID");
-  const authorization = await apnsAuthorization();
-  // APNs requires HTTP/2. Fail explicitly if the hosted runtime cannot provide it.
-  const client = Deno.createHttpClient({ http2: true, http1: false });
-  try {
-    const response = await fetch(`https://api.push.apple.com/3/device/${deviceToken}`, {
-      method: "POST", client, signal: AbortSignal.timeout(15000),
-      headers: { authorization: `bearer ${authorization}`, "apns-topic": topic,
-        "apns-push-type": "alert", "apns-priority": "10", "content-type": "application/json" },
-      body: JSON.stringify({ aps: { alert: { title: payload.title, body: payload.body }, sound: "default" }, url: payload.url }),
-    });
-    // Consume the response without logging device identifiers or notification data.
-    await response.text();
-    return response.status;
-  } finally { client.close(); }
+  const result = await postApns(deviceToken, "api.push.apple.com", topic, "alert", {
+    aps: { alert: { title: payload.title, body: payload.body }, sound: "default" }, url: payload.url,
+  });
+  return result.status;
+}
+
+export function liveActivityEndRequest(environment: string, timestamp = Math.floor(Date.now() / 1000)) {
+  if (environment !== "production" && environment !== "sandbox") throw new Error("Invalid APNs environment");
+  return {
+    host: environment === "sandbox" ? "api.sandbox.push.apple.com" : "api.push.apple.com",
+    topic: "no.strandeconsulting.sleepy.push-type.liveactivity",
+    pushType: "liveactivity" as const,
+    payload: { aps: { timestamp, event: "end", "content-state": { soundMonitoringActive: false },
+      "dismissal-date": timestamp - 1 } },
+  };
+}
+
+export function sendLiveActivityEnd(token: string, environment: string) {
+  const { host, topic, pushType, payload } = liveActivityEndRequest(environment);
+  return postApns(token, host, topic, pushType, payload);
 }

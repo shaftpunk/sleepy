@@ -70,3 +70,14 @@ test('Capacitor deployment scanning still sees the App minimum before the extens
   assert.equal(file.match(/IPHONEOS_DEPLOYMENT_TARGET = ([\d.]+)/)[1],'15.0');
   for(const config of configurations(objects.PBXNativeTarget['A74000000000000000000013']))assert.equal(Number(config.buildSettings.IPHONEOS_DEPLOYMENT_TARGET),16.2);
 });
+
+test('native coordinator exposes the current token snapshot and stops observers on local dismissal', () => {
+  const swift = fs.readFileSync(path.join(__dirname, '../ios/App/App/SleepLiveActivity.swift'), 'utf8');
+  assert.match(swift, /Activity.request\([^\n]+pushType: \.token\)/);
+  assert.match(swift, /if let token = activity.pushToken/);
+  assert.match(swift, /for await token in activity.pushTokenUpdates/);
+  assert.match(swift, /guard tokenTasks\[activity.id\] == nil/);
+  assert.match(swift, /notifyListeners\("activityTokenChanged", data: row\)/);
+  assert.match(swift, /call.resolve\(\["tokens": SleepLiveActivityCoordinator.shared.tokenSnapshot\(\)\]\)/);
+  assert.match(swift, /removeToken\(activity.id\)\s+await activity.end\([^\n]+dismissalPolicy: \.immediate\)/);
+});

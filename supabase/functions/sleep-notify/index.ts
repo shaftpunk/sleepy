@@ -1,3 +1,4 @@
+import { endLiveActivities } from "./liveActivities.ts";
 import webpush from "npm:web-push@3.6.7";
 import { sendNativeNotifications } from "../_shared/nativePush.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
@@ -72,6 +73,7 @@ export function validateSleepEventPayload(
 
 export default {
   async fetch(req: Request): Promise<Response> {
+    let activityDelivery: Promise<void> | undefined;
     try {
       const webhookSecret = Deno.env.get("SLEEP_EVENT_WEBHOOK_SECRET");
 
@@ -105,17 +107,7 @@ export default {
       const vapidSubject =
         Deno.env.get("VAPID_SUBJECT") ?? "mailto:sleepy@example.com";
 
-      if (
-        !supabaseUrl ||
-        !serviceRoleKey ||
-        !vapidPublicKey ||
-        !vapidPrivateKey
-      ) {
-        throw new Error("Missing server configuration.");
-      }
-
-      webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
-
+      if (!supabaseUrl || !serviceRoleKey) throw new Error("Missing server configuration.");
       const supabase = createClient(supabaseUrl, serviceRoleKey);
 
       /*
@@ -144,6 +136,14 @@ export default {
       if (event === "ended" && sleepRow.endtime === null) {
         return json({ sent: 0, reason: "Session has no end time" });
       }
+
+      if (event === "ended" && Deno.env.get("APNS_PRIVATE_KEY")) {
+        activityDelivery = endLiveActivities(supabase, sleepId, babyId, sleepRow.endtime)
+          .catch(() => { console.error("Live Activity end dispatch failed"); });
+      }
+
+      if (!vapidPublicKey || !vapidPrivateKey) throw new Error("Missing server configuration.");
+      webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
 
       const { data: baby, error: babyError } = await supabase
         .from("babies")
@@ -322,6 +322,8 @@ export default {
         },
         500,
       );
+    } finally {
+      await activityDelivery;
     }
   },
 };

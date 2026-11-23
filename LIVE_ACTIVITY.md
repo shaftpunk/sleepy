@@ -274,8 +274,7 @@ Physical TestFlight procedure (iOS 16.2+):
 ## Later stages (not implemented)
 
 Direct active-sleep routing; explicit privacy-aware lifecycle freshness UI;
-remote ActivityKit update/end/start infrastructure and its separate token/topic
-design; multi-device presentation policy; deliberate user-controlled restoration;
+remote ActivityKit start and live content updates; multi-device presentation policy; deliberate user-controlled restoration;
 Home/accessory widgets; App Intent actions; sound-event summaries/charts; and
 subscription/paywall integration. None of these are silently enabled by Stage 1.
 
@@ -296,3 +295,13 @@ subscription/paywall integration. None of these are silently enabled by Stage 1.
   older iOS, actual archive/signing/export and physical-device behavior remain
   macOS/TestFlight gates. The new widget profile secret is required first for a
   signed build; no provisioning profile has been created or installed remotely.
+
+## Remote dismissal acceptance on TestFlight
+
+Deploy the token migration and RPCs, then the updated sleep-notify function, then distribute the iOS build. Confirm existing alerts still work before installing the new build. TestFlight uses production APNs. A sandbox-signed build must also set the app Info.plist key SleepyLiveActivityAPNSEnvironment to sandbox.
+
+1. Sign in on two physical iPhones as different caregivers with access to the same baby. Start a sleep and confirm both phones show a Live Activity for it.
+2. Using a privileged backend session, confirm two unexpired registrations for that sleep by counting distinct installations where push_token is non-null. Do not select or print token values.
+3. Lock iPhone B and allow Sleepy to become suspended. Press Wake on iPhone A. Confirm A dismisses locally immediately and B's card disappears while B is still locked, without opening Sleepy. Record time to dismissal and the app build and iOS versions.
+4. Repeat from A's Lock Screen Wake button, with ordinary alerts disabled on B, and with both phones signed into the same account. To check isolation, keep another baby's activity visible on a separate device or installation and verify it survives the first baby's Wake.
+5. Repeat with an older app build for compatibility with ordinary notifications and foreground recovery. APNs acceptance is useful for diagnosis. The acceptance criterion is actual dismissal on the locked receiving device.

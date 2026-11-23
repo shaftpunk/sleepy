@@ -10,6 +10,10 @@ final class SleepLiveActivityCoordinator {
     private let log = Logger(subsystem: "no.strandeconsulting.sleepy", category: "LiveActivity")
     private let defaults = UserDefaults.standard
     private var sound: [String: Bool] = [:]
+    private var tokenTasks: [String: Task<Void, Never>] = [:]
+    private var stateTasks: [String: Task<Void, Never>] = [:]
+    private var tokens: [String: [String: Any]] = [:]
+    var tokenChanged: (([String: Any]) -> Void)?
     private var queued: Task<Void, Never>?
     // Keep handles while this process lives, including system-ended cards that
     // Activity.activities may no longer enumerate but iOS still retains.
@@ -51,6 +55,7 @@ final class SleepLiveActivityCoordinator {
         for activity in managed where activity.activityState == .ended || activity.attributes.presentationEndsAt <= Date() {
             await finish(activity)
         }
+        for activity in managed { observeToken(activity) }
     }
     // Serialize bridge reconciliation and native sound transitions across await
     // points, so an older update cannot overtake Stop/account cleanup.
@@ -137,10 +142,17 @@ final class SleepLiveActivityCoordinator {
         let attributes = SleepActivityAttributes(sleepId: sleep.sleepId, babyId: sleep.babyId, babyName: sleep.babyName,
                                                 startedAt: sleep.startedAt, presentationEndsAt: expires)
         do {
-            let activity = try Activity.request(attributes: attributes,
-                content: ActivityContent(state: SleepActivityAttributes.ContentState(soundMonitoringActive: sound[sleep.sleepId] ?? false,
-                    estimatedWakeTime: sleep.estimatedWakeTime, classification: sleep.classification), staleDate: expires), pushType: nil)
+            let content = ActivityContent(state: SleepActivityAttributes.ContentState(soundMonitoringActive: sound[sleep.sleepId] ?? false,
+                estimatedWakeTime: sleep.estimatedWakeTime, classification: sleep.classification), staleDate: expires)
+            let activity: Activity<SleepActivityAttributes>
+            do {
+                activity = try Activity.request(attributes: attributes, content: content, pushType: .token)
+            } catch {
+                // Keep local presentation available if push-enabled creation fails.
+                activity = try Activity.request(attributes: attributes, content: content, pushType: nil)
+            }
             retained[activity.id] = activity
+            observeToken(activity)
             var ledger = attempted; ledger[sleep.sleepId] = Date().timeIntervalSince1970; attempted = ledger
             log.info("Live Activity started")
         } catch { log.info("Live Activity request unavailable; sleep data unchanged") }
@@ -211,7 +223,64 @@ final class SleepLiveActivityCoordinator {
         contextBabies = []
         // Capture ownership is managed by SoundMeter, not ActivityKit.
     }
+    private func observeToken(_ activity: Activity<SleepActivityAttributes>) {
+        guard tokenTasks[activity.id] == nil, ownerID != nil, enabled,
+              activity.activityState == .active || activity.activityState == .stale,
+              activity.attributes.presentationEndsAt > Date() else { return }
+        if let token = activity.pushToken { recordToken(token, for: activity) }
+        tokenTasks[activity.id] = Task { [weak self] in
+            for await token in activity.pushTokenUpdates {
+                guard !Task.isCancelled else { return }
+                self?.recordToken(token, for: activity)
+            }
+        }
+        stateTasks[activity.id] = Task { [weak self] in
+            for await state in activity.activityStateUpdates {
+                guard !Task.isCancelled else { return }
+                if state == .ended || state == .dismissed {
+                    self?.removeToken(activity.id)
+                    return
+                }
+            }
+        }
+    }
+    private func recordToken(_ bytes: Data, for activity: Activity<SleepActivityAttributes>) {
+        guard let owner = ownerID, activity.activityState == .active || activity.activityState == .stale,
+              activity.attributes.presentationEndsAt > Date() else { return }
+        let token = bytes.map { String(format: "%02x", $0) }.joined()
+        guard (tokens[activity.id]?["token"] as? String) != token else { return }
+        let key = "SleepyLiveActivity.tokenRevision.v1"
+        let revision = defaults.integer(forKey: key) + 1
+        defaults.set(revision, forKey: key)
+        // The checked-in provisioning entitlement is production. Sandbox-signed
+        // builds must also set SleepyLiveActivityAPNSEnvironment to sandbox.
+        let environment = Bundle.main.object(forInfoDictionaryKey: "SleepyLiveActivityAPNSEnvironment") as? String ?? "production"
+        let row: [String: Any] = ["ownerId": owner.uuidString.lowercased(), "activityId": activity.id,
+            "sleepId": activity.attributes.sleepId, "babyId": activity.attributes.babyId, "token": token,
+            "revision": revision, "environment": environment,
+            "expiresAt": ISO8601DateFormatter().string(from: activity.attributes.presentationEndsAt)]
+        tokens[activity.id] = row
+        tokenChanged?(row)
+    }
+    private func removeToken(_ activityId: String) {
+        tokenTasks.removeValue(forKey: activityId)?.cancel()
+        stateTasks.removeValue(forKey: activityId)?.cancel()
+        if var row = tokens.removeValue(forKey: activityId) {
+            row.removeValue(forKey: "token")
+            row["revoked"] = true
+            tokenChanged?(row)
+        }
+    }
+    func tokenSnapshot() -> [[String: Any]] {
+        Array(tokens.values)
+    }
+    func endActivity(ownerId: String, activityId: String) async {
+        guard ownerID == UUID(uuidString: ownerId),
+              let activity = managed.first(where: { $0.id == activityId }) else { return }
+        await finish(activity)
+    }
     private func finish(_ activity: Activity<SleepActivityAttributes>) async {
+        removeToken(activity.id)
         await activity.end(ActivityContent(state: .init(soundMonitoringActive: false), staleDate: Date()), dismissalPolicy: .immediate)
         retained.removeValue(forKey: activity.id)
     }
@@ -226,6 +295,8 @@ public class SleepyLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "updateSleep", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endSleep", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "reconcile", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getActivityTokens", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "endActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endAll", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setContext", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "reconcileBaby", returnType: CAPPluginReturnPromise),
@@ -239,6 +310,11 @@ public class SleepyLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
     public override func load() {
         NotificationCenter.default.addObserver(self, selector: #selector(foregrounded), name: UIApplication.didBecomeActiveNotification, object: nil)
         Task { @MainActor [weak self] in
+            if #available(iOS 16.2, *) {
+                SleepLiveActivityCoordinator.shared.tokenChanged = { [weak self] row in
+                    self?.notifyListeners("activityTokenChanged", data: row)
+                }
+            }
             SleepWakeCredentials.requestRefresh = { [weak self] owner, force in
                 self?.notifyListeners("wakeSessionRefreshRequested", data: ["ownerId": owner.uuidString.lowercased(), "forceRefresh": force])
             }
@@ -301,6 +377,20 @@ public class SleepyLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
     }
     @objc public func endSleep(_ call: CAPPluginCall) {
         perform(call) { if #available(iOS 16.2, *), let id = call.getString("sleepId") { await SleepLiveActivityCoordinator.shared.end(sleepId: id) } }
+    }
+    @objc public func getActivityTokens(_ call: CAPPluginCall) {
+        Task { @MainActor in
+            if #available(iOS 16.2, *) {
+                call.resolve(["tokens": SleepLiveActivityCoordinator.shared.tokenSnapshot()])
+            } else { call.resolve(["tokens": []]) }
+        }
+    }
+    @objc public func endActivity(_ call: CAPPluginCall) {
+        perform(call) {
+            if #available(iOS 16.2, *), let owner = call.getString("ownerId"), let id = call.getString("activityId") {
+                await SleepLiveActivityCoordinator.shared.endActivity(ownerId: owner, activityId: id)
+            }
+        }
     }
     @objc public func endAll(_ call: CAPPluginCall) {
         perform(call) { if #available(iOS 16.2, *) { await SleepLiveActivityCoordinator.shared.endAll() } }

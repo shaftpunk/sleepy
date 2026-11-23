@@ -15,8 +15,13 @@ function load(file, imports, globals = {}) {
 function fixture({ native = true, failRead = false, failBridge = false, gate, estimate, estimateGate, classification = 'UNCERTAIN', storage = new Map() } = {}) {
   const calls = [], contexts = [], records = new Map(), document = { hidden: false }; let generation = 0, logout;
   const enabledCalls = [];
+  const tokenCalls = []; let tokenListener;
+  let user = "owner", result = "registered", snapshot = [];
   const bridge = { setEnabled: async ({ enabled }) => { enabledCalls.push(enabled); if (!enabled) calls.push(['clear']); },
     setContext: async data => contexts.push(data),
+    addListener: async (event, listener) => { if (event === 'activityTokenChanged') { tokenCalls.push('subscribe'); tokenListener = listener; } },
+    getActivityTokens: async () => { tokenCalls.push('snapshot'); return { tokens: snapshot }; },
+    endActivity: async options => tokenCalls.push(['dismiss', options]),
     endSleep: async data => calls.push(['end', data]),
     reconcileBaby: async data => calls.push(['baby', data]),
     reconcile: async data => { if (failBridge) throw Error('optional failure'); calls.push(['reconcile', data]); },
@@ -29,6 +34,11 @@ function fixture({ native = true, failRead = false, failBridge = false, gate, es
   } });
   const service = load('src/services/liveActivityService.ts', {
     './liveActivityPreference': preference,
+    './nativePushService': { nativePushInstallationProof: () => ({ p_installation_id: 'phone', p_installation_key: 'proof' }) },
+    '../lib/supabase': { supabase: {
+      auth: { getSession: async () => ({ data: { session: { user: { id: user }, access_token: "session-token" } } }) },
+      rpc: (name, args) => ({ setHeader() { return this; }, abortSignal: async () => { tokenCalls.push([name, args]); return { data: result }; } }),
+    } },
     '@capacitor/core': { Capacitor: { isNativePlatform: () => native, getPlatform: () => 'ios', isPluginAvailable: () => true }, registerPlugin: () => bridge },
     './sleepService': { getActiveSleep: async id => { if (gate) await gate; if (failRead) throw Error('offline'); return records.get(id) ?? null; } },
     './sleepEstimateService': {
@@ -36,8 +46,10 @@ function fixture({ native = true, failRead = false, failBridge = false, gate, es
       subscribeSleepEstimateHistory: listener => { historyChanged = listener; },
     },
     '../auth/sessionLifecycle': { registerBeforeSignOut: fn => { logout = fn; }, sessionGeneration: () => generation, isSessionGenerationCurrent: value => value === generation },
-  }, { document });
+  }, { document, AbortSignal });
   return { service, bridge, calls, contexts, records, document, preference, storage, enabledCalls,
+    tokenCalls, emitToken: row => tokenListener(row), setSnapshot: rows => { snapshot = rows; },
+    switchUser: value => { user = value; generation++; }, registrationResult: value => { result = value; },
     setEstimate: value => { currentEstimate = value; historyChanged(); },
     invalidate: () => generation++, logout: async () => { generation++; await logout(); },
     baby: { id: 'baby', name: 'Amalie' }, sleep: { id: 'sleep', baby_id: 'baby', starttime: '2026-11-10T19:48:00Z', endtime: null, deleted_at: null } };
@@ -285,4 +297,35 @@ test('app lifecycle scopes to selected baby and native didBecomeActive recovers 
   f.document.hidden=false;nativeEvents.get('foreground')();await new Promise(r=>setImmediate(r));
   assert.ok(f.calls.length>count);assert.equal(f.calls.at(-1)[1].sleeps.length,0);
   for(const close of cleanup)close?.();
+});
+
+test('ActivityKit token snapshot, rotation, deduplication and exact late dismissal', async () => {
+  const f = fixture();
+  const row = { ownerId: 'owner', activityId: 'card', sleepId: 'sleep', babyId: 'baby', token: 'first',
+    environment: 'production', expiresAt: '2030-01-01T00:00:00Z', revision: 1 };
+  f.setSnapshot([row]);
+  await f.service.configureSleepLiveActivities('owner', [f.baby]);
+  const flush = () => new Promise(resolve => setImmediate(resolve));
+  await flush();
+  assert.deepEqual(f.tokenCalls.slice(0, 2), ['subscribe', 'snapshot']);
+  const registrations = () => f.tokenCalls.filter(call => call[0] === 'register_live_activity_token');
+  assert.equal(registrations().length, 1);
+  f.emitToken(row);
+  await flush();
+  assert.equal(registrations().length, 1);
+  f.registrationResult('already_ended');
+  f.emitToken({ ...row, token: 'second', revision: 2 });
+  await flush();
+  assert.equal(registrations()[1][1].p_revision, 2);
+  const dismissed = f.tokenCalls.find(call => call[0] === 'dismiss');
+  assert.equal(dismissed[1].activityId, 'card');
+  f.switchUser('other');
+  await f.service.configureSleepLiveActivities('other', [f.baby]);
+  f.emitToken({ ...row, revision: 3 });
+  await flush();
+  assert.equal(registrations().length, 2);
+  await f.logout();
+  f.emitToken({ ...row, ownerId: 'other', revision: 4 });
+  await flush();
+  assert.equal(registrations().length, 2);
 });

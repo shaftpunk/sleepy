@@ -69,6 +69,11 @@ function installation(create = true): Installation | null {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
   return value;
 }
+export function nativePushInstallationProof() {
+  const value = installation();
+  if (!value) throw new Error("Installation unavailable");
+  return { p_installation_id: value.id, p_installation_key: value.key };
+}
 function current(value: NonNullable<typeof context>) {
   return userId === value.userId && epoch === value.epoch && isSessionGenerationCurrent(value.generation);
 }

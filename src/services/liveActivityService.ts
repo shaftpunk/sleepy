@@ -4,12 +4,26 @@ import { getActiveSleepEstimate, subscribeSleepEstimateHistory } from "./sleepEs
 import type { ActiveSleepClassification } from "../analytics/personalSleepClassification";
 import { registerBeforeSignOut, sessionGeneration, isSessionGenerationCurrent } from "../auth/sessionLifecycle";
 import { liveActivityEnabled, saveLiveActivityEnabled } from "./liveActivityPreference";
+import { supabase } from "../lib/supabase";
+import { nativePushInstallationProof } from "./nativePushService";
 import type { SleepPresentationChange } from "./sleepPresentationEvents";
 
 export type LiveActivityBaby = { id: string; name: string };
 export type LiveSleep = { sleepId: string; babyId: string; babyName: string; startedAt: string;
   classification: ActiveSleepClassification; estimatedWakeTime: string | null };
+type ActivityToken = {
+  ownerId: string;
+  activityId: string;
+  sleepId: string;
+  babyId: string;
+  revision: number;
+  expiresAt: string;
+  environment: "production" | "sandbox";
+} & ({ token: string; revoked?: false } | { revoked: true });
 type Bridge = {
+  getActivityTokens(): Promise<{ tokens: ActivityToken[] }>;
+  endActivity(options: { ownerId: string; activityId: string }): Promise<void>;
+  addListener(event: "activityTokenChanged", listener: (token: ActivityToken) => void): Promise<PluginListenerHandle>;
   setEnabled(options: { enabled: boolean }): Promise<void>;
   getAppInfo(): Promise<{ version: string; build: string }>;
   reconcile(options: { ownerId: string; sleeps: LiveSleep[] }): Promise<void>;
@@ -31,6 +45,86 @@ export const liveActivitiesSupported = () => Capacitor.isNativePlatform() && Cap
 let owner: string | null = null, babies: LiveActivityBaby[] = [], revision = 0;
 let work: Promise<void> = Promise.resolve();
 let presented: { record: SleepRecord; payload: LiveSleep }[] = [];
+let tokenListener: Promise<PluginListenerHandle> | undefined;
+const activityTokens = new Map<string, ActivityToken>();
+const acknowledged = new Map<string, number>();
+const tokenWrites = new Map<string, Promise<void>>();
+
+function sendActivityToken(row: ActivityToken, userId: string, generation: number): Promise<void> {
+  const current = () => owner === userId && isSessionGenerationCurrent(generation);
+  const eligible = () => current() && liveActivityEnabled() && babies.some(baby => baby.id === row.babyId);
+  const key = row.activityId;
+  const operation = (tokenWrites.get(key) ?? Promise.resolve()).then(async () => {
+    if (!row.revoked && (!eligible() || activityTokens.get(key) !== row || acknowledged.get(key) === row.revision)) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user.id !== userId || (!row.revoked && !eligible())) return;
+    const authorization = "Bearer " + session.access_token;
+    const args = { ...nativePushInstallationProof(), p_activity_id: key, p_revision: row.revision };
+    if (row.revoked) {
+      await supabase.rpc("revoke_live_activity_token", args).setHeader("Authorization", authorization).abortSignal(AbortSignal.timeout(4000));
+      return;
+    }
+    const { data, error } = await supabase.rpc("register_live_activity_token", {
+      ...args, p_sleep_id: row.sleepId, p_baby_id: row.babyId, p_environment: row.environment,
+      p_push_token: row.token, p_expires_at: row.expiresAt,
+    }).setHeader("Authorization", authorization).abortSignal(AbortSignal.timeout(4000));
+    if (error || !current() || activityTokens.get(key) !== row) return;
+    if (data === "already_ended") {
+      acknowledged.set(key, row.revision);
+      await bridge.endActivity({ ownerId: userId, activityId: key });
+    } else if (data === "registered" || data === "unchanged") {
+      acknowledged.set(key, row.revision);
+    }
+  }).catch(() => { /* Retry unacknowledged tokens on the next snapshot. */ });
+  tokenWrites.set(key, operation);
+  void operation.then(() => { if (tokenWrites.get(key) === operation) tokenWrites.delete(key); });
+  return operation;
+}
+
+function receiveActivityToken(row: ActivityToken) {
+  const userId = owner;
+  if (!userId || row.ownerId !== userId.toLowerCase()) return;
+  const previous = activityTokens.get(row.activityId);
+  if (previous && (row.revision < previous.revision || previous.revoked)) return;
+  if (row.revoked) {
+    activityTokens.set(row.activityId, row);
+    acknowledged.delete(row.activityId);
+  } else {
+    if (!liveActivityEnabled() || !babies.some(baby => baby.id === row.babyId)) return;
+    if (previous?.revision === row.revision) row = previous;
+    else activityTokens.set(row.activityId, row);
+    if (tokenWrites.has(row.activityId) && previous === row) return;
+  }
+  void sendActivityToken(row, userId, sessionGeneration());
+}
+
+async function syncActivityTokens(userId: string, generation: number) {
+  try {
+    tokenListener ??= Promise.resolve(bridge.addListener("activityTokenChanged", receiveActivityToken)).catch(error => {
+      tokenListener = undefined;
+      throw error;
+    });
+    await tokenListener;
+    if (owner !== userId || !isSessionGenerationCurrent(generation)) return;
+    const { tokens } = await bridge.getActivityTokens();
+    for (const [id, row] of activityTokens) {
+      if (row.revoked && Date.parse(row.expiresAt) <= Date.now()) activityTokens.delete(id);
+    }
+    if (owner === userId && isSessionGenerationCurrent(generation)) tokens.forEach(receiveActivityToken);
+  } catch { /* Older native bridges and failed snapshots recover on a later refresh. */ }
+}
+
+function revokeActivityTokens(userId: string, keep: (row: ActivityToken) => boolean = () => false) {
+  const operations = [];
+  for (const row of activityTokens.values()) {
+    if (row.revoked || keep(row)) continue;
+    activityTokens.set(row.activityId, { ...row, revoked: true });
+    acknowledged.delete(row.activityId);
+    operations.push(sendActivityToken({ ...row, revoked: true }, userId, sessionGeneration()));
+  }
+  return Promise.all(operations);
+}
+
 function optional(operation: () => Promise<void>): Promise<void> {
   return Promise.resolve().then(operation).catch(() => { console.info("[Sleepy Live Activity] Optional presentation unavailable; sleep data is unchanged."); });
 }
@@ -39,7 +133,11 @@ function enqueue(operation: () => Promise<void>): Promise<void> {
   return work;
 }
 export function configureSleepLiveActivities(userId: string | null, accessibleBabies: LiveActivityBaby[]): Promise<void> {
-  const changedAccount = owner !== null && owner !== userId;
+  const previousOwner = owner;
+  const changedAccount = previousOwner !== null && previousOwner !== userId;
+  if (previousOwner) void revokeActivityTokens(previousOwner, row =>
+    previousOwner === userId && accessibleBabies.some(baby => baby.id === row.babyId));
+  if (changedAccount) activityTokens.clear();
   owner = userId; babies = accessibleBabies.map(({ id, name }) => ({ id, name })); revision++;
   presented = [];
   if (!liveActivitiesSupported()) return Promise.resolve();
@@ -78,6 +176,7 @@ export function refreshSleepLiveActivities(): Promise<void> {
   return enqueue(async () => {
     if (!liveActivityEnabled() || version !== revision || owner !== userId || !isSessionGenerationCurrent(authGeneration)) return;
     await bridge.setEnabled({ enabled: true });
+    void syncActivityTokens(userId, authGeneration);
     // A failed/incomplete read must never masquerade as "no active sleeps".
     const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 8000);
     let rows;
@@ -94,6 +193,7 @@ export function refreshSleepLiveActivities(): Promise<void> {
     if (version !== revision || owner !== userId || document.hidden || !isSessionGenerationCurrent(authGeneration)) return;
     await bridge.reconcile({ ownerId: userId, sleeps: snapshots.map(snapshot => snapshot.payload) });
     presented = snapshots;
+    void syncActivityTokens(userId, authGeneration);
   });
 }
 export async function setSleepLiveActivitiesEnabled(enabled: boolean): Promise<void> {
@@ -103,13 +203,17 @@ export async function setSleepLiveActivitiesEnabled(enabled: boolean): Promise<v
   if (!liveActivitiesSupported()) return;
   // Do not wait for an offline/in-flight database read to dismiss presentation.
   // The native plugin serializes bridge calls; revision fences the old read.
+  if (!enabled && owner) void revokeActivityTokens(owner);
   await bridge.setEnabled({ enabled });
   if (liveActivityEnabled()) await refreshSleepLiveActivities();
 }
-export function clearSleepLiveActivities(): Promise<void> {
+export async function clearSleepLiveActivities(): Promise<void> {
+  const revocation = owner ? revokeActivityTokens(owner) : Promise.resolve();
+  activityTokens.clear();
   revision++; owner = null; babies = [];
   presented = [];
-  return liveActivitiesSupported() ? optional(() => bridge.endAll()) : Promise.resolve();
+  if (liveActivitiesSupported()) await optional(() => bridge.endAll());
+  await revocation;
 }
 // ActivityKit errors must never block logout, unlike authenticated push detach.
 registerBeforeSignOut(clearSleepLiveActivities);
