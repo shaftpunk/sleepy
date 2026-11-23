@@ -227,7 +227,11 @@ function HomeActivity() {
           <circle className="home-orb-now" cx="183" cy="148" r="3.4" />
         </svg>
         <RecentOrbMarkers now={now} sleep={completedSleepEnd} feed={lastFeed?.starttime} diaper={lastDiaper?.changed_at} />
-        <img className="home-current-animal" src={activeSleep ? sleepingFox : awakeFox} alt="" draggable={false} />
+        <div className="home-orb-fox-slot">
+          <div className="home-orb-fox-motion">
+            <img className="home-current-animal" src={activeSleep ? sleepingFox : awakeFox} alt="" draggable={false} />
+          </div>
+        </div>
       </>}
       {isDefault && !loading && !activeSleep && completedSleepEnd && <>
         <span className="home-awake-label">{t("home.awakeFor")}</span>

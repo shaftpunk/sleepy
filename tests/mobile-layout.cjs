@@ -97,7 +97,7 @@ export async function deleteFeed(id){if(!p.has("log-fixture"))return blocked();f
   if (url.endsWith('/householdService.ts')) return params + failure + `export async function getMyHouseholds(){if(p.has('error'))throw Error('Synthetic long failure message. '+ 'x'.repeat(70));return [{id:'household',name:'Strande Engevik – familie med et langt navn',role:'owner'}]};export const getMyBabies=async()=>[];export const getHouseholdMemberRoles=async()=>['owner','parent','viewer'];export {blocked as updateBabyBirthDate,blocked as createBabyForHousehold,blocked as createHouseholdWithBaby};`;
   if (url.endsWith('/invitationService.ts')) return `export const createHouseholdInvitation=async()=>({token:'synthetic-layout-only-'+ 'A'.repeat(65),expires_at:new Date().toISOString()}),acceptHouseholdInvitation=async()=>({household_name:'Synthetic family'});`;
   if (url.endsWith('/pushService.ts')) return `export const hasPushSubscription=async()=>true,attributePushSubscription=async()=>{},enablePushNotifications=async()=>{},disablePushNotifications=async()=>{},sendTestNotification=async()=>{};`;
-  if (url.endsWith('/nativePushService.ts')) return params+`export const isNativeIOS=()=>true,nativePushState=()=>p.has('denied')?'denied':'enabled',subscribeNativePush=()=>()=>{};`;
+  if (url.endsWith('/nativePushService.ts')) return params+`export const isNativeIOS=()=>true,nativePushState=()=>p.has('denied')?'denied':'enabled',subscribeNativePush=()=>()=>{},nativePushInstallationProof=()=>({p_installation_id:"fixture",p_installation_key:"fixture"});`;
   if (process.argv.includes('--settings-only')) {
     if(url.endsWith('/predictionReminder.ts')) return params+ `export const preferenceChanged='reminder-fixture', reminderAvailable=()=>true, reminderKey=(user,baby)=>'fixture:'+user+':'+baby, requestReminderPermission=async()=>!p.has('denied'), reconcileReminder=async()=>{};`;
     if(url.endsWith('/PurchaseEvidenceContext.tsx')) return  `export const usePurchaseEvidence=()=>({status:'none',refreshedAt:'fixture'});`;
@@ -808,6 +808,7 @@ async function main() {
           });
           assert.ok(clear, 'markers stay inside the ring and clear of the fox and text');
         }
+        let foxAnchor;
         async function checkOrb(sleeping) {
           if (skin !== 'default') return;
           const fox = home.locator('.home-current-animal');
@@ -817,13 +818,25 @@ async function main() {
           const pulse = home.locator('.home-ring-pulse');
           const animation = el => getComputedStyle(el).animationName;
           assert.equal(await pulse.evaluate(el => getComputedStyle(el).animationDuration), sleeping ? '7.5s' : '5s');
-          assert.equal(await fox.evaluate(animation), sleeping ? 'none' : 'home-fox-breathe');
+          const slot = home.locator('.home-orb-fox-slot');
+          const motion = slot.locator('.home-orb-fox-motion');
+          assert.equal(await motion.evaluate(animation), 'home-fox-breathe');
+          assert.equal(await motion.evaluate(el => getComputedStyle(el).animationDuration), sleeping ? '7.5s' : '5s');
+          const anchor = await slot.evaluate(el => {
+            const box = el.getBoundingClientRect(), orb = el.parentElement.getBoundingClientRect();
+            return [box.x + box.width / 2 - orb.x, box.bottom - orb.top, box.width, box.height, orb.height];
+          });
+          if (foxAnchor) assert.deepEqual(anchor, foxAnchor);
+          foxAnchor = anchor;
           const foxBox = await fox.boundingBox(), ringBox = await ring.boundingBox();
           assert.ok(foxBox.y > ringBox.y + 8);
           assert.ok(Math.abs(foxBox.x + foxBox.width / 2 - ringBox.x - ringBox.width / 2) < 2);
           await page.emulateMedia({ reducedMotion: 'reduce' });
           await checkMarkers();
-          for (const layer of [ring, pulse, home.locator('.home-ring-cool'), fox]) assert.equal(await layer.evaluate(animation), 'none');
+          const staticFox = await fox.boundingBox();
+          const firstText = await home.locator('.home-current :is(.home-awake-label, h2)').first().boundingBox();
+          assert.ok(staticFox.y + staticFox.height <= firstText.y + 1);
+          for (const layer of [ring, pulse, home.locator('.home-ring-cool'), motion]) assert.equal(await layer.evaluate(animation), 'none');
           assert.equal(await ring.locator('linearGradient').count(), 2);
           await page.emulateMedia({ reducedMotion: 'no-preference' });
           if (width === 390 && theme === 'light' && lang === 'en' && (sleeping || !await page.evaluate(() => window.__orbObserved))) {
@@ -832,7 +845,7 @@ async function main() {
             for (let i = 0; i <= 12; i++) {
               samples.push(await pulse.evaluate(el => {
                 const matrix = new DOMMatrix(getComputedStyle(el.closest('svg')).transform);
-                const fox = document.querySelector('.home-current-animal');
+                const fox = document.querySelector('.home-orb-fox-motion');
                 return { opacity: Number(getComputedStyle(el).opacity), rotation: matrix.b, foxY: new DOMMatrix(getComputedStyle(fox).transform).f };
               }));
               if (!sleeping && (i === 0 || i === 6)) {
@@ -842,7 +855,8 @@ async function main() {
             }
             assert.ok(Math.min(...samples.map(s => s.opacity)) < .1 && Math.max(...samples.map(s => s.opacity)) > .9);
             assert.ok(samples.every(s => s.rotation === 0));
-            assert.ok(sleeping ? samples.every(s => s.foxY === 0) : samples.some(s => s.foxY < -.9));
+            assert.ok(samples.some(s => s.foxY < (sleeping ? -.85 : -1.3)));
+            assert.ok(samples.some(s => s.foxY > -.15));
             await page.evaluate(() => { window.__orbObserved = true; });
           }
           const duration = home.locator(sleeping ? '.home-current-value' : '.home-awake-duration');

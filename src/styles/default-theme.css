@@ -239,6 +239,9 @@
 
   & .home-current {
     --orb-cycle: 5s;
+    --fox-width: 66%;
+    --fox-lift: -1.5px;
+    --fox-breath-scale: 1.012;
     --orb-warm: var(--orb-peach);
     --orb-pink: #db93ad;
     --orb-scale: 1.025;
@@ -246,7 +249,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     box-sizing: border-box;
     width: min(100%, clamp(205px, calc(100svh - 470px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)), 304px));
     aspect-ratio: 1;
@@ -269,6 +272,9 @@
   }
   & .home-current[data-sleeping="true"] {
     --orb-cycle: 7.5s;
+    --fox-width: 96%;
+    --fox-lift: -1px;
+    --fox-breath-scale: 1.006;
     --orb-warm: #cfb7d8;
     --orb-pink: #ddaebf;
     --orb-cool: #b59ed0;
@@ -315,17 +321,32 @@
     & .home-orb-ring { animation: home-ring-expand var(--orb-cycle) ease-in-out infinite; }
     & .home-ring-cool { animation: home-ring-fade var(--orb-cycle) ease-in-out infinite; animation-delay: calc(var(--orb-cycle) / -2); }
     & .home-ring-pulse { animation: home-ring-fade var(--orb-cycle) ease-in-out infinite; }
-    & .home-current[data-sleeping="false"] .home-current-animal {
+    & .home-orb-fox-motion {
       animation: home-fox-breathe var(--orb-cycle) ease-in-out infinite;
     }
   }
+  & .home-orb-fox-slot {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    flex: none;
+    width: 36%;
+    height: 33%;
+  }
+  & .home-orb-fox-motion {
+    width: var(--fox-width);
+    height: 78%;
+    transform-origin: center bottom;
+  }
   & .home-current-animal {
-    width: 43%;
-    height: auto;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center bottom;
     pointer-events: none;
     user-select: none;
   }
-  & .home-current:has(.home-awake-duration) .home-current-animal { width: 25%; margin-top: 6px; }
   & .home-awake-label { font-size: .8125rem; color: var(--text-secondary); }
   & .home-awake-duration { font-size: 1.25rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
   & .home-current h2 { margin-top: 4px; font-size: 1rem; font-weight: 550; }
@@ -481,5 +502,5 @@
 
 @keyframes home-fox-breathe {
   0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-1px) scale(1.012); }
+  50% { transform: translateY(var(--fox-lift)) scale(var(--fox-breath-scale)); }
 }
