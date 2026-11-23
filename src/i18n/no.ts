@@ -155,6 +155,17 @@ const no = {
     now: "Nå",
   },
 
+  sleepInsights: {
+    title: "Søvninnsikt",
+    last7: "Siste 7 dager",
+    last30: "Siste 30 dager",
+    last15: "Siste 15 uker",
+    recorded: "Registrert søvn per dag. Hull betyr at ingen søvn ble registrert.",
+    missing: "Ingen søvn registrert",
+    future: "Kommende dag",
+    thisWeek: "Denne uken",
+    unavailable: "Kunne ikke laste søvnhistorikken.",
+  },
   log: {
     add: "Legg til",
     previous: "Forrige dag",

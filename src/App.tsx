@@ -24,6 +24,7 @@ import HouseholdContextSelector from "./households/HouseholdContextSelector";
 
 const Home = lazy(() => import("./pages/Home"));
 const History = lazy(() => import("./pages/History"));
+const SleepInsights = lazy(() => import("./pages/SleepInsights"));
 const Settings = lazy(() => import("./pages/Settings"));
 const About = lazy(() => import("./pages/About"));
 
@@ -91,6 +92,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/log" element={<History />} />
+              <Route path="/log/insights" element={<SleepInsights />} />
               <Route path="/settings">
                 <Route index element={<Settings />} />
                 <Route path="family" element={<Settings section="family" />} />

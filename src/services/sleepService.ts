@@ -608,11 +608,9 @@ export async function getSleepsOverlappingPeriod(
   babyId: string,
   fromDate: string,
   toDate: string,
+  page?: { offset: number; size: number },
 ) {
-  const {
-    data,
-    error,
-  } = await supabase
+  const query = supabase
     .from("sleep")
     .select("*")
     .eq(
@@ -636,6 +634,9 @@ export async function getSleepsOverlappingPeriod(
         ascending: true,
       },
     );
+  const { data, error } = await (page
+    ? query.order("id").range(page.offset, page.offset + page.size - 1)
+    : query);
 
   if (error) {
     throw error;

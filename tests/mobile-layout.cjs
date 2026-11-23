@@ -76,6 +76,13 @@ function mock(url) {
     if(p.has('probability-fixture')){const at=(days,h,m=0)=>{const d=new Date();d.setDate(d.getDate()-days);d.setHours(h,m,0,0);return d.getTime()};const row=(start,end)=>({id:String(start),baby_id:'baby',starttime:iso(start),endtime:iso(end),durationminutes:(end-start)/60000,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,i)=>{const d=i+1;return [row(at(d+1,23,30),at(d,7)),row(at(d,d<=9?9:11,30),at(d,d<=9?10:12,30)),row(at(d,20),at(d,21))]}).flat());}
     if(p.has('next-sleep-fixture')&&!p.has('empty')){sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,d)=>Array.from({length:6},(_,i)=>{const end=now-(d+1)*86400000-i*4*3600000;return {id:String(end),baby_id:'baby',starttime:iso(end-3600000),endtime:iso(end),durationminutes:60,sleep_type:'sleep',rate:'4',deleted_at:null}})).flat(),{id:'last',baby_id:'baby',starttime:iso(now-2*3600000),endtime:iso(now-3600000),durationminutes:60,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.sort((a,b)=>Date.parse(b.endtime)-Date.parse(a.endtime));}
     if(p.has('wave-fixture')&&!p.has('empty')){const at=(d,h,m=0)=>{const date=new Date(now);date.setDate(date.getDate()-d);date.setHours(h,m,0,0);return date.getTime()};const row=(start,end)=>({id:String(start),baby_id:'baby',starttime:iso(start),endtime:iso(end),durationminutes:(end-start)/60000,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,i)=>{const d=i+1;return [row(at(d+1,22),at(d,6)),row(at(d,9,15),at(d,10,5)),row(at(d,12,55),at(d,13,35)),row(at(d,16,10),at(d,16,50)),row(at(d,p.has('multi')?18:20),at(d,p.has('multi')?19:21))]}).flat(),...(p.has('multi')?[]:[row(at(0,9,15),at(0,10,5))]),...(p.has('night')?[row(at(1,20,9),at(0,6,53))]:[]));sleeps.sort((a,b)=>Date.parse(b.endtime)-Date.parse(a.endtime));}
+    if(p.has('insights-fixture')) {
+      const at=(days,h)=>{const d=new Date(now);d.setDate(d.getDate()-days);d.setHours(h,0,0,0);return d.getTime()};
+      sleeps.splice(0,sleeps.length,...Array.from({length:97},(_,i)=>i).filter(i=>i%9!==5).map(i=>{
+        const end=at(i,i ? 10 : 0),start=end-(4+i%7)*3600000;
+        return { ...sleeps[0], id:'insight-'+i, baby_id:'baby', starttime:iso(start),endtime:iso(end),durationminutes:(end-start)/60000 };
+      }), { ...sleeps[0],id:'today',baby_id:'baby',starttime:iso(at(0,0)-3*3600000),endtime:iso(at(0,0)+2*3600000),durationminutes:300 });
+    }
     if(p.has('home-fixture')&&!p.has('empty')){sleeps.splice(0,sleeps.length,...Array.from({length:24},(_,i)=>({...sleeps[0],id:'history-'+i,baby_id:'baby',starttime:iso(now-(63+i*120)*60000),endtime:iso(now-(18+i*120)*60000),durationminutes:45,sleep_type:'sleep',rate:'4.8',deleted_at:null})));}
     if(p.has('last-slept-fixture')&&sleeps[0])Object.assign(sleeps[0],{starttime:iso(now-223*60000),endtime:iso(now-151*60000),durationminutes:72});
     export const getActiveSleep=async()=>window.__homeActive!==undefined?window.__homeActive:p.has('active')?{...sleeps[0],id:'active',baby_id:'baby',sleep_type:'sleep',starttime:p.has('wave-fixture')||p.has('home-fixture')||p.has('last-slept-fixture')?iso(now-42*60000):sleeps[0].starttime,endtime:null}:null,
@@ -948,6 +955,38 @@ async function main() {
         await visit('/settings/notifications/sound', 'active&sound=listening');
         await page.locator('.sound-settings .home-sound-controls > summary').click();
         await page.locator('.sound-settings .sound-panel').waitFor();
+        continue;
+      }
+      if (process.argv.includes('--sleep-insights')) {
+        await visit('/log', 'date=2026-11-20');
+        const insight = page.getByRole('link', { name: lang === 'en' ? 'Sleep insights' : 'S\u00f8vninnsikt' });
+        const box = await insight.boundingBox();
+        assert.ok(box.width >= 44 && box.height >= 44);
+        assert.equal(await insight.evaluate(link => link.nextElementSibling.tagName), 'BUTTON');
+        await insight.click();
+        await page.locator('.sleep-insights-weeks').waitFor();
+        assert.equal(new URL(page.url()).pathname, '/log/insights');
+        assert.equal(new URL(page.url()).searchParams.get('date'), '2026-11-20');
+        assert.equal(await page.locator('.bottom-nav a[aria-current="page"]').getAttribute('href'), '/log');
+        assert.equal(await page.locator('.bottom-nav a').count(), 3);
+        assert.equal(await page.locator('.sleep-insights-days > li').count(), 7);
+        assert.equal(await page.locator('.sleep-insights-weeks > li').count(), 15);
+        assert.equal(await page.locator('.sleep-insights-mini > span').count(), 105);
+        await check('sleep-insights', true);
+        await visit('/log/insights', 'date=2026-11-20&insights-fixture');
+        await page.locator('.sleep-insights-weeks').waitFor();
+        assert.ok(await page.locator('.sleep-insights-trend g > path').count() > 0);
+        assert.ok(await page.locator('.sleep-insights-trend g > circle').count() < 30);
+        await check('sleep-insights-populated', true);
+        const days = page.locator('.sleep-insights-days');
+        assert.ok(await days.locator('strong').count() > 0);
+        await page.locator('.sleep-insights-header select').selectOption('baby-2');
+        await days.waitFor();
+        assert.equal(await days.locator('strong').count(), 0);
+        await page.locator('.sleep-insights-header a').click();
+        await page.locator('.log-date input').waitFor();
+        assert.equal(new URL(page.url()).pathname, '/log');
+        assert.equal(await page.locator('.log-date input').inputValue(), '2026-11-20');
         continue;
       }
       if (logOnly) {

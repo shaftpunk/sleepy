@@ -1,0 +1,71 @@
+.sleep-insights { display: grid; gap: 14px; }
+.sleep-insights-header { display: flex; align-items: start; gap: 10px; }
+.sleep-insights-header > div { min-width: 0; }
+.sleep-insights-header h1 { margin: 0; font-size: 1.4rem; }
+.sleep-insights-header p { margin: 3px 0 0; color: var(--ui-muted); overflow-wrap: anywhere; }
+.sleep-insights-baby { position: relative; width: fit-content; max-width: 100%; }
+.sleep-insights-baby svg { position: absolute; inset-inline-end: 9px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; pointer-events: none; }
+.sleep-insights-header select {
+  min-height: 48px;
+  max-width: 100%;
+  appearance: none;
+  text-overflow: ellipsis;
+  color: inherit;
+  font: inherit;
+  background: var(--ui-surface, var(--control-bg));
+  border: 1px solid var(--ui-border, var(--control-border));
+  border-radius: 10px;
+  padding-inline: 8px 30px;
+}
+.sleep-insights-header a {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  min-width: 44px;
+  min-height: 44px;
+  color: var(--lavender, var(--ui-text));
+  background: var(--lavender-soft, var(--control-bg));
+  border-radius: 50%;
+  text-decoration: none;
+}
+.sleep-insights-header a { font-size: 1.5rem; }
+.sleep-insights a:focus-visible:focus-visible {
+  outline: 2px solid var(--focus-ring, currentColor);
+  outline-offset: 2px;
+}
+.sleep-insights-card {
+  min-width: 0;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--ui-border, var(--control-border));
+  background: var(--hero-bottom, var(--ui-surface, var(--control-bg)));
+}
+.sleep-insights-card h2 { margin: 0; font-size: 1.0625rem; }
+.sleep-insights-card p { margin: 6px 0 12px; color: var(--ui-muted); font-size: .8125rem; }
+.sleep-insights-days, .sleep-insights-weeks { list-style: none; margin: 0; padding: 0; }
+.sleep-insights-days li {
+  display: grid;
+  grid-template-columns: minmax(4.75rem, 1fr) minmax(20px, 2fr) minmax(4.5rem, auto);
+  align-items: center;
+  gap: 8px;
+  min-height: 29px;
+  font-size: .8125rem;
+  font-variant-numeric: tabular-nums;
+}
+.sleep-insights-days li > :last-child { text-align: end; }
+.sleep-insights-track { display: block; height: 6px; background: var(--ui-border, var(--control-border)); border-radius: 999px; }
+.sleep-insights-track > span { display: block; height: 100%; border-radius: inherit; background: var(--lavender, currentColor); }
+.sleep-insights-trend { display: block; width: 100%; height: auto; margin-top: 8px; color: var(--lavender, var(--ui-text)); }
+.sleep-insights-trend path { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.sleep-insights-trend circle { fill: currentColor; }
+.sleep-insights-trend .sleep-insights-gridline { stroke: var(--ui-border, var(--control-border)); stroke-width: 1; }
+.sleep-insights-scale { text-align: end; color: var(--ui-muted); font-size: .75rem; margin-top: 6px; }
+.sleep-insights-axis { display: flex; justify-content: space-between; color: var(--ui-muted); font-size: .75rem; }
+.sleep-insights-weeks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.sleep-insights-weeks > li { min-width: 0; border-radius: 10px; padding: 8px; background: var(--surface-soft, var(--control-bg)); }
+.sleep-insights-weeks h3 { margin: 0; color: var(--ui-text); font-size: .75rem; font-weight: 600; }
+.sleep-insights-mini { display: grid; align-items: end; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; height: 29px; margin-top: 6px; }
+.sleep-insights-mini span { background: var(--lavender, currentColor); border-radius: 2px; }
+.sleep-insights-mini span[data-missing="true"] { min-height: 2px; background: var(--ui-border, var(--control-border)); }
+.insights-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; margin: -1px; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 359px) { .sleep-insights-weeks { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

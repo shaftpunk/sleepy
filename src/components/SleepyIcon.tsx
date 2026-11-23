@@ -9,6 +9,7 @@
   edit: "m4 16-1 5 5-1L20 8l-4-4L4 16Zm10-10 4 4",
   chevron: "m6 9 6 6 6-6",
   clock: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM12 7v5l3 2",
+  glasses: "M2 11h2m16 0h2M10 12c0-2 4-2 4 0M4 9h6v4a3 3 0 0 1-6 0zm10 0h6v4a3 3 0 0 1-6 0z",
   calendar: "M4 6h16v14H4zM8 4v4m8-4v4M4 10h16",
 };
 

@@ -424,13 +424,13 @@
   & .home-recent-row > svg:last-child { display: none; }
 
   & .log-page { gap: 18px; }
-  & .log-header > button, & .log-date button, & .log-date-picker {
+  & .log-header-actions > button, & .log-date button, & .log-date-picker {
     border: 0;
     border-radius: 999px;
     background: var(--surface);
     box-shadow: 0 3px 12px var(--shadow);
   }
-  & .log-header > button { color: var(--lavender-ink); background: var(--lavender-soft); padding-inline: 17px; }
+  & .log-header-actions > button { color: var(--lavender-ink); background: var(--lavender-soft); padding-inline: 17px; }
   & .log-date { justify-content: center; }
   & .log-date-picker { flex: 0 1 13rem; min-height: 48px; font-weight: 600; }
   & .log-date button { color: var(--lavender); }

@@ -156,6 +156,17 @@ const en = {
     now: "Now",
   },
 
+  sleepInsights: {
+    title: "Sleep insights",
+    last7: "Last 7 days",
+    last30: "Last 30 days",
+    last15: "Last 15 weeks",
+    recorded: "Sleep recorded each day. Gaps mean no sleep was logged.",
+    missing: "No sleep logged",
+    future: "Upcoming day",
+    thisWeek: "This week",
+    unavailable: "Could not load sleep history.",
+  },
   log: {
     add: "Add",
     previous: "Previous day",

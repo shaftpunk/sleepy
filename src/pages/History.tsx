@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { ageInDays } from "../analytics/localDate";
 import SleepyIcon from "../components/SleepyIcon";
 import DiaperModal from "../components/DiaperModal";
@@ -69,9 +69,14 @@ export default function History() {
           {age != null && <small>{new Intl.NumberFormat(LOCALES[lang], { style: "unit", unit: "day", unitDisplay: "long" }).format(age)}</small>}
         </div>
       </div>
-      <button className="secondary-button" type="button" disabled={!babyId} ref={addButton} onClick={() => setAdding(viewKey)}>
-        <span aria-hidden="true">+</span> {t("log.add")}
-      </button>
+      <div className="log-header-actions">
+        <Link className="log-insights-link" aria-label={t("sleepInsights.title")} to={{ pathname: "/log/insights", search: params.toString() }}>
+          <SleepyIcon name="glasses" />
+        </Link>
+        <button className="secondary-button" type="button" disabled={!babyId} ref={addButton} onClick={() => setAdding(viewKey)}>
+          <span aria-hidden="true">+</span> {t("log.add")}
+        </button>
+      </div>
     </header>
     <div className="log-date">
       <button type="button" className="secondary-button" aria-label={t("log.previous")}

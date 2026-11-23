@@ -21,4 +21,16 @@
 .log-identity strong, .log-identity small { display: block; overflow-wrap: anywhere; }
 .log-identity:has(strong) h1, .log-identity small { font-size: .8125rem; color: var(--ui-muted); }
 .log-identity strong { font-size: 1.125rem; }
-.log-header > button { flex-shrink: 0; }
+.log-header-actions { display: flex; align-items: center; flex-shrink: 0; gap: 4px; }
+.log-header-actions > button { flex-shrink: 0; }
+.log-insights-link {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: var(--lavender, var(--ui-text));
+  background: var(--lavender-soft, var(--control-bg));
+  border-radius: 50%;
+}
+.log-insights-link:focus-visible { outline: 2px solid var(--focus-ring, currentColor); outline-offset: 2px; }
+.log-insights-link svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
