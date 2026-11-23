@@ -771,17 +771,52 @@ async function main() {
           const fox = home.locator('.home-current-animal');
           assert.equal(await fox.count(), 1);
           assert.match(await fox.getAttribute('src'), sleeping ? /sleeping-fox/ : /awake-fox/);
-          const stop = home.locator('.home-orb-ring stop').first();
-          assert.equal(await stop.evaluate(el => getComputedStyle(el).animationDuration), sleeping ? '7.5s' : '5s');
+          const ring = home.locator('.home-orb-ring');
+          const pulse = home.locator('.home-ring-pulse');
+          const animation = el => getComputedStyle(el).animationName;
+          assert.equal(await pulse.evaluate(el => getComputedStyle(el).animationDuration), sleeping ? '7.5s' : '5s');
+          assert.equal(await fox.evaluate(animation), sleeping ? 'none' : 'home-fox-breathe');
+          const foxBox = await fox.boundingBox(), ringBox = await ring.boundingBox();
+          assert.ok(foxBox.y > ringBox.y + 8);
+          assert.ok(Math.abs(foxBox.x + foxBox.width / 2 - ringBox.x - ringBox.width / 2) < 2);
           await page.emulateMedia({ reducedMotion: 'reduce' });
-          assert.equal(await stop.evaluate(el => getComputedStyle(el).animationName), 'none');
-          assert.equal(await home.locator('.home-orb-ring stop').count(), 3);
+          for (const layer of [ring, pulse, fox]) assert.equal(await layer.evaluate(animation), 'none');
+          assert.equal(await ring.locator('linearGradient').count(), 2);
           await page.emulateMedia({ reducedMotion: 'no-preference' });
+          if (width === 390 && theme === 'light' && lang === 'en' && (sleeping || !await page.evaluate(() => window.__orbObserved))) {
+            const samples = [];
+            const cycle = sleeping ? 7500 : 5000;
+            for (let i = 0; i <= 12; i++) {
+              samples.push(await pulse.evaluate(el => {
+                const matrix = new DOMMatrix(getComputedStyle(el.closest('svg')).transform);
+                const fox = document.querySelector('.home-current-animal');
+                return { opacity: Number(getComputedStyle(el).opacity), rotation: matrix.b, foxY: new DOMMatrix(getComputedStyle(fox).transform).f };
+              }));
+              if (i < 12) await new Promise(resolve => setTimeout(resolve, cycle / 12));
+            }
+            assert.ok(Math.min(...samples.map(s => s.opacity)) < .1 && Math.max(...samples.map(s => s.opacity)) > .9);
+            assert.ok(samples.every(s => s.rotation === 0));
+            assert.ok(sleeping ? samples.every(s => s.foxY === 0) : samples.some(s => s.foxY < -.9));
+            await page.evaluate(() => { window.__orbObserved = true; });
+          }
           const duration = home.locator(sleeping ? '.home-current-value' : '.home-awake-duration');
           const before = await duration.textContent();
           await page.clock.fastForward(60000);
           assert.notEqual(await duration.textContent(), before);
           if (sleeping) assert.equal(await home.locator('.home-current h2').innerText(), lang === 'en' ? 'Sleeping for' : 'Sover i');
+        }
+        if (skin === 'default') {
+          const header = home.locator('.home-header');
+          const select = header.locator('select');
+          const available = await select.evaluate(el => el.clientWidth - parseFloat(getComputedStyle(el).paddingRight) - parseFloat(getComputedStyle(el).paddingLeft));
+          assert.ok(available > width - 125);
+          for (const name of ['Amalie', 'Ellinor', 'Alexander', 'Christopher', 'Maximilian']) {
+            assert.ok(await select.evaluate((el, name) => {
+              const ctx = document.createElement('canvas').getContext('2d');
+              ctx.font = getComputedStyle(el).font;
+              return ctx.measureText(name).width;
+            }, name) <= available);
+          }
         }
         await checkOrb(false);
         assert.equal(await home.locator('.home-recent-row').count(), 3);
@@ -813,6 +848,7 @@ async function main() {
         assert.equal(await home.locator('.home-quick-actions .secondary-button').count(), 0);
         assert.equal(await home.locator('.home-current-value').count(), 1);
         if (width >= 375) assert.ok(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1), 'sleeping Home fits the viewport');
+        await check('minimal-home-sleeping', true);
         await home.locator('.home-started').click();
         await page.locator('[role="dialog"]').waitFor();
         await page.keyboard.press('Escape');

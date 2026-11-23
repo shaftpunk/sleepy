@@ -207,13 +207,22 @@ function HomeActivity() {
   }
 
   return <>
-    <section className="home-current" aria-labelledby="home-current-title">
+    <section className="home-current" data-sleeping={Boolean(activeSleep)} aria-labelledby="home-current-title">
       {isDefault && <>
-        <svg className="home-orb-ring" data-sleeping={Boolean(activeSleep)} aria-hidden="true" viewBox="0 0 200 200">
-          <defs><linearGradient id="orb-light" x2="1" y2="1" gradientUnits="objectBoundingBox">
-            <stop stopColor="var(--orb-lavender)" /><stop offset=".55" stopColor="var(--orb-pink)" /><stop offset="1" stopColor="var(--orb-edge)" stopOpacity=".45" />
-          </linearGradient></defs>
-          <path d="M 28 163 A 96 96 0 1 1 172 163" fill="none" stroke="url(#orb-light)" strokeWidth="4" strokeLinecap="round" />
+        <svg className="home-orb-ring" aria-hidden="true" viewBox="0 0 200 200">
+          <defs>
+            <path id="home-ring-arc" d="M 28 163 A 96 96 0 1 1 172 163" />
+            <linearGradient id="home-ring-base" x2="1" y2="1">
+              <stop stopColor="#ad94d3" /><stop offset=".55" stopColor="#c9a8ce" /><stop offset="1" stopColor="#e6b6c6" />
+            </linearGradient>
+            <linearGradient id="home-ring-warm" x2="1" y2="1">
+              <stop stopColor="var(--orb-warm)" /><stop offset=".6" stopColor="#e9acbd" /><stop offset="1" stopColor="#c4a7d9" />
+            </linearGradient>
+          </defs>
+          <g fill="none" strokeWidth="4" strokeLinecap="round">
+            <use href="#home-ring-arc" stroke="url(#home-ring-base)" />
+            <use className="home-ring-pulse" href="#home-ring-arc" stroke="url(#home-ring-warm)" />
+          </g>
         </svg>
         <img className="home-current-animal" src={activeSleep ? sleepingFox : awakeFox} alt="" draggable={false} />
       </>}
