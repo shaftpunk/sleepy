@@ -149,6 +149,7 @@ final class SleepLiveActivityCoordinator {
                 activity = try Activity.request(attributes: attributes, content: content, pushType: .token)
             } catch {
                 // Keep local presentation available if push-enabled creation fails.
+                log.notice("ActivityKit token request failed; trying local presentation")
                 activity = try Activity.request(attributes: attributes, content: content, pushType: nil)
             }
             retained[activity.id] = activity
@@ -227,7 +228,9 @@ final class SleepLiveActivityCoordinator {
         guard tokenTasks[activity.id] == nil, ownerID != nil, enabled,
               activity.activityState == .active || activity.activityState == .stale,
               activity.attributes.presentationEndsAt > Date() else { return }
-        if let token = activity.pushToken { recordToken(token, for: activity) }
+        let currentToken = activity.pushToken
+        log.notice("Activity token observer started activityId=\(activity.id, privacy: .public) sleepId=\(activity.attributes.sleepId, privacy: .public) tokenPresent=\(currentToken != nil) tokenBytes=\(currentToken?.count ?? 0)")
+        if let token = currentToken { recordToken(token, for: activity) }
         tokenTasks[activity.id] = Task { [weak self] in
             for await token in activity.pushTokenUpdates {
                 guard !Task.isCancelled else { return }
@@ -259,11 +262,17 @@ final class SleepLiveActivityCoordinator {
             "sleepId": activity.attributes.sleepId, "babyId": activity.attributes.babyId, "token": token,
             "revision": revision, "environment": environment,
             "expiresAt": ISO8601DateFormatter().string(from: activity.attributes.presentationEndsAt)]
+        log.notice("Activity token ready activityId=\(activity.id, privacy: .public) sleepId=\(activity.attributes.sleepId, privacy: .public) tokenPresent=true tokenBytes=\(bytes.count) revision=\(revision)")
         tokens[activity.id] = row
         tokenChanged?(row)
     }
     private func removeToken(_ activityId: String) {
-        tokenTasks.removeValue(forKey: activityId)?.cancel()
+        if let observer = tokenTasks.removeValue(forKey: activityId) {
+            observer.cancel()
+            if let activity = retained[activityId] {
+                log.notice("Activity token observer stopped activityId=\(activityId, privacy: .public) sleepId=\(activity.attributes.sleepId, privacy: .public)")
+            }
+        }
         stateTasks.removeValue(forKey: activityId)?.cancel()
         if var row = tokens.removeValue(forKey: activityId) {
             row.removeValue(forKey: "token")
@@ -295,6 +304,7 @@ public class SleepyLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "updateSleep", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endSleep", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "reconcile", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "logActivityTokenDiagnostic", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getActivityTokens", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endAll", returnType: CAPPluginReturnPromise),
@@ -377,6 +387,20 @@ public class SleepyLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
     }
     @objc public func endSleep(_ call: CAPPluginCall) {
         perform(call) { if #available(iOS 16.2, *), let id = call.getString("sleepId") { await SleepLiveActivityCoordinator.shared.end(sleepId: id) } }
+    }
+    @objc public func logActivityTokenDiagnostic(_ call: CAPPluginCall) {
+        let phases: Set<String> = ["listener_ready", "snapshot_read", "snapshot_failed", "native_event",
+            "snapshot_token", "context_rejected", "rpc_attempt", "rpc_registered", "rpc_unchanged",
+            "rpc_already_ended", "rpc_authorization_failed", "rpc_failed", "retry_on_snapshot"]
+        if let phase = call.getString("phase"), phases.contains(phase) {
+            let activityId = call.getString("activityId") ?? ""
+            let sleepId = call.getString("sleepId").flatMap(UUID.init(uuidString:))?.uuidString ?? ""
+            let revision = call.getInt("revision") ?? 0
+            let present = call.getBool("tokenPresent") ?? false
+            let logger = Logger(subsystem: "no.strandeconsulting.sleepy", category: "LiveActivity")
+            logger.notice("Activity registration phase=\(phase, privacy: .public) activityId=\(activityId, privacy: .public) sleepId=\(sleepId, privacy: .public) tokenPresent=\(present) revision=\(revision)")
+        }
+        call.resolve()
     }
     @objc public func getActivityTokens(_ call: CAPPluginCall) {
         Task { @MainActor in

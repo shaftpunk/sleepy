@@ -99,6 +99,7 @@ export default {
         event,
         actor_user_id: actorUserId,
       } = validated;
+      if (event === "ended") console.info("Live Activity webhook received", { sleepId, babyId });
 
       const supabaseUrl = Deno.env.get("SUPABASE_URL");
       const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -126,6 +127,7 @@ export default {
       }
 
       if (!sleepRow || sleepRow.deleted_at || sleepRow.baby_id !== babyId) {
+        if (event === "ended") console.info("Live Activity end skipped: sleep missing, deleted, or wrong baby", { sleepId, babyId });
         return json({ sent: 0, reason: "Sleep session not found" });
       }
 
@@ -134,12 +136,17 @@ export default {
       }
 
       if (event === "ended" && sleepRow.endtime === null) {
+        console.info("Live Activity end skipped: sleep active", { sleepId, babyId });
         return json({ sent: 0, reason: "Session has no end time" });
       }
 
-      if (event === "ended" && Deno.env.get("APNS_PRIVATE_KEY")) {
-        activityDelivery = endLiveActivities(supabase, sleepId, babyId, sleepRow.endtime)
-          .catch(() => { console.error("Live Activity end dispatch failed"); });
+      if (event === "ended") {
+        if (Deno.env.get("APNS_PRIVATE_KEY")) {
+          activityDelivery = endLiveActivities(supabase, sleepId, babyId, sleepRow.endtime)
+            .catch(() => { console.error("Live Activity end dispatch failed", { sleepId, babyId }); });
+        } else {
+          console.warn("Live Activity end skipped: APNs key missing", { sleepId, babyId });
+        }
       }
 
       if (!vapidPublicKey || !vapidPrivateKey) throw new Error("Missing server configuration.");

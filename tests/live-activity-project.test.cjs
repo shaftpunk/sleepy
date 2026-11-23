@@ -74,7 +74,7 @@ test('Capacitor deployment scanning still sees the App minimum before the extens
 test('native coordinator exposes the current token snapshot and stops observers on local dismissal', () => {
   const swift = fs.readFileSync(path.join(__dirname, '../ios/App/App/SleepLiveActivity.swift'), 'utf8');
   assert.match(swift, /Activity.request\([^\n]+pushType: \.token\)/);
-  assert.match(swift, /if let token = activity.pushToken/);
+  assert.match(swift, /let currentToken = activity.pushToken/);
   assert.match(swift, /for await token in activity.pushTokenUpdates/);
   assert.match(swift, /guard tokenTasks\[activity.id\] == nil/);
   assert.match(swift, /notifyListeners\("activityTokenChanged", data: row\)/);

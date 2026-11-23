@@ -305,3 +305,52 @@ Deploy the token migration and RPCs, then the updated sleep-notify function, the
 3. Lock iPhone B and allow Sleepy to become suspended. Press Wake on iPhone A. Confirm A dismisses locally immediately and B's card disappears while B is still locked, without opening Sleepy. Record time to dismissal and the app build and iOS versions.
 4. Repeat from A's Lock Screen Wake button, with ordinary alerts disabled on B, and with both phones signed into the same account. To check isolation, keep another baby's activity visible on a separate device or installation and verify it survives the first baby's Wake.
 5. Repeat with an older app build for compatibility with ordinary notifications and foreground recovery. APNs acceptance is useful for diagnosis. The acceptance criterion is actual dismissal on the locked receiving device.
+
+## Temporary remote-dismissal diagnostics
+
+Use a fresh sleep on two phones with a TestFlight build containing this patch and the instrumented sleep-notify deployment. Start a new card on each phone because a card created by an older build cannot gain a token. On a Mac, use Console with each iPhone selected, filtered by subsystem no.strandeconsulting.sleepy and category LiveActivity. For an accepted push with a lingering card, also capture the receiving device's apsd and liveactivitiesd logs around the attempted delivery. Keep device identifiers and logs restricted to the investigation.
+
+### SQL for an authorized administrator
+
+Replace the UUID in the first query with the test sleep ID. Run it before and after Wake. The row remains after cleanup, with has_token becoming false. Client revocation and APNs acceptance or invalidation can all clear it, so correlate with the Edge result.
+
+```sql
+select installation_id, activity_id, sleep_id, baby_id, environment, revision,
+       created_at, updated_at, expires_at, push_token is not null as has_token
+from public.live_activity_tokens
+where sleep_id = '<test-sleep-uuid>'::uuid
+order by created_at;
+
+select sleep_id, count(*) as registrations,
+       count(distinct installation_id) as installations
+from public.live_activity_tokens
+where push_token is not null and expires_at > now()
+group by sleep_id;
+```
+
+### Two-phone reproduction
+
+1. Sign in as different caregivers of the same baby. Start a new sleep on A, open Sleepy on B, and confirm both Live Activities refer to that sleep. Record each build and iOS version.
+2. Compare the native observer and token-ready entries on both phones with the frontend listener, event or snapshot, and RPC result entries. Query the test sleep. Expect two eligible rows from distinct installations, both with production environment on TestFlight. Record the activity IDs and revisions.
+3. Lock B and let Sleepy suspend. Wake from A and record whether A's card disappears immediately.
+4. Filter sleep-notify logs by sleep ID. Record webhook receipt, target count, B's activity ID and revision, APNs host, outgoing timestamp, HTTP status and reason, and cleanup row count. Re-run the first query and correlate the result with B specifically.
+5. Observe B while it is still locked. If APNs accepted the request and the card remains, use the iOS logs to distinguish delivery, decoding, and dismissal. Repeat with Lock Screen Wake on A and with ordinary alerts disabled on B.
+
+| Evidence | Classification |
+| --- | --- |
+| Fresh card falls back to local creation, or observer never reports nonzero token bytes | TOKEN_NOT_CREATED |
+| Swift reports a token but neither bridge event nor snapshot delivers it | TOKEN_NOT_BRIDGED |
+| Bridge delivers the token but RPC fails, is skipped, or no usable row appears | TOKEN_NOT_REGISTERED |
+| Both rows were present but the end webhook does not arrive or excludes B | REGISTRATION_NOT_FOUND at dispatch. Check the trigger and webhook when receipt is absent, then sleep/baby match, expiry, membership, and exact end timestamp when selection is empty. |
+| APNs rejects the request, credentials, or topic | APNS_REQUEST_INVALID. For an exception before a response, record the logged authorization, HTTP/2 client, or transport stage separately. |
+| The registered environment/selected host disagrees with signed provisioning | APNS_ENVIRONMENT_MISMATCH. BadDeviceToken alone also permits stale-token and other causes. |
+| iOS logs report a failure decoding the accepted content state | CONTENT_STATE_DECODE_FAILURE |
+| iOS logs show B processed the end but the card remains | IOS_RECEIVED_BUT_NOT_DISMISSED. HTTP 200 alone leaves iOS receipt unconfirmed. |
+
+### Optional one-off APNs probe
+
+Run the repository script locally as a privileged operator against a controlled completed test sleep with exactly one chosen eligible registration. Load SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, APNS_PRIVATE_KEY, APNS_TEAM_ID, and APNS_KEY_ID through the local secret environment. The script sends a real end to the selected card, prints the status and reason, and leaves the registration untouched. It cannot replay a token that cleanup has already cleared.
+
+```text
+deno run --no-lock --allow-env --allow-net scripts/diagnose-live-activity-end.ts <sleep-id> <installation-id> <activity-id>
+```

@@ -15,13 +15,14 @@ function load(file, imports, globals = {}) {
 function fixture({ native = true, failRead = false, failBridge = false, gate, estimate, estimateGate, classification = 'UNCERTAIN', storage = new Map() } = {}) {
   const calls = [], contexts = [], records = new Map(), document = { hidden: false }; let generation = 0, logout;
   const enabledCalls = [];
-  const tokenCalls = []; let tokenListener;
+  const tokenCalls = [], tokenDiagnostics = []; let tokenListener;
   let user = "owner", result = "registered", snapshot = [];
   const bridge = { setEnabled: async ({ enabled }) => { enabledCalls.push(enabled); if (!enabled) calls.push(['clear']); },
     setContext: async data => contexts.push(data),
     addListener: async (event, listener) => { if (event === 'activityTokenChanged') { tokenCalls.push('subscribe'); tokenListener = listener; } },
     getActivityTokens: async () => { tokenCalls.push('snapshot'); return { tokens: snapshot }; },
     endActivity: async options => tokenCalls.push(['dismiss', options]),
+    logActivityTokenDiagnostic: async fields => tokenDiagnostics.push(fields),
     endSleep: async data => calls.push(['end', data]),
     reconcileBaby: async data => calls.push(['baby', data]),
     reconcile: async data => { if (failBridge) throw Error('optional failure'); calls.push(['reconcile', data]); },
@@ -48,7 +49,7 @@ function fixture({ native = true, failRead = false, failBridge = false, gate, es
     '../auth/sessionLifecycle': { registerBeforeSignOut: fn => { logout = fn; }, sessionGeneration: () => generation, isSessionGenerationCurrent: value => value === generation },
   }, { document, AbortSignal });
   return { service, bridge, calls, contexts, records, document, preference, storage, enabledCalls,
-    tokenCalls, emitToken: row => tokenListener(row), setSnapshot: rows => { snapshot = rows; },
+    tokenCalls, tokenDiagnostics, emitToken: row => tokenListener(row), setSnapshot: rows => { snapshot = rows; },
     switchUser: value => { user = value; generation++; }, registrationResult: value => { result = value; },
     setEstimate: value => { currentEstimate = value; historyChanged(); },
     invalidate: () => generation++, logout: async () => { generation++; await logout(); },
@@ -310,6 +311,9 @@ test('ActivityKit token snapshot, rotation, deduplication and exact late dismiss
   assert.deepEqual(f.tokenCalls.slice(0, 2), ['subscribe', 'snapshot']);
   const registrations = () => f.tokenCalls.filter(call => call[0] === 'register_live_activity_token');
   assert.equal(registrations().length, 1);
+  assert.ok(f.tokenDiagnostics.some(entry => entry.phase === 'rpc_registered' && entry.tokenPresent));
+  assert.ok(f.tokenDiagnostics.every(entry => Object.keys(entry)
+    .every(key => ['phase', 'activityId', 'sleepId', 'revision', 'tokenPresent'].includes(key))));
   f.emitToken(row);
   await flush();
   assert.equal(registrations().length, 1);

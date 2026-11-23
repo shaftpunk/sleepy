@@ -19,12 +19,22 @@ export async function apnsAuthorization(): Promise<string> {
   return jwt;
 }
 
+export class LiveActivityApnsError extends Error {
+  constructor(readonly stage: "authorization" | "http2_client" | "transport") {
+    super("Live Activity APNs " + stage + " failed");
+  }
+}
+
 async function postApns(
   token: string, host: string, topic: string, pushType: "alert" | "liveactivity", payload: unknown,
 ): Promise<{ status: number; reason?: string }> {
-  const authorization = await apnsAuthorization();
-  const client = Deno.createHttpClient({ http2: true, http1: false });
+  let stage: LiveActivityApnsError["stage"] = "authorization";
+  let client: Deno.HttpClient | undefined;
   try {
+    const authorization = await apnsAuthorization();
+    stage = "http2_client";
+    client = Deno.createHttpClient({ http2: true, http1: false });
+    stage = "transport";
     const response = await fetch(`https://${host}/3/device/${token}`, {
       method: "POST", client, signal: AbortSignal.timeout(15000),
       headers: { authorization: `bearer ${authorization}`, "apns-topic": topic,
@@ -34,10 +44,16 @@ async function postApns(
     const body = await response.text();
     let reason: string | undefined;
     if (pushType === "liveactivity" && !response.ok) {
-      try { reason = JSON.parse(body).reason; } catch { /* No usable APNs reason. */ }
+      try {
+        const value = JSON.parse(body).reason;
+        if (typeof value === "string" && /^[A-Z][A-Za-z]{1,47}$/.test(value)) reason = value;
+      } catch { /* No usable APNs reason. */ }
     }
     return { status: response.status, reason };
-  } finally { client.close(); }
+  } catch (error) {
+    if (pushType === "liveactivity") throw new LiveActivityApnsError(stage);
+    throw error;
+  } finally { client?.close(); }
 }
 
 export async function sendApns(deviceToken: string, payload: { title: string; body: string; url: string }): Promise<number> {
@@ -60,7 +76,10 @@ export function liveActivityEndRequest(environment: string, timestamp = Math.flo
   };
 }
 
-export function sendLiveActivityEnd(token: string, environment: string) {
+export function sendLiveActivityEnd(token: string, environment: string, diagnosticId?: string) {
   const { host, topic, pushType, payload } = liveActivityEndRequest(environment);
+  if (diagnosticId) console.info("Live Activity APNs request", {
+    activityId: diagnosticId, host, topic, pushType, priority: 10, aps: payload.aps,
+  });
   return postApns(token, host, topic, pushType, payload);
 }
