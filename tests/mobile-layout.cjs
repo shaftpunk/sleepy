@@ -829,6 +829,9 @@ async function main() {
           const motion = slot.locator('.home-orb-fox-motion');
           assert.equal(await motion.evaluate(animation), 'home-fox-breathe');
           assert.equal(await motion.evaluate(el => getComputedStyle(el).animationDuration), sleeping ? '7.5s' : '5s');
+          // Fox peaks ahead of the ring (phase offset); only the awake fox sways.
+          assert.equal(await motion.evaluate(el => getComputedStyle(el).animationDelay), sleeping ? '-1.35s' : '-0.9s');
+          assert.equal(await fox.evaluate(animation), sleeping ? 'none' : 'home-fox-sway');
           const anchor = await slot.evaluate(el => {
             const box = el.getBoundingClientRect(), orb = el.parentElement.getBoundingClientRect();
             return [box.x + box.width / 2 - orb.x, box.bottom - orb.top, box.width, box.height, orb.height];
@@ -843,7 +846,7 @@ async function main() {
           const staticFox = await fox.boundingBox();
           const firstText = await home.locator('.home-current :is(.home-awake-label, h2)').first().boundingBox();
           assert.ok(staticFox.y + staticFox.height <= firstText.y + 1);
-          for (const layer of [ring, pulse, home.locator('.home-ring-cool'), motion]) assert.equal(await layer.evaluate(animation), 'none');
+          for (const layer of [ring, pulse, home.locator('.home-ring-cool'), motion, fox]) assert.equal(await layer.evaluate(animation), 'none');
           assert.equal(await ring.locator('linearGradient').count(), 2);
           await page.emulateMedia({ reducedMotion: 'no-preference' });
           if (width === 390 && theme === 'light' && lang === 'en' && (sleeping || !await page.evaluate(() => window.__orbObserved))) {

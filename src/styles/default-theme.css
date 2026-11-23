@@ -240,8 +240,10 @@
   & .home-current {
     --orb-cycle: 5s;
     --fox-width: 66%;
-    --fox-lift: -1.5px;
-    --fox-breath-scale: 1.012;
+    /* Awake idle: a soft lift with an even scale (sway is a separate layer). */
+    --fox-lift: -1.6px;
+    --fox-scale-x: 1.009;
+    --fox-scale-y: 1.009;
     --orb-warm: var(--orb-peach);
     --orb-pink: #db93ad;
     --orb-scale: 1.025;
@@ -273,8 +275,10 @@
   & .home-current[data-sleeping="true"] {
     --orb-cycle: 7.5s;
     --fox-width: 96%;
-    --fox-lift: -1px;
-    --fox-breath-scale: 1.006;
+    /* Sleeping: breathing. Height grows a little more than width, almost no lift. */
+    --fox-lift: -.95px;
+    --fox-scale-x: 1.003;
+    --fox-scale-y: 1.007;
     --orb-warm: #cfb7d8;
     --orb-pink: #ddaebf;
     --orb-cool: #b59ed0;
@@ -321,8 +325,17 @@
     & .home-orb-ring { animation: home-ring-expand var(--orb-cycle) ease-in-out infinite; }
     & .home-ring-cool { animation: home-ring-fade var(--orb-cycle) ease-in-out infinite; animation-delay: calc(var(--orb-cycle) / -2); }
     & .home-ring-pulse { animation: home-ring-fade var(--orb-cycle) ease-in-out infinite; }
+    /* The fox shares the ring's cycle but peaks ~18% earlier, so the two never
+       crest together. A sine-like curve avoids a visible stop at each turn. */
     & .home-orb-fox-motion {
-      animation: home-fox-breathe var(--orb-cycle) ease-in-out infinite;
+      animation: home-fox-breathe var(--orb-cycle) cubic-bezier(.37, 0, .63, 1) infinite;
+      animation-delay: calc(var(--orb-cycle) * -.18);
+    }
+    /* Awake only: a slow, tiny sway on its own period (not a multiple of the
+       lift), so the combined motion does not read as an obvious loop. */
+    & .home-current:not([data-sleeping="true"]) .home-current-animal {
+      animation: home-fox-sway 7.4s ease-in-out infinite;
+      animation-delay: -1.9s;
     }
   }
   & .home-orb-fox-slot {
@@ -344,6 +357,7 @@
     height: 100%;
     object-fit: contain;
     object-position: center bottom;
+    transform-origin: center bottom;
     pointer-events: none;
     user-select: none;
   }
@@ -501,6 +515,13 @@
 }
 
 @keyframes home-fox-breathe {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(var(--fox-lift)) scale(var(--fox-breath-scale)); }
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  50% { transform: translateY(var(--fox-lift)) scale(var(--fox-scale-x), var(--fox-scale-y)); }
+}
+
+/* Anchored at the paws: at most ~0.55deg and 0.3px either way. */
+@keyframes home-fox-sway {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  30% { transform: translateX(-.3px) rotate(-.55deg); }
+  70% { transform: translateX(.3px) rotate(.5deg); }
 }
