@@ -1,4 +1,71 @@
 .sleep-insights { display: grid; gap: 14px; }
+.sleep-insights-panel { display: grid; gap: 14px; min-width: 0; }
+.sleep-insights-panel[hidden] { display: none; }
+.sleep-insights-tabs {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(72px, 1fr));
+  justify-self: start;
+  max-width: 100%;
+  padding: 3px;
+  gap: 3px;
+  border-radius: 15px;
+  background: var(--ui-control);
+}
+.sleep-insights-tabs button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ui-text);
+  font: inherit;
+  font-size: .875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sleep-insights-tabs [aria-selected="true"] {
+  background: var(--lavender-soft, color-mix(in srgb, var(--ui-text) 12%, transparent));
+  border-color: var(--ui-border);
+}
+.sleep-insights-tabs button:focus-visible,
+.sleep-insights-panel:focus-visible,
+.sleep-insights-help summary:focus-visible {
+  outline: 2px solid var(--focus-ring, currentColor);
+  outline-offset: 2px;
+}
+.sleep-insights-estimate {
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--ui-surface, var(--control-bg));
+}
+.sleep-insights-estimate h2,
+.sleep-insights-data-row h2 { margin: 0; font-size: .9375rem; font-weight: 650; }
+.sleep-insights-estimate p,
+.sleep-insights-data-row p,
+.sleep-insights-help p { margin: 4px 0 0; color: var(--ui-muted); font-size: .875rem; line-height: 1.45; }
+.sleep-insights-estimate .sleep-insights-estimate-time {
+  color: var(--ui-text);
+  font-size: clamp(1.25rem, 6vw, 1.75rem);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.sleep-insights-data-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 0 2px 12px;
+  border-bottom: 1px solid var(--ui-border, var(--control-border));
+}
+.sleep-insights-data-row strong { font-size: .875rem; }
+.sleep-insights-data-row > div { grid-column: 1 / -1; }
+.sleep-insights-help summary {
+  align-content: center;
+  min-height: 44px;
+  font-size: .875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
 .sleep-insights-header { display: flex; align-items: start; gap: 10px; }
 .sleep-insights-header > div { min-width: 0; }
 .sleep-insights-header h1 { margin: 0; font-size: 1.4rem; }

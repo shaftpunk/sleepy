@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { parseLocalDateOnly } from "../analytics/localDate";
 import { buildSleepInsights, type InsightDay } from "../analytics/sleepInsights";
@@ -10,11 +10,16 @@ import { formatDuration } from "../lib/format";
 import { getSleepsOverlappingPeriod, type SleepRecord } from "../services/sleepService";
 import { subscribeToSleepChanges } from "../services/sleepRealtime";
 import { useAppStore } from "../stores/appStore";
+import SleepInsightsData from "./SleepInsightsData";
 import "./SleepInsights.css";
+
+const tabs = ["graph", "data"] as const;
 
 export default function SleepInsights() {
   const { t } = useTranslation();
   const [params] = useSearchParams();
+  const [tab, setTab] = useState<(typeof tabs)[number]>("graph");
+  const tabId = useId();
   const babies = useAppStore(state => state.babies);
   const babyId = useAppStore(state => state.currentBabyId);
   const setBaby = useAppStore(state => state.setCurrentBabyId);
@@ -31,7 +36,25 @@ export default function SleepInsights() {
         {babies.length === 1 && <p>{baby?.name}</p>}
       </div>
     </header>
-    {babyId && <SleepHistory key={babyId} babyId={babyId} />}
+    <div className="sleep-insights-tabs" role="tablist" aria-label={t("sleepInsights.title")}>
+      {tabs.map(value => <button key={value} type="button" role="tab" id={`${tabId}-${value}`}
+        aria-selected={tab === value} aria-controls={`${tabId}-${value}-panel`} tabIndex={tab === value ? 0 : -1}
+        onClick={() => setTab(value)} onKeyDown={event => {
+          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+          event.preventDefault();
+          const next = event.key === "Home" ? "graph" : event.key === "End" ? "data" : value === "graph" ? "data" : "graph";
+          setTab(next);
+          document.getElementById(`${tabId}-${next}`)?.focus();
+        }}>{t(`sleepInsights.${value}`)}</button>)}
+    </div>
+    <div className="sleep-insights-panel" role="tabpanel" id={`${tabId}-graph-panel`}
+      aria-labelledby={`${tabId}-graph`} tabIndex={0} hidden={tab !== "graph"}>
+      {babyId && <SleepHistory key={babyId} babyId={babyId} />}
+    </div>
+    <div className="sleep-insights-panel" role="tabpanel" id={`${tabId}-data-panel`}
+      aria-labelledby={`${tabId}-data`} tabIndex={0} hidden={tab !== "data"}>
+      {babyId && tab === "data" && <SleepInsightsData key={babyId} babyId={babyId} birthDate={baby?.birth_date} />}
+    </div>
   </main>;
 }
 

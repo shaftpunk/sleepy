@@ -27,6 +27,7 @@ export type NextSleepPrediction = {
   awakeMinutes?: number;
   typicalAwakeMinutes?: { min: number; max: number };
   confidence?: "low" | "medium" | "high";
+  pattern?: "stable" | "variable";
   sampleSize: number;
 };
 type Sample = { minutes: number; weight: number; dayKey: string; startTs: number; similarity: number };
@@ -91,5 +92,6 @@ export function calculateNextSleep({ sessions, active, now, ageDays = null }: {
   return { ...(peak && { peak }), status: "ready", earliestStart, latestStart,
     likelyStart: Math.min(latestStart, Math.max(earliestStart, roundUp(quantile(remaining, .5)))),
     awakeMinutes: Math.floor(awake), typicalAwakeMinutes: { min: Math.floor(min / 5) * 5, max: Math.ceil(max / 5) * 5 },
-    confidence, sampleSize: samples.length };
+    confidence, pattern: variability < NEXT_SLEEP_RULES.high.relativeSpread ? "stable" : "variable",
+    sampleSize: samples.length };
 }
