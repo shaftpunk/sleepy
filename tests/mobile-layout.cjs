@@ -766,7 +766,23 @@ async function main() {
         await page.locator('.sleep-action').waitFor();
         await page.waitForFunction(() => !document.querySelector('.sleep-action').disabled);
         const home = page.locator('.home-minimal');
+        async function checkNowMarker() {
+          if (skin !== 'default') return;
+          const clear = await home.locator('.home-orb-now').evaluate(dot => {
+            const box = dot.getBoundingClientRect();
+            const orb = dot.closest('.home-current');
+            const occupied = [...orb.querySelectorAll('img, .home-orb-markers svg')].map(el => el.getBoundingClientRect());
+            for (const content of orb.querySelectorAll('h2, p, button, strong, span')) {
+              const range = document.createRange();
+              range.selectNodeContents(content);
+              occupied.push(...range.getClientRects());
+            }
+            return occupied.every(r => box.right <= r.left || box.left >= r.right || box.bottom <= r.top || box.top >= r.bottom);
+          });
+          assert.ok(clear, 'Now marker clears the fox, text and activity glyphs');
+        }
         async function checkMarkers() {
+          await checkNowMarker();
           if (skin !== 'default') return;
           const layer = home.locator('.home-orb-markers');
           assert.equal(await layer.getAttribute('aria-hidden'), 'true');
@@ -913,6 +929,7 @@ async function main() {
         assert.equal(await home.locator('.home-current-value').count(), 0);
         assert.equal(await home.locator('.home-awake-duration').count(), 0);
         assert.equal(await home.locator('.home-orb-markers').count(), 0);
+        await checkNowMarker();
         await check('minimal-home');
         await visit('/settings/notifications/sound', 'active&sound=listening');
         await page.locator('.sound-settings .home-sound-controls > summary').click();

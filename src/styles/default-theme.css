@@ -275,6 +275,12 @@
     --orb-halo: 1px;
     --orb-scale: 1.005;
   }
+  & .home-orb-now {
+    fill: #fff0db;
+    stroke: #edaa91;
+    stroke-width: 1.35;
+    filter: drop-shadow(0 0 2px #e79cadbf);
+  }
   & .home-orb-markers {
     position: absolute;
     inset: 0;

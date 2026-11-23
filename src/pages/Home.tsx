@@ -224,6 +224,7 @@ function HomeActivity() {
             <use className="home-ring-cool" href="#home-ring-arc" stroke="var(--orb-cool)" />
             <use className="home-ring-pulse" href="#home-ring-arc" stroke="url(#home-ring-warm)" />
           </g>
+          <circle className="home-orb-now" cx="183" cy="148" r="3.4" />
         </svg>
         <RecentOrbMarkers now={now} sleep={completedSleepEnd} feed={lastFeed?.starttime} diaper={lastDiaper?.changed_at} />
         <img className="home-current-animal" src={activeSleep ? sleepingFox : awakeFox} alt="" draggable={false} />
