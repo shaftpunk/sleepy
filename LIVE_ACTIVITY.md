@@ -354,3 +354,7 @@ Run the repository script locally as a privileged operator against a controlled 
 ```text
 deno run --no-lock --allow-env --allow-net scripts/diagnose-live-activity-end.ts <sleep-id> <installation-id> <activity-id>
 ```
+
+### Internal diagnostics screen
+
+When dispatching the iOS App Store release workflow for an internal TestFlight build, enable the live_activity_diagnostics input. The input defaults to false. Install that build, create a fresh Live Activity, then open Settings and expand Internal diagnostics · Live Activity. Use Refresh diagnostics after the token event or registration attempt. Refresh reads metadata only. A recovered activity may show Unknown for token-enabled creation when the current app process did not create it.

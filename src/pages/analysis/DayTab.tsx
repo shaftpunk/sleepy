@@ -8,6 +8,7 @@ import type { ActiveSleep, SleepSession } from "../../analytics/types";
 type Props = {
   sessions: SleepSession[];
   now: number;
+  ageDays?: number | null;
   active?: ActiveSleep | null;
 };
 
@@ -27,7 +28,7 @@ function toneForDayBar(totalMinutes: number, pctOfMax: number): BarRowTone {
   return "warning";
 }
 
-export default function DayTab({ sessions, now, active = null }: Props) {
+export default function DayTab({ sessions, now, active = null, ageDays = null }: Props) {
   const { t, lang } = useTranslation();
 
   const windowGroupLabels: Record<string, string> = {
@@ -38,8 +39,8 @@ export default function DayTab({ sessions, now, active = null }: Props) {
   };
 
   const perDay = computeSleepPerDayLast7(sessions, now);
-  const buckets = computeHourlyDistribution(sessions, now, active);
-  const wakeThroughDay = computeWakeWindowsThroughDay(sessions, now, active);
+  const buckets = computeHourlyDistribution(sessions, now, active, ageDays);
+  const wakeThroughDay = computeWakeWindowsThroughDay(sessions, now, active, ageDays);
 
   const todayLabel = t("common.today");
 

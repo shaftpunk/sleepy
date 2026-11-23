@@ -13,6 +13,7 @@ import FamilySettings from "../components/FamilySettings";
 import AddChildSettings from "../components/AddChildSettings";
 import JoinHousehold from "../components/JoinHousehold";
 import { ReminderSetting } from "../components/PredictionReminderLifecycle";
+import LiveActivityDiagnostics, { showLiveActivityDiagnostics } from "../components/LiveActivityDiagnostics";
 import LiveActivitySettings from "../components/LiveActivitySettings";
 import SleepyPlusSettings from "../components/SleepyPlusSettings";
 import { useTranslation, type Language, type TranslationKey } from "../i18n";
@@ -56,6 +57,7 @@ export default function Settings({ section }: { section?: Section }) {
         </Link>
       </li>)}
     </ul>
+    {showLiveActivityDiagnostics() && <LiveActivityDiagnostics />}
   </main>;
   if (section === "sound") return <SettingsScreen title={t("sound.title")} back="/settings/notifications">
     <SoundMonitoringSettings />

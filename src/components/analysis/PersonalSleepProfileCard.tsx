@@ -10,6 +10,7 @@ type Props = {
   sessions: SleepSession[];
   guideline: SleepGuideline | null;
   now: number;
+  ageDays?: number | null;
   active?: ActiveSleep | null;
 };
 
@@ -19,10 +20,10 @@ const CONFIDENCE_KEYS: Record<string, TranslationKey> = {
   high: "common.confidenceHigh",
 };
 
-export default function PersonalSleepProfileCard({ sessions, guideline, now, active = null }: Props) {
+export default function PersonalSleepProfileCard({ sessions, guideline, now, active = null, ageDays = null }: Props) {
   const { t, lang } = useTranslation();
 
-  const profile = computePersonalSleepProfile(sessions, now, active);
+  const profile = computePersonalSleepProfile(sessions, now, active, ageDays);
   const hasData = hasDisplayableSleepProfile(profile);
 
   return (

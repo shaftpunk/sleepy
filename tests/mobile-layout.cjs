@@ -52,7 +52,7 @@ function mock(url) {
   if(url.endsWith('/entitlementService.ts'))return `import features from '/src/entitlements/features.json';export async function resolveHouseholdEntitlements(householdId){const tier=window.__tier||(new URLSearchParams(location.search).has('plus-entitled')?'plus':'free'),delay=window.__resolutionDelay||0;await new Promise(r=>setTimeout(r,delay));if(window.__resolutionFailure)throw Error('Synthetic unavailable RPC');return {householdId,tier,isPlus:tier==='plus',features:Object.keys(features).filter(f=>tier==='plus'||features[f].requiredTier==='free'),verificationState:'verified',verifiedAt:new Date().toISOString(),validUntil:null,recheckAt:new Date(Date.now()+300000).toISOString(),policyVersion:1}};`;
   if (url === '/src/auth/AuthProvider.tsx') return `${params}export const useAuth=()=>({user:{id:'user',email:'parent.with.a.long.synthetic.email@example.invalid',user_metadata:{full_name:'Alexandra Strande Engevik'}},session:{user:{id:'user'}},loading:p.has('loading'),signOut:async()=>{window.__signedOut=true;}});`;
   if (url === '/src/services/diaperService.ts' && (logOnly||process.argv.includes('--today-summary')||process.argv.includes('--minimal-home'))) return `
-    export const diaperTypes=['wet','dirty','both'];
+    export const diaperTypes=['wet','dirty','both','dry'];
     export async function countDiaperChangesBetween(...args){window.__diaperCountQuery=args;return new URLSearchParams(location.search).has("empty")?0:5;}
     const rows=[['wet','10:00','baby'],['dirty','09:00','baby'],['both','11:00','baby'],['other','11:30','another']];
     export async function getRecentDiaperChanges(babyId,limit){
@@ -75,6 +75,7 @@ function mock(url) {
   if (url === '/src/services/sleepService.ts') return records + failure + `
     if(p.has('probability-fixture')){const at=(days,h,m=0)=>{const d=new Date();d.setDate(d.getDate()-days);d.setHours(h,m,0,0);return d.getTime()};const row=(start,end)=>({id:String(start),baby_id:'baby',starttime:iso(start),endtime:iso(end),durationminutes:(end-start)/60000,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,i)=>{const d=i+1;return [row(at(d+1,23,30),at(d,7)),row(at(d,d<=9?9:11,30),at(d,d<=9?10:12,30)),row(at(d,20),at(d,21))]}).flat());}
     if(p.has('next-sleep-fixture')&&!p.has('empty')){sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,d)=>Array.from({length:6},(_,i)=>{const end=now-(d+1)*86400000-i*4*3600000;return {id:String(end),baby_id:'baby',starttime:iso(end-3600000),endtime:iso(end),durationminutes:60,sleep_type:'sleep',rate:'4',deleted_at:null}})).flat(),{id:'last',baby_id:'baby',starttime:iso(now-2*3600000),endtime:iso(now-3600000),durationminutes:60,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.sort((a,b)=>Date.parse(b.endtime)-Date.parse(a.endtime));}
+    if(p.has('insights-sleeping'))sleeps.push({...sleeps[0],id:'insights-active',starttime:iso(now-1800000),endtime:null});
     if(p.has('wave-fixture')&&!p.has('empty')){const at=(d,h,m=0)=>{const date=new Date(now);date.setDate(date.getDate()-d);date.setHours(h,m,0,0);return date.getTime()};const row=(start,end)=>({id:String(start),baby_id:'baby',starttime:iso(start),endtime:iso(end),durationminutes:(end-start)/60000,sleep_type:'sleep',rate:'4',deleted_at:null});sleeps.splice(0,sleeps.length,...Array.from({length:12},(_,i)=>{const d=i+1;return [row(at(d+1,22),at(d,6)),row(at(d,9,15),at(d,10,5)),row(at(d,12,55),at(d,13,35)),row(at(d,16,10),at(d,16,50)),row(at(d,p.has('multi')?18:20),at(d,p.has('multi')?19:21))]}).flat(),...(p.has('multi')?[]:[row(at(0,9,15),at(0,10,5))]),...(p.has('night')?[row(at(1,20,9),at(0,6,53))]:[]));sleeps.sort((a,b)=>Date.parse(b.endtime)-Date.parse(a.endtime));}
     if(p.has('insights-fixture')) {
       const at=(days,h)=>{const d=new Date(now);d.setDate(d.getDate()-days);d.setHours(h,0,0,0);return d.getTime()};
@@ -104,7 +105,7 @@ export async function deleteFeed(id){if(!p.has("log-fixture"))return blocked();f
   if (url.endsWith('/householdService.ts')) return params + failure + `export async function getMyHouseholds(){if(p.has('error'))throw Error('Synthetic long failure message. '+ 'x'.repeat(70));return [{id:'household',name:'Strande Engevik – familie med et langt navn',role:'owner'}]};export const getMyBabies=async()=>[];export const getHouseholdMemberRoles=async()=>['owner','parent','viewer'];export {blocked as updateBabyBirthDate,blocked as createBabyForHousehold,blocked as createHouseholdWithBaby};`;
   if (url.endsWith('/invitationService.ts')) return `export const createHouseholdInvitation=async()=>({token:'synthetic-layout-only-'+ 'A'.repeat(65),expires_at:new Date().toISOString()}),acceptHouseholdInvitation=async()=>({household_name:'Synthetic family'});`;
   if (url.endsWith('/pushService.ts')) return `export const hasPushSubscription=async()=>true,attributePushSubscription=async()=>{},enablePushNotifications=async()=>{},disablePushNotifications=async()=>{},sendTestNotification=async()=>{};`;
-  if (url.endsWith('/nativePushService.ts')) return params+`export const isNativeIOS=()=>true,nativePushState=()=>p.has('denied')?'denied':'enabled',subscribeNativePush=()=>()=>{},nativePushInstallationProof=()=>({p_installation_id:"fixture",p_installation_key:"fixture"});`;
+  if (url.endsWith('/nativePushService.ts')) return params+`export const isNativeIOS=()=>true,nativePushState=()=>p.has('denied')?'denied':'enabled',subscribeNativePush=()=>()=>{},nativePushInstallationProof=()=>({p_installation_id:"fixture",p_installation_key:"fixture"}),nativePushInstallationPresence=()=>({installationPresent:true,proofPresent:true});`;
   if (process.argv.includes('--settings-only')) {
     if(url.endsWith('/predictionReminder.ts')) return params+ `export const preferenceChanged='reminder-fixture', reminderAvailable=()=>true, reminderKey=(user,baby)=>'fixture:'+user+':'+baby, requestReminderPermission=async()=>!p.has('denied'), reconcileReminder=async()=>{};`;
     if(url.endsWith('/PurchaseEvidenceContext.tsx')) return  `export const usePurchaseEvidence=()=>({status:'none',refreshedAt:'fixture'});`;
@@ -127,6 +128,7 @@ async function main() {
     browser = await chromium.launch({ headless: true, ...(process.env.SLEEPY_CHROMIUM_PATH ? { executablePath: process.env.SLEEPY_CHROMIUM_PATH } : {}) });
     const page = await browser.newPage({timezoneId:'Europe/Oslo'});
     if (logOnly) await page.clock.setFixedTime(new Date('2026-11-21T18:00:00Z'));
+    if (process.argv.includes('--sleep-insights')) await page.clock.setFixedTime(new Date('2026-11-23T08:00:00Z'));
     if(process.argv.includes('--sleep-wave-only')||process.argv.includes('--analysis-only'))await page.clock.install({time:new Date('2026-11-16T11:08:00Z')});
     // Home fixtures are relative to "now", but Today stats count sessions that
     // started after local midnight: on the real clock the quality assertion
@@ -350,11 +352,12 @@ async function main() {
         await secondary.first().click();
         const diaper=page.locator('.diaper-modal');
         await check('diaper-dialog');
-        await diaper.locator('.diaper-types button').last().click();
+        assert.equal(await diaper.locator('.diaper-types button').count(), 4);
+        await diaper.getByRole('button', { name: lang === 'en' ? 'Dry' : 'Tørr', exact: true }).click();
         await diaper.locator('input').fill('2026-11-21T10:30');
         await diaper.locator('[type=submit]').click();
         await diaper.waitFor({state:'hidden'});
-        assert.deepEqual(await page.evaluate(()=>window.__diaperRows),[{baby_id:'baby',type:'both',changed_at:'2026-11-21T09:30:00.000Z'}]);
+        assert.deepEqual(await page.evaluate(()=>window.__diaperRows),[{baby_id:'baby',type:'dry',changed_at:'2026-11-21T09:30:00.000Z'}]);
         await sleep.click();
         await secondary.first().waitFor({state:'hidden'});
         assert.equal(await page.locator('.sleep-action').count(),1);
@@ -687,6 +690,23 @@ async function main() {
         await check('home-failed-action',true);await page.keyboard.press('Escape');
         console.log(context+' Home checked');continue;
       }
+      if (process.argv.includes('--live-activity-diagnostics')) {
+        await visit('/settings');
+        const diagnostics = page.getByText('Internal diagnostics \u00b7 Live Activity', { exact: true });
+        const enabled = process.env.VITE_ENABLE_LIVE_ACTIVITY_DIAGNOSTICS === 'true';
+        await page.locator('.settings-index').waitFor();
+        if (enabled) {
+          await diagnostics.waitFor();
+          await diagnostics.click();
+          await page.getByText('Registration RPC attempted', { exact: true }).waitFor();
+          assert.match(await page.locator('.live-activity-diagnostic-values').innerText(), /Installation proof present\s+Yes/);
+          await page.getByRole('button', { name: 'Refresh diagnostics' }).click();
+          await page.getByText('Registration RPC attempted', { exact: true }).waitFor();
+        }
+        if (!enabled) assert.equal(await diagnostics.count(), 0);
+        await check('live-activity-diagnostics', true);
+        continue;
+      }
       if (process.argv.includes('--settings-only')) {
         await visit('/settings');
         const nav = page.locator('.bottom-nav a[aria-current="page"]');
@@ -961,6 +981,12 @@ async function main() {
         continue;
       }
       if (process.argv.includes('--sleep-insights')) {
+        const graph = page.getByRole('tab', { name: lang === 'en' ? 'Graph' : 'Graf' });
+        const data = page.getByRole('tab', { name: 'Data' });
+        const dataPanel = page.getByRole('tabpanel', { name: 'Data' });
+        const estimate = dataPanel.locator('.sleep-insights-estimate-time');
+        const basis = dataPanel.getByRole('heading', { name: lang === 'en' ? 'Data basis' : 'Datagrunnlag' });
+        const limited = dataPanel.getByText(lang === 'en' ? 'Limited' : 'Begrenset', { exact: true });
         await visit('/log', 'date=2026-11-20');
         const insight = page.getByRole('link', { name: lang === 'en' ? 'Sleep insights' : 'S\u00f8vninnsikt' });
         const box = await insight.boundingBox();
@@ -975,7 +1001,31 @@ async function main() {
         assert.equal(await page.locator('.sleep-insights-days > li').count(), 7);
         assert.equal(await page.locator('.sleep-insights-weeks > li').count(), 15);
         assert.equal(await page.locator('.sleep-insights-mini > span').count(), 105);
+        assert.equal(await graph.getAttribute('aria-selected'), 'true');
+        assert.equal(await dataPanel.count(), 0);
+        for (const tab of [graph, data]) {
+          const target = await tab.boundingBox();
+          assert.ok(target.width >= 44 && target.height >= 44);
+        }
+        const background = tab => tab.evaluate(button => getComputedStyle(button).backgroundColor);
+        assert.notEqual(await background(graph), await background(data));
         await check('sleep-insights', true);
+        await graph.focus();
+        await page.keyboard.press('ArrowRight');
+        assert.equal(await data.getAttribute('aria-selected'), 'true');
+        assert.equal(await data.evaluate(button => button === document.activeElement), true);
+        await page.locator('.sleep-insights-weeks').waitFor({ state: 'hidden' });
+        await limited.waitFor();
+        await dataPanel.getByText(lang === 'en' ? 'Accuracy tracking is planned' : 'Måling av treffsikkerhet er planlagt').waitFor();
+        assert.doesNotMatch(await dataPanel.innerText(), /%|\d+ (of|av) \d+/);
+        assert.equal(await estimate.count(), 0);
+        assert.doesNotMatch(await dataPanel.innerText(), /relevant.*(gap|våkenperiod)/);
+        await dataPanel.locator('summary').click();
+        assert.equal(await dataPanel.locator('details').getAttribute('open'), '');
+        await check('sleep-insights-data-empty', true);
+        await graph.click();
+        assert.equal(await dataPanel.count(), 0);
+        await page.locator('.sleep-insights-weeks').waitFor();
         await visit('/log/insights', 'date=2026-11-20&insights-fixture');
         await page.locator('.sleep-insights-weeks').waitFor();
         assert.ok(await page.locator('.sleep-insights-trend g > path').count() > 0);
@@ -1011,6 +1061,30 @@ async function main() {
         await page.locator('.log-date input').waitFor();
         assert.equal(new URL(page.url()).pathname, '/log');
         assert.equal(await page.locator('.log-date input').inputValue(), '2026-11-20');
+
+        await visit('/', 'next-sleep-fixture');
+        const homeEstimate = page.locator('.home-current-value');
+        await homeEstimate.waitFor();
+        const homeInterval = await homeEstimate.innerText();
+        await visit('/log/insights', 'next-sleep-fixture');
+        await data.click();
+        await estimate.waitFor();
+        assert.equal(await estimate.innerText(), homeInterval);
+        await dataPanel.getByText(lang === 'en' ? 'Strong' : 'Sterkt', { exact: true }).waitFor();
+        assert.match(await dataPanel.innerText(), /\b\d+ relevant/);
+        await check('sleep-insights-data-ready', true);
+        await page.locator('.sleep-insights-header select').selectOption('baby-2');
+        assert.equal(await data.getAttribute('aria-selected'), 'true');
+        assert.equal(await estimate.count(), 0);
+        await limited.waitFor();
+        assert.doesNotMatch(await dataPanel.innerText(), /\b\d+ relevant/);
+
+        await visit('/log/insights', 'next-sleep-fixture&insights-sleeping');
+        await data.click();
+        await dataPanel.getByText(lang === 'en' ? 'Sleeping now' : 'Sover nå', { exact: true }).waitFor();
+        assert.equal(await estimate.count(), 0);
+        assert.equal(await basis.count(), 0);
+        await check('sleep-insights-data-sleeping');
         continue;
       }
       if (logOnly) {
@@ -1093,10 +1167,15 @@ async function main() {
           await dialog.locator('button').nth(index).click();
           await dialog.locator('input[type=datetime-local]').first().waitFor();
           assert.ok((await dialog.locator('input[type=datetime-local]').first().inputValue()).startsWith('2026-10-24'));
-          if (index === 2) await dialog.locator('.diaper-types button').last().click();
+          if (index === 2) {
+            assert.equal(await dialog.locator('.diaper-types button').count(), 4);
+            await check('dry-diaper-dialog');
+            await dialog.getByRole('button', { name: lang === 'en' ? 'Dry' : 'Tørr', exact: true }).click();
+          }
           await dialog.locator('.primary-button').click();
           await dialog.waitFor({ state: 'hidden' });
           await row(['new-sleep','new-feed','new'][index]).waitFor();
+          if (index === 2) assert.match(await row('new').innerText(), lang === 'en' ? /Dry/ : /Tørr/);
         }
         await date.fill('2026-11-21');
         await row('active').waitFor();

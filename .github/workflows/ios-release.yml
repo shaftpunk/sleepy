@@ -2,6 +2,11 @@ name: iOS App Store release
 
 on:
   workflow_dispatch:
+    inputs:
+      live_activity_diagnostics:
+        description: Include temporary internal Live Activity diagnostics
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -46,6 +51,7 @@ jobs:
 
       - name: Prepare native iOS project
         env:
+          VITE_ENABLE_LIVE_ACTIVITY_DIAGNOSTICS: ${{ inputs.live_activity_diagnostics }}
           VITE_REVENUECAT_IOS_API_KEY: ${{ secrets.VITE_REVENUECAT_IOS_API_KEY }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}

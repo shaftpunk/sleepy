@@ -23,7 +23,7 @@ const hill = ({ start, end }: { start: number; end: number }, crest: number) => 
   return `M ${c - r} 150 C ${c - r * .45} 150 ${c - r * .42} ${h} ${c} ${h} C ${c + r * .42} ${h} ${c + r * .45} 150 ${c + r} 150 Z`;
 };
 // Later forecast events fade with horizon; emphasis never grows further ahead.
-const laterOpacity = (sequenceIndex: number) => Math.max(.38, .98 - (sequenceIndex - 1) * .28);
+const laterOpacity = (sequenceIndex: number, quality?: string) => Math.max(.38, .98 - (sequenceIndex - 1) * .28) * (quality === "low" ? .78 : quality === "medium" ? .9 : 1);
 
 export default function SleepWaveChart({ model, now, formatRange }: {
   model: SleepWaveModel; now: number; formatRange: (startMs: number, endMs: number) => string;
@@ -181,7 +181,7 @@ export default function SleepWaveChart({ model, now, formatRange }: {
         {model.active && <path d={hill(model.active, recordedWaveCrest(model.active))} fill={`url(#${id}-hillfill)`} />}
         {nextWave && <path className="is-next" d={hill(nextWave, recordedWaveCrest(nextWave))} />}
         {model.predicted.filter(p => !p.isNext && p.wave).map(p => <path key={p.sequenceIndex} className="is-later"
-          style={{ opacity: laterOpacity(p.sequenceIndex) * .6 }} d={hill(p.wave!, recordedWaveCrest(p.wave!))} fill={`url(#${id}-hillfill)`} />)}
+          style={{ opacity: laterOpacity(p.sequenceIndex, p.quality) * .6 }} d={hill(p.wave!, recordedWaveCrest(p.wave!))} fill={`url(#${id}-hillfill)`} />)}
       </g>
       <g className="sleep-wave-blooms" fill={`url(#${id}-bloom)`} clipPath={`url(#${id}-sky)`}>
         {[...displayed, ...(model.active ? [model.active] : []), ...(nextWave ? [nextWave] : [])].map((s, i) => <ellipse key={i} {...bloom(s)} />)}
@@ -197,7 +197,7 @@ export default function SleepWaveChart({ model, now, formatRange }: {
       })}
       {model.predicted.filter(p => !p.isNext).map(p => {
         const x0 = p.onset.start * 640, x1 = p.onset.end * 640;
-        return <g key={p.sequenceIndex} data-wave-predicted={p.sequenceIndex} className={`sleep-wave-later is-depth-${p.sequenceIndex}`} style={{ opacity: laterOpacity(p.sequenceIndex) }}>
+        return <g key={p.sequenceIndex} data-wave-predicted={p.sequenceIndex} className={`sleep-wave-later is-depth-${p.sequenceIndex}`} style={{ opacity: laterOpacity(p.sequenceIndex, p.quality) }}>
           <path style={{ opacity: p.wave ? .08 : .3 }} className="sleep-wave-later-band" d={`M ${x0} 150 V 70 Q ${x0} 62 ${(x0 + x1) / 2} 62 Q ${x1} 62 ${x1} 70 V 150 Z`} fill={`url(#${id}-band)`} />
           {p.wave && <path className="sleep-wave-predicted" d={recordedWavePath(p.wave)} fill={`url(#${id}-${p.sequenceIndex === 1 ? "next" : "predicted"})`} />}
         </g>;

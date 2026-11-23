@@ -16,12 +16,12 @@ export function sleepPatternBand(percentage: number | null): PatternBand {
   if (percentage >= SLEEP_PATTERN_THRESHOLDS.strong) return "strong";
   return percentage >= SLEEP_PATTERN_THRESHOLDS.moderate ? "moderate" : "weak";
 }
-export function buildSleepProbabilityBuckets(sessions: SleepSession[], now: number, active: ActiveSleep | null = null) {
+export function buildSleepProbabilityBuckets(sessions: SleepSession[], now: number, active: ActiveSleep | null = null, ageDays: number | null = null) {
   return Array.from({ length: 1440 / SLEEP_TIMELINE_STEP_MINUTES }, (_, index) => {
     const startMinute = index * SLEEP_TIMELINE_STEP_MINUTES;
     // One shared engine, including its usable-day rules and DST abstentions.
     // The sample is at the bucket's labelled start, not a second interval formula.
-    const result = calculateSleepProbability(sessions, minutesToClockLabel(startMinute), now, active);
+    const result = calculateSleepProbability(sessions, minutesToClockLabel(startMinute), now, active, ageDays);
     return { startMinute, endMinute: startMinute + SLEEP_TIMELINE_STEP_MINUTES,
       percentage: result.weightedPercentage, band: sleepPatternBand(result.weightedPercentage) };
   });

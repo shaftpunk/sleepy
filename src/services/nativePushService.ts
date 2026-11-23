@@ -69,6 +69,14 @@ function installation(create = true): Installation | null {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
   return value;
 }
+export function nativePushInstallationPresence() {
+  try {
+    const saved = installation(false);
+    return { installationPresent: Boolean(saved?.id), proofPresent: Boolean(saved?.key) };
+  } catch {
+    return { installationPresent: false, proofPresent: false };
+  }
+}
 export function nativePushInstallationProof() {
   const value = installation();
   if (!value) throw new Error("Installation unavailable");

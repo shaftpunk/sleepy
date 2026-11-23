@@ -8,16 +8,17 @@ import type { ActiveSleep, SleepSession } from "../../analytics/types";
 type Props = {
   sessions: SleepSession[];
   now: number;
+  ageDays?: number | null;
   active?: ActiveSleep | null;
 };
 
-export default function InsightTab({ sessions, now, active = null }: Props) {
+export default function InsightTab({ sessions, now, active = null, ageDays = null }: Props) {
   const { t, lang } = useTranslation();
 
   const recorded = recordedAnalysisPeriod(sessions, now);
   const quality = computeQualityDistribution(recorded);
   const nightVsDay = computeNightVsDayBreakdown(sessions, now);
-  const insights = generateInsights(sessions, now, active);
+  const insights = generateInsights(sessions, now, active, ageDays);
 
   const qualityRows: BarRow[] = quality
     .filter((row) => row.count > 0)

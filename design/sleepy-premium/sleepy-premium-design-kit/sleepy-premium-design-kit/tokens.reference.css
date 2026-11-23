@@ -1,0 +1,15 @@
+/* Sleepy Premium palette REFERENCE ONLY. Do not import directly.
+   Map these candidate values to existing theme tokens after reviewing CSS. */
+:root {
+  --premium-ivory: #FAF1ED;
+  --premium-warm-paper: #F5E8E7;
+  --premium-blush: #D9B4C7;
+  --premium-lavender: #C5ACDD;
+  --premium-mauve: #76556D;
+  --premium-plum: #342238;
+  --premium-ink: #38273C;
+  --premium-muted-ink: #765F78;
+  --premium-surface-edge: rgba(255,255,255,.65);
+}
+/* Dark-mode reference: warm plum foundation, blush/ivory accents,
+   no blue/navy cast. Preserve accessible contrast. */

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useAppStore } from "../stores/appStore";
 import { getActiveSleep, getLastCompletedSleep, startSleep, stopSleep, type SleepRecord } from "../services/sleepService";
 import { getLastFeed, type FeedRecord } from "../services/feedService";
@@ -17,8 +17,7 @@ import SoundMonitorPanel from "../components/SoundMonitorPanel";
 import SleepPrimaryAction from "../components/SleepPrimaryAction";
 import { useAnalyticsData } from "../hooks/useAnalyticsData";
 import { computeNextFeedSide } from "../analytics/home";
-import { ageInDays } from "../analytics/localDate";
-import { calculateNextSleep } from "../analytics/nextSleep";
+import { useNextSleepPrediction } from "../hooks/useNextSleepPrediction";
 import { feedTypeLabel, formatClock, formatSleepRange, sideLabel } from "../lib/format";
 import { formatHomeDuration } from "../lib/homePresentation";
 import { useTranslation } from "../i18n";
@@ -67,10 +66,7 @@ function HomeActivity() {
   const [sleepActionError, setSleepActionError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now);
   const { sessions, active, feeds } = useAnalyticsData(currentBabyId);
-  const predictionMinute = Math.ceil(now / 60000) * 60000;
-  const ageDays = ageInDays(currentBaby?.birth_date, predictionMinute);
-  const nextSleep = useMemo(() => calculateNextSleep({ sessions, active, now: predictionMinute, ageDays }),
-    [sessions, active, predictionMinute, ageDays]);
+  const nextSleep = useNextSleepPrediction(sessions, active, now, currentBaby?.birth_date);
   const nextFeedSide = computeNextFeedSide(feeds);
 
   const sleepRequest = useRef(0);

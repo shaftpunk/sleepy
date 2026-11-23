@@ -4,14 +4,14 @@ import { minutesToClockLabel } from "../../analytics/time";
 import type { ActiveSleep, SleepSession } from "../../analytics/types";
 import { useTranslation } from "../../i18n";
 
-type Props = { sessions: SleepSession[]; active: ActiveSleep | null; now: number;
+type Props = { sessions: SleepSession[]; active: ActiveSleep | null; now: number; ageDays?: number | null;
   selectedTime: string; onSelectTime: (time: string) => void };
 const position = (startMinute: number, endMinute: number) => ({ left: `${startMinute / 14.4}%`, width: `${(endMinute - startMinute) / 14.4}%` });
-export default function SleepRhythmTimeline({ sessions, active, now, selectedTime, onSelectTime }: Props) {
+export default function SleepRhythmTimeline({ sessions, active, now, ageDays = null, selectedTime, onSelectTime }: Props) {
   const { t, locale } = useTranslation();
   const id = useId();
   const rows = useMemo(() => buildSleepTimelineRows(sessions, now), [sessions, now]);
-  const buckets = useMemo(() => buildSleepProbabilityBuckets(sessions, now, active), [sessions, now, active]);
+  const buckets = useMemo(() => buildSleepProbabilityBuckets(sessions, now, active, ageDays), [sessions, now, active, ageDays]);
   const pattern = buckets.filter(bucket => bucket.band !== "none");
   const [hour, minute] = selectedTime.split(":").map(Number);
   const selectedMinute = hour * 60 + minute;

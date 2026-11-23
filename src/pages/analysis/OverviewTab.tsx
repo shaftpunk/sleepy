@@ -21,12 +21,13 @@ type Props = {
 export default function OverviewTab({ sessions, active, birthDate, now }: Props) {
   const { t, lang } = useTranslation();
 
+  const ageDays = ageInDays(birthDate, now);
   const sevenDayAvg = computeWindowAverage(sessions, now, 7, active);
   const trend = computeWeeklyTrend(sessions, now, active);
-  const kpis = computeKpis(sessions, now, active);
-  const rhythm = computeRhythmCard(sessions, now, active);
+  const kpis = computeKpis(sessions, now, active, ageDays);
+  const rhythm = computeRhythmCard(sessions, now, active, ageDays);
 
-  const ageDays = ageInDays(birthDate, now);
+
   const guidelineLookup = getGuidelineForAgeDays(ageDays);
   const guideline = guidelineLookup.status === "found" ? guidelineLookup.guideline : null;
 
@@ -85,7 +86,7 @@ export default function OverviewTab({ sessions, active, birthDate, now }: Props)
         />
       </section>
 
-      <SleepProbabilityCard sessions={sessions} active={active} now={now} />
+      <SleepProbabilityCard sessions={sessions} active={active} now={now} ageDays={ageDays} />
 
       <section className="analysis-card">
         <div className="analysis-card-heading">
@@ -122,11 +123,11 @@ export default function OverviewTab({ sessions, active, birthDate, now }: Props)
       </section>
       <details className="analysis-details">
         <summary>{t("analysis.personalProfile.title")}</summary>
-        <PersonalSleepProfileCard sessions={sessions} guideline={guideline} now={now} active={active} />
+        <PersonalSleepProfileCard sessions={sessions} guideline={guideline} now={now} active={active} ageDays={ageDays} />
       </details>
       <details className="analysis-details">
         <summary>{t("home.nextSleepTitle")}</summary>
-        <NextSleepPredictionCard sessions={sessions} active={active} now={now} ageDays={ageDays} />
+        <NextSleepPredictionCard sessions={sessions} active={active} now={now} birthDate={birthDate} />
       </details>
       <details className="analysis-details">
         <summary>{t("analysis.ageGuide.title")}</summary>

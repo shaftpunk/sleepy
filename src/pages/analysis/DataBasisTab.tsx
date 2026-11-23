@@ -3,9 +3,7 @@ import { summarizeDataBasis } from "../../analytics/dataBasis";
 import { FORECAST_RULES } from "../../analytics/dailySleepForecast";
 import { ageInDays } from "../../analytics/localDate";
 import { NEXT_SLEEP_LOOKBACK_DAYS } from "../../analytics/nextSleep";
-import { computeForecastSleepProfile, PERSONAL_SLEEP_LOOKBACK_DAYS } from "../../analytics/personalSleepProfile";
 import { MIN_SLEEP_PROBABILITY_DAYS } from "../../analytics/sleepProbability";
-import { computeSleepPrediction } from "../../analytics/sleepPrediction";
 import { buildSleepWaveModel, buildUpcomingDayWaveModel, waveModelNow } from "../../analytics/sleepWaveModel";
 import { RECENT_PATTERN_DAYS, USABLE_DAY_RULE } from "../../analytics/sleepHistory";
 import type { ActiveSleep, SleepSession } from "../../analytics/types";
@@ -19,10 +17,9 @@ export default function DataBasisTab({ sessions, active, now, birthDate }: Props
   const { t, locale } = useTranslation();
   const clockId = useId();
   const [time, setTime] = useState("10:00");
-  const data = useMemo(() => summarizeDataBasis(sessions, active, now, time), [sessions, active, now, time]);
+  const ageDays = ageInDays(birthDate, now);
+  const data = useMemo(() => summarizeDataBasis(sessions, active, now, time, ageDays), [sessions, active, now, time, ageDays]);
   const { nextSleep, dayForecast, upcomingForecast, nightForecast } = useSleepForecasts({ sessions, active, now, birthDate });
-  const analysisNext = computeSleepPrediction({ sessions, active, now, ageDays: ageInDays(birthDate, now),
-    profile: computeForecastSleepProfile(sessions, now) });
   const wave = buildSleepWaveModel({ sessions, active, prediction: nextSleep, forecast: dayForecast,
     now: waveModelNow(sessions, active, now) });
   const upcomingWave = buildUpcomingDayWaveModel(upcomingForecast);
@@ -84,8 +81,6 @@ export default function DataBasisTab({ sessions, active, now, birthDate }: Props
           </>)}
         {model(t("analysis.dataBasis.nextHome"), readiness(nextSleep.status),
           t("analysis.dataBasis.next", { days: NEXT_SLEEP_LOOKBACK_DAYS }))}
-        {model(t("analysis.prediction.title"), readiness(analysisNext.status),
-          t("analysis.dataBasis.nextOverview", { days: PERSONAL_SLEEP_LOOKBACK_DAYS }))}
         {model(t("analysis.dataBasis.dailyTitle"),
           forecastReady ? "ready" : dayForecast?.status === "partial" ? "building" : readiness(dayForecast?.status ?? upcomingForecast.status),
           t(nightForecast ? "analysis.dataBasis.upcoming" : "analysis.dataBasis.daily", { days: nightForecast ? RECENT_PATTERN_DAYS : FORECAST_RULES.lookbackDays }))}

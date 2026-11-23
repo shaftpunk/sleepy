@@ -5,7 +5,7 @@ import type { ActiveSleepClassification } from "../analytics/personalSleepClassi
 import { registerBeforeSignOut, sessionGeneration, isSessionGenerationCurrent } from "../auth/sessionLifecycle";
 import { liveActivityEnabled, saveLiveActivityEnabled } from "./liveActivityPreference";
 import { supabase } from "../lib/supabase";
-import { nativePushInstallationProof } from "./nativePushService";
+import { nativePushInstallationPresence, nativePushInstallationProof } from "./nativePushService";
 import type { SleepPresentationChange } from "./sleepPresentationEvents";
 
 export type LiveActivityBaby = { id: string; name: string };
@@ -20,7 +20,18 @@ type ActivityToken = {
   expiresAt: string;
   environment: "production" | "sandbox";
 } & ({ token: string; revoked?: false } | { revoked: true });
+type NativeDiagnostic = {
+  activityId?: string; sleepId?: string; babyId?: string; requested?: boolean;
+  tokenPresent?: boolean; tokenBytes?: number; updateReceived?: boolean; observerActive?: boolean;
+  snapshotContainsToken?: boolean; revision?: number; environment?: string;
+};
+type RegistrationDiagnostic = {
+  activityId: string; sleepId: string; babyId: string; revision: number; environment: string;
+  eventReceived?: boolean; lastAttempt?: string; lastSuccess?: string; result?: string;
+  errorCode?: string; errorMessage?: string; dedupeSkipped?: boolean; staleFenced?: boolean; retryPending?: boolean;
+};
 type Bridge = {
+  getActivityTokenDiagnostics(options: { ownerId: string }): Promise<NativeDiagnostic>;
   logActivityTokenDiagnostic(options: { phase: string; activityId?: string; sleepId?: string; revision?: number; tokenPresent?: boolean }): Promise<void>;
   getActivityTokens(): Promise<{ tokens: ActivityToken[] }>;
   endActivity(options: { ownerId: string; activityId: string }): Promise<void>;
@@ -51,6 +62,28 @@ const activityTokens = new Map<string, ActivityToken>();
 const acknowledged = new Map<string, number>();
 const tokenWrites = new Map<string, Promise<void>>();
 
+// Temporary, bounded diagnostic state. Store only metadata for the current account.
+const diagnostics = new Map<string, RegistrationDiagnostic>();
+let listenerInstalled = false;
+let snapshotStatus = "Not read";
+function recordRegistration(row: ActivityToken, patch: Partial<RegistrationDiagnostic>) {
+  if (owner?.toLowerCase() !== row.ownerId) return;
+  const previous = diagnostics.get(row.activityId);
+  if (previous && previous.revision > row.revision) return;
+  diagnostics.delete(row.activityId);
+  diagnostics.set(row.activityId, { ...previous, activityId: row.activityId, sleepId: row.sleepId,
+    babyId: row.babyId, revision: row.revision, environment: row.environment, ...patch });
+  if (diagnostics.size > 8) diagnostics.delete(diagnostics.keys().next().value!);
+}
+
+export async function readLiveActivityDiagnostics() {
+  const userId = owner, generation = sessionGeneration();
+  const native = userId ? await Promise.resolve().then(() => bridge.getActivityTokenDiagnostics({ ownerId: userId })).catch(() => null) : null;
+  if (owner !== userId || !isSessionGenerationCurrent(generation)) throw new Error("Account changed");
+  const registration = native?.activityId ? diagnostics.get(native.activityId) : [...diagnostics.values()].at(-1);
+  return { native, registration, ...nativePushInstallationPresence(), generation, listenerInstalled, snapshotStatus };
+}
+
 // Forward only explicit fields to the iOS device log, including on TestFlight.
 function logActivityToken(phase: string, row?: ActivityToken) {
   const fields = row ? { activityId: row.activityId, sleepId: row.sleepId,
@@ -60,13 +93,22 @@ function logActivityToken(phase: string, row?: ActivityToken) {
 
 function sendActivityToken(row: ActivityToken, userId: string, generation: number): Promise<void> {
   const current = () => owner === userId && isSessionGenerationCurrent(generation);
+  const diagnose = (patch: Partial<RegistrationDiagnostic>) => {
+    if (isSessionGenerationCurrent(generation)) recordRegistration(row, patch);
+  };
   const eligible = () => current() && liveActivityEnabled() && babies.some(baby => baby.id === row.babyId);
   const key = row.activityId;
   const operation = (tokenWrites.get(key) ?? Promise.resolve()).then(async () => {
-    if (!row.revoked && (!eligible() || activityTokens.get(key) !== row || acknowledged.get(key) === row.revision)) return;
+    if (!row.revoked && (!eligible() || activityTokens.get(key) !== row || acknowledged.get(key) === row.revision)) {
+      diagnose(acknowledged.get(key) === row.revision ? { dedupeSkipped: true } : { staleFenced: true });
+      return;
+    }
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user.id !== userId || (!row.revoked && !eligible())) {
-      if (!row.revoked) logActivityToken("context_rejected", row);
+      if (!row.revoked) {
+        diagnose({ staleFenced: true, result: "Session or activity context rejected" });
+        logActivityToken("context_rejected", row);
+      }
       return;
     }
     const authorization = "Bearer " + session.access_token;
@@ -75,25 +117,44 @@ function sendActivityToken(row: ActivityToken, userId: string, generation: numbe
       await supabase.rpc("revoke_live_activity_token", args).setHeader("Authorization", authorization).abortSignal(AbortSignal.timeout(4000));
       return;
     }
+    diagnose({ lastAttempt: new Date().toISOString(), result: "Pending",
+      errorCode: undefined, errorMessage: undefined, retryPending: false });
     logActivityToken("rpc_attempt", row);
     const { data, error } = await supabase.rpc("register_live_activity_token", {
       ...args, p_sleep_id: row.sleepId, p_baby_id: row.babyId, p_environment: row.environment,
       p_push_token: row.token, p_expires_at: row.expiresAt,
     }).setHeader("Authorization", authorization).abortSignal(AbortSignal.timeout(4000));
     if (error) {
+      // Only expose known server messages. Arbitrary upstream text can contain request data.
+      const knownMessages = ["Authentication required", "Invalid installation credential", "Sleep unavailable", "Invalid Live Activity registration"];
+      diagnose({ result: "Failed", retryPending: true,
+        errorCode: /^(?:[0-9A-Z]{5}|PGRST[0-9]{3})$/.test(error.code) ? error.code : undefined,
+        errorMessage: knownMessages.includes(error.message) ? error.message : "Registration request failed" });
       logActivityToken(["42501", "PGRST301", "PGRST302"].includes(error.code) ? "rpc_authorization_failed" : "rpc_failed", row);
       return;
     }
     if (data === "registered" || data === "unchanged" || data === "already_ended") logActivityToken("rpc_" + data, row);
     else logActivityToken("rpc_failed", row);
-    if (!current() || activityTokens.get(key) !== row) return;
+    if (!current() || activityTokens.get(key) !== row) {
+      diagnose({ staleFenced: true });
+      return;
+    }
+    const registered = data === "registered" || data === "unchanged";
+    diagnose({ result: registered || data === "already_ended" ? data : "Unexpected RPC result",
+      ...(registered ? { lastSuccess: new Date().toISOString() } : {}),
+      retryPending: !registered && data !== "already_ended" });
     if (data === "already_ended") {
       acknowledged.set(key, row.revision);
       await bridge.endActivity({ ownerId: userId, activityId: key });
     } else if (data === "registered" || data === "unchanged") {
       acknowledged.set(key, row.revision);
     }
-  }).catch(() => { if (!row.revoked) logActivityToken("rpc_failed", row); });
+  }).catch(() => {
+    if (!row.revoked) {
+      diagnose({ result: "Failed", errorMessage: "Registration or bridge call failed", retryPending: true });
+      logActivityToken("rpc_failed", row);
+    }
+  });
   tokenWrites.set(key, operation);
   void operation.then(() => { if (tokenWrites.get(key) === operation) tokenWrites.delete(key); });
   return operation;
@@ -103,8 +164,9 @@ function receiveActivityToken(row: ActivityToken, fromSnapshot = false) {
   logActivityToken(fromSnapshot ? "snapshot_token" : "native_event", row);
   const userId = owner;
   if (!userId || row.ownerId !== userId.toLowerCase()) { logActivityToken("context_rejected", row); return; }
+  recordRegistration(row, fromSnapshot ? {} : { eventReceived: true });
   const previous = activityTokens.get(row.activityId);
-  if (previous && (row.revision < previous.revision || previous.revoked)) return;
+  if (previous && (row.revision < previous.revision || previous.revoked)) { recordRegistration(row, { staleFenced: true }); return; }
   if (row.revoked) {
     activityTokens.set(row.activityId, row);
     acknowledged.delete(row.activityId);
@@ -112,7 +174,7 @@ function receiveActivityToken(row: ActivityToken, fromSnapshot = false) {
     if (!liveActivityEnabled() || !babies.some(baby => baby.id === row.babyId)) { logActivityToken("context_rejected", row); return; }
     if (previous?.revision === row.revision) row = previous;
     else activityTokens.set(row.activityId, row);
-    if (tokenWrites.has(row.activityId) && previous === row) return;
+    if (tokenWrites.has(row.activityId) && previous === row) { recordRegistration(row, { dedupeSkipped: true }); return; }
   }
   if (fromSnapshot && previous === row && acknowledged.get(row.activityId) !== row.revision) logActivityToken("retry_on_snapshot", row);
   void sendActivityToken(row, userId, sessionGeneration());
@@ -125,15 +187,21 @@ async function syncActivityTokens(userId: string, generation: number) {
       throw error;
     });
     await tokenListener;
+    listenerInstalled = true;
     logActivityToken("listener_ready");
     if (owner !== userId || !isSessionGenerationCurrent(generation)) return;
     const { tokens } = await bridge.getActivityTokens();
+    if (owner !== userId || !isSessionGenerationCurrent(generation)) return;
+    snapshotStatus = "Read (" + tokens.length + ")";
     logActivityToken("snapshot_read");
     for (const [id, row] of activityTokens) {
       if (row.revoked && Date.parse(row.expiresAt) <= Date.now()) activityTokens.delete(id);
     }
     if (owner === userId && isSessionGenerationCurrent(generation)) tokens.forEach(row => receiveActivityToken(row, true));
-  } catch { logActivityToken("snapshot_failed"); }
+  } catch {
+    if (owner === userId && isSessionGenerationCurrent(generation)) snapshotStatus = "Failed";
+    logActivityToken("snapshot_failed");
+  }
 }
 
 function revokeActivityTokens(userId: string, keep: (row: ActivityToken) => boolean = () => false) {
@@ -160,6 +228,7 @@ export function configureSleepLiveActivities(userId: string | null, accessibleBa
   if (previousOwner) void revokeActivityTokens(previousOwner, row =>
     previousOwner === userId && accessibleBabies.some(baby => baby.id === row.babyId));
   if (changedAccount) activityTokens.clear();
+  if (previousOwner !== userId) { diagnostics.clear(); snapshotStatus = "Not read"; }
   owner = userId; babies = accessibleBabies.map(({ id, name }) => ({ id, name })); revision++;
   presented = [];
   if (!liveActivitiesSupported()) return Promise.resolve();
@@ -232,6 +301,8 @@ export async function setSleepLiveActivitiesEnabled(enabled: boolean): Promise<v
 export async function clearSleepLiveActivities(): Promise<void> {
   const revocation = owner ? revokeActivityTokens(owner) : Promise.resolve();
   activityTokens.clear();
+  diagnostics.clear();
+  snapshotStatus = "Not read";
   revision++; owner = null; babies = [];
   presented = [];
   if (liveActivitiesSupported()) await optional(() => bridge.endAll());

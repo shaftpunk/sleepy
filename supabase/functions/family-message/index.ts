@@ -1,8 +1,20 @@
 import webpush from "npm:web-push@3.6.7";
+import { sendNativeNotifications } from "../_shared/nativePush.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import {
   validateFamilyMessageRequest,
 } from "./validation.ts";
+
+type DeliverySummary = {
+  sent?: number;
+  recipients: number;
+  subscriptions: number;
+  attempted: number;
+  delivered: number;
+  failed: number;
+  pushStatuses: number[];
+  reason?: string;
+};
 
 function senderNameFromUser(user: {
   email?: string | null;
@@ -81,6 +93,11 @@ export default {
       const supabase = createClient(supabaseUrl, serviceRoleKey);
       const { babyId, message } = payload;
 
+      console.log("family-message request:", {
+        senderUserId: sender.id,
+        babyId,
+      });
+
       const { data: householdRows, error: householdError } = await supabase
         .from("baby_households")
         .select("household_id")
@@ -91,6 +108,12 @@ export default {
       const householdIds = (householdRows ?? []).map(
         (row) => row.household_id as string,
       );
+
+      console.log("family-message households:", {
+        babyId,
+        householdIds,
+        count: householdIds.length,
+      });
 
       if (householdIds.length === 0) {
         return json({ error: "Not found" }, 404);
@@ -115,8 +138,23 @@ export default {
         (userId) => userId !== sender.id,
       );
 
+      console.log("family-message recipients:", {
+        senderUserId: sender.id,
+        recipientIds,
+        count: recipientIds.length,
+      });
+
       if (recipientIds.length === 0) {
-        return json({ sent: 0, reason: "no_push_recipients" });
+        return json({
+          sent: 0,
+          recipients: 0,
+          subscriptions: 0,
+          attempted: 0,
+          delivered: 0,
+          failed: 0,
+          pushStatuses: [],
+          reason: "no_other_household_members",
+        } satisfies DeliverySummary);
       }
 
       const { data: subscriptions, error: subscriptionError } = await supabase
@@ -126,9 +164,19 @@ export default {
 
       if (subscriptionError) throw subscriptionError;
 
-      if (!subscriptions?.length) {
-        return json({ sent: 0, reason: "no_push_recipients" });
-      }
+      const summary: DeliverySummary = {
+        recipients: recipientIds.length,
+        subscriptions: subscriptions?.length ?? 0,
+        attempted: 0,
+        delivered: 0,
+        failed: 0,
+        pushStatuses: [],
+      };
+
+      console.log("family-message subscriptions:", {
+        recipientIds,
+        subscriptions: summary.subscriptions,
+      });
 
       let senderName = senderNameFromUser(sender);
 
@@ -160,11 +208,11 @@ export default {
         tag: `sleepy-family-message-${babyId}`,
       });
 
-      let sent = 0;
+      for (const subscription of subscriptions ?? []) {
+        summary.attempted++;
 
-      for (const subscription of subscriptions) {
         try {
-          await webpush.sendNotification(
+          const response = await webpush.sendNotification(
             {
               endpoint: subscription.endpoint,
               keys: {
@@ -174,16 +222,33 @@ export default {
             },
             pushPayload,
           );
-          sent++;
+          const statusCode = response.statusCode;
+
+          summary.delivered++;
+          summary.pushStatuses.push(statusCode);
+
+          console.log("family-message push accepted:", {
+            subscriptionId: subscription.id,
+            statusCode,
+          });
         } catch (error) {
           const statusCode =
             error && typeof error === "object" && "statusCode" in error
               ? (error as { statusCode?: number }).statusCode
               : undefined;
 
+          summary.failed++;
+
+          if (typeof statusCode === "number") {
+            summary.pushStatuses.push(statusCode);
+          }
+
           console.error("family-message push failed:", {
             subscriptionId: subscription.id,
             statusCode,
+            body: error && typeof error === "object" && "body" in error
+              ? (error as { body?: unknown }).body
+              : undefined,
             error,
           });
 
@@ -204,9 +269,27 @@ export default {
         }
       }
 
+      const native = await sendNativeNotifications(supabase, recipientIds, {
+        title: "Sleepy", body: `${senderName}: ${message}`, url: "/",
+      });
+      summary.attempted += native.attempted;
+      summary.delivered += native.sent;
+      summary.failed += native.failed;
+
+      console.log("family-message complete:", {
+        senderUserId: sender.id,
+        babyId,
+        ...summary,
+      });
+
       return json({
-        sent,
-        reason: sent === 0 ? "no_push_recipients" : undefined,
+        // Keep the existing client contract while exposing the complete
+        // delivery summary to diagnose zero-delivery outcomes.
+        sent: summary.delivered,
+        ...summary,
+        reason: summary.delivered === 0
+          ? "no_push_delivery_accepted"
+          : undefined,
       });
     } catch (error) {
       console.error("family-message failed:", error);

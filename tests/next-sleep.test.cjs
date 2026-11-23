@@ -11,6 +11,21 @@ test('irregular patterns widen window and lower confidence',()=>{const stable=ru
 test('empty, sparse, stale and nap-only logging abstain',()=>{for(const s of [[],history().slice(-3),history().filter(s=>s.endMs<now-8*86400000),history().filter(s=>new Date(s.endMs).getHours()===8)])assert.equal(run(s).status,'insufficient_data');});
 test('missing logging periods are not awake samples',()=>{const r=run(history().filter((s,i)=>i%8===0));assert.equal(r.status,'insufficient_data');});
 test('overlaps and duplicates do not inflate samples',()=>{const s=history(),r=run(s);const duplicate=run([...s,...s]);assert.equal(duplicate.sampleSize,r.sampleSize);assert.equal(duplicate.likelyStart,r.likelyStart);const contained=run([...s,...s.map(x=>session(x.startMs+minute,x.endMs-minute))]);assert.equal(contained.sampleSize,r.sampleSize);});
+test('Insights evidence uses existing confidence bands and counts only eligible gaps', () => {
+  const strong = run();
+  const good = run(history().filter(s => s.endMs >= now - 8 * 86400000));
+  const limited = run(history(), { ageDays: 30 });
+  assert.equal(strong.confidence, 'high');
+  assert.equal(good.confidence, 'medium');
+  assert.equal(limited.confidence, 'low');
+  assert.equal(strong.pattern, 'stable');
+  assert.equal(run(history(now, d => d % 2 ? 30 : 210)).pattern, 'variable');
+  assert.ok(good.sampleSize < strong.sampleSize);
+  const empty = run([]);
+  assert.equal(empty.status, 'insufficient_data');
+  assert.equal(empty.sampleSize, 0);
+  assert.equal(empty.pattern, undefined);
+});
 test('ongoing sleep wins over history and future active rows abstain',()=>{assert.equal(run(history(),{active:{id:'a',startMs:now-minute}}).status,'sleeping');assert.equal(run(history(),{active:{id:'a',startMs:now+minute}}).status,'insufficient_data');});
 test('recent wake-up anchors prediction to completed sleep',()=>{const s=history();s[s.length-1]=session(now-60*minute,now);const r=run(s);assert.equal(r.status,'ready');assert.equal(r.awakeMinutes,0);assert.ok(r.earliestStart>now);});
 test('edits and deletes recompute without a prediction cache',()=>{const s=history(),before=run(s);s[s.length-1]=session(now-90*minute,now-30*minute);assert.notEqual(run(s).likelyStart,before.likelyStart);assert.equal(run(s.slice(-2)).status,'insufficient_data');});

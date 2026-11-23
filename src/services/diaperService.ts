@@ -1,6 +1,6 @@
 ﻿import { supabase } from "../lib/supabase";
 
-export const diaperTypes = ["wet", "dirty", "both"] as const;
+export const diaperTypes = ["wet", "dirty", "both", "dry"] as const;
 export type DiaperType = (typeof diaperTypes)[number];
 
 export type DiaperChange = {

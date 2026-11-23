@@ -77,8 +77,8 @@ export function computeNightVsDayBreakdown(sessions: SleepSession[], now: number
   return [row("night", night), row("day", day)];
 }
 
-export function generateInsights(sessions: SleepSession[], now: number, active: ActiveSleep | null = null): Insight[] {
-  const profile = computePersonalSleepProfile(sessions, now, active);
+export function generateInsights(sessions: SleepSession[], now: number, active: ActiveSleep | null = null, ageDays: number | null = null): Insight[] {
+  const profile = computePersonalSleepProfile(sessions, now, active, ageDays);
   const insights: Insight[] = [];
   if (profile.typicalBedtime != null && profile.typicalWakeTime != null) {
     insights.push({ id: "typical-rhythm", payload: { bedtimeMin: profile.typicalBedtime, wakeMin: profile.typicalWakeTime } });

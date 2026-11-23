@@ -16,10 +16,11 @@ function fixture({ native = true, failRead = false, failBridge = false, gate, es
   const calls = [], contexts = [], records = new Map(), document = { hidden: false }; let generation = 0, logout;
   const enabledCalls = [];
   const tokenCalls = [], tokenDiagnostics = []; let tokenListener;
-  let user = "owner", result = "registered", snapshot = [];
+  let user = "owner", result = "registered", rpcError, snapshot = [];
   const bridge = { setEnabled: async ({ enabled }) => { enabledCalls.push(enabled); if (!enabled) calls.push(['clear']); },
     setContext: async data => contexts.push(data),
     addListener: async (event, listener) => { if (event === 'activityTokenChanged') { tokenCalls.push('subscribe'); tokenListener = listener; } },
+    getActivityTokenDiagnostics: async () => ({ activityId: "card", tokenPresent: true, tokenBytes: 32 }),
     getActivityTokens: async () => { tokenCalls.push('snapshot'); return { tokens: snapshot }; },
     endActivity: async options => tokenCalls.push(['dismiss', options]),
     logActivityTokenDiagnostic: async fields => tokenDiagnostics.push(fields),
@@ -35,10 +36,10 @@ function fixture({ native = true, failRead = false, failBridge = false, gate, es
   } });
   const service = load('src/services/liveActivityService.ts', {
     './liveActivityPreference': preference,
-    './nativePushService': { nativePushInstallationProof: () => ({ p_installation_id: 'phone', p_installation_key: 'proof' }) },
+    './nativePushService': { nativePushInstallationPresence: () => ({ installationPresent: true, proofPresent: true }), nativePushInstallationProof: () => ({ p_installation_id: 'phone', p_installation_key: 'proof' }) },
     '../lib/supabase': { supabase: {
       auth: { getSession: async () => ({ data: { session: { user: { id: user }, access_token: "session-token" } } }) },
-      rpc: (name, args) => ({ setHeader() { return this; }, abortSignal: async () => { tokenCalls.push([name, args]); return { data: result }; } }),
+      rpc: (name, args) => ({ setHeader() { return this; }, abortSignal: async () => { tokenCalls.push([name, args]); return { data: result, error: rpcError }; } }),
     } },
     '@capacitor/core': { Capacitor: { isNativePlatform: () => native, getPlatform: () => 'ios', isPluginAvailable: () => true }, registerPlugin: () => bridge },
     './sleepService': { getActiveSleep: async id => { if (gate) await gate; if (failRead) throw Error('offline'); return records.get(id) ?? null; } },
@@ -50,6 +51,7 @@ function fixture({ native = true, failRead = false, failBridge = false, gate, es
   }, { document, AbortSignal });
   return { service, bridge, calls, contexts, records, document, preference, storage, enabledCalls,
     tokenCalls, tokenDiagnostics, emitToken: row => tokenListener(row), setSnapshot: rows => { snapshot = rows; },
+    registrationError: error => { rpcError = error; },
     switchUser: value => { user = value; generation++; }, registrationResult: value => { result = value; },
     setEstimate: value => { currentEstimate = value; historyChanged(); },
     invalidate: () => generation++, logout: async () => { generation++; await logout(); },
@@ -332,4 +334,25 @@ test('ActivityKit token snapshot, rotation, deduplication and exact late dismiss
   f.emitToken({ ...row, ownerId: 'other', revision: 4 });
   await flush();
   assert.equal(registrations().length, 2);
+});
+
+test('internal registration snapshot exposes safe metadata and hides arbitrary RPC error content', async () => {
+  const f = fixture();
+  await f.service.configureSleepLiveActivities('owner', [f.baby]);
+  f.registrationError({ code: '42501', message: 'Sensitive detail: proof-value' });
+  f.emitToken({ ownerId: 'owner', activityId: 'card', sleepId: 'sleep', babyId: 'baby', revision: 7,
+    environment: 'production', token: 'sample-token', expiresAt: '2030-01-01T00:00:00Z' });
+  await new Promise(resolve => setImmediate(resolve));
+  const snapshot = await f.service.readLiveActivityDiagnostics();
+  assert.equal(snapshot.native.tokenBytes, 32);
+  assert.equal(snapshot.installationPresent, true);
+  assert.equal(snapshot.proofPresent, true);
+  assert.equal(snapshot.registration.errorCode, '42501');
+  assert.equal(snapshot.registration.errorMessage, 'Registration request failed');
+  assert.equal(snapshot.registration.eventReceived, true);
+  assert.equal(snapshot.registration.retryPending, true);
+  assert.ok(snapshot.registration.lastAttempt);
+  assert.doesNotMatch(JSON.stringify(snapshot), /sample-token|proof-value/);
+  await f.logout();
+  assert.equal((await f.service.readLiveActivityDiagnostics()).registration, undefined);
 });

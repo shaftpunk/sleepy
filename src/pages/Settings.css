@@ -279,3 +279,15 @@
   gap: 8px;
   min-height: 44px;
 }
+
+.live-activity-diagnostic-values > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: .5rem;
+  padding-block: .25rem;
+}
+
+.live-activity-diagnostic-values dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

@@ -56,9 +56,10 @@ export function computeSleepPerDayLast7(
 export function computeHourlyDistribution(
   sessions: SleepSession[],
   now: number,
-  active: ActiveSleep | null = null
+  active: ActiveSleep | null = null,
+  ageDays: number | null = null
 ): BucketDistribution {
-  return recentBucketDistribution(sessions, now, active);
+  return recentBucketDistribution(sessions, now, active, ageDays);
 }
 
 export type WakeWindowsThroughDay = {
@@ -66,12 +67,12 @@ export type WakeWindowsThroughDay = {
   excludedGapCount: number;
 };
 
-export function computeWakeWindowsThroughDay(sessions: SleepSession[], now: number, active: ActiveSleep | null = null): WakeWindowsThroughDay {
-  const result = recentSleepEvidence(sessions, now, active);
+export function computeWakeWindowsThroughDay(sessions: SleepSession[], now: number, active: ActiveSleep | null = null, ageDays: number | null = null): WakeWindowsThroughDay {
+  const result = recentSleepEvidence(sessions, now, active, ageDays);
   return {
     groups: (["1st", "2nd", "3rd", "4th+"] as const).map((label, i) => {
       const selected = result.windows.filter(w => Math.min(w.index, 3) === i);
-      return { label, count: selected.length, medianMinutes: weightedWakeMedian(selected, now) };
+      return { label, count: selected.length, medianMinutes: weightedWakeMedian(selected, now, ageDays) };
     }),
     excludedGapCount: result.excludedGapCount,
   };

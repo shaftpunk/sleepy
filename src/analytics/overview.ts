@@ -54,8 +54,8 @@ export type OverviewKpis = {
   napsPerDay: number | null;
 };
 
-export function computeKpis(sessions: SleepSession[], now: number, active: ActiveSleep | null = null): OverviewKpis {
-  const profile = computePersonalSleepProfile(sessions, now, active);
+export function computeKpis(sessions: SleepSession[], now: number, active: ActiveSleep | null = null, ageDays: number | null = null): OverviewKpis {
+  const profile = computePersonalSleepProfile(sessions, now, active, ageDays);
   const keys = new Set(completedLocalDays(now).map(d => d.localDate));
   // Explicit factual record for the completed 30-day period, not a typical stretch.
   const longestMinutes = sessions.filter(s => keys.has(dayKeyOf(s.startMs)) && s.endMs <= now && s.durationMin > 0 && s.durationMin <= MAX_PLAUSIBLE_SESSION_MINUTES)
@@ -69,7 +69,7 @@ export type RhythmCard = {
   medianWakeWindowMinutes: number | null;
 };
 
-export function computeRhythmCard(sessions: SleepSession[], now: number, active: ActiveSleep | null = null): RhythmCard {
-  const profile = computePersonalSleepProfile(sessions, now, active);
+export function computeRhythmCard(sessions: SleepSession[], now: number, active: ActiveSleep | null = null, ageDays: number | null = null): RhythmCard {
+  const profile = computePersonalSleepProfile(sessions, now, active, ageDays);
   return { bedtimeMin: profile.typicalBedtime, wakeMin: profile.typicalWakeTime, medianWakeWindowMinutes: profile.medianWakeWindow };
 }

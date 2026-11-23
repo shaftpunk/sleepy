@@ -1,5 +1,29 @@
 # Analysis recency audit and methodology
 
+## Current policy
+
+The earlier audit below records the original migration to a 30-day profile. The
+prediction update supersedes its fixed-weight and legacy forecast descriptions.
+See [prediction methodology](./sleep-prediction-methodology.md) for the live
+forecast rules and replay procedure.
+
+- Analysis uses the previous 30 completed local dates. The shared base tiers
+  remain 1.00, 0.75, 0.50 and 0.25. When age is known, each base weight is
+  raised to `1 + exp(-ageDays / 120)`. Without a valid birth date, the base
+  weights apply. Age changes influence, never session eligibility.
+- Personal Sleep Profile and curated Insights use the recorded child's recurring
+  main sleep pattern when supported. Explicit night/nap labels take precedence.
+  Exact historical summaries and equal-weight completed-week trends retain
+  their original rules.
+- Likely Asleep and its timeline use the same weights at the selected local
+  time. Five usable days are still required, with the time bracketed by
+  recorded evidence. The percentage summarizes observations.
+- Data Basis shows the same eligibility counts and live model statuses.
+  Overview, Home and the History planner use the same personalized Next Sleep
+  forecast. The age guide remains a separate reference.
+
+
+
 ## Scope and finding
 
 Analysis describes two different things: exact recorded periods and estimates of

@@ -111,8 +111,10 @@ test('haptics are optional on web, missing plugins, and rejecting or synchronous
 });
 test('Home keeps the shared predictor, authoritative writes and a synchronous duplicate guard', () => {
   const home = fs.readFileSync('src/pages/Home.tsx', 'utf8');
-  // Home and History call the same engine with the same minute and age inputs.
-  assert.ok(home.includes('calculateNextSleep(') && fs.readFileSync('src/hooks/useSleepForecasts.ts', 'utf8').includes('calculateNextSleep('));
+  const insights = fs.readFileSync('src/pages/SleepInsightsData.tsx', 'utf8');
+  const shared = fs.readFileSync('src/hooks/useNextSleepPrediction.ts', 'utf8');
+  assert.ok(home.includes('useNextSleepPrediction(') && insights.includes('useNextSleepPrediction('));
+  assert.ok(shared.includes('calculateNextSleep(') && fs.readFileSync('src/hooks/useSleepForecasts.ts', 'utf8').includes('calculateNextSleep('));
   for (const name of ['await startSleep(', 'await stopSleep(', 'sleepActionBusy.current = true']) assert.ok(home.includes(name));
   assert.doesNotMatch(home, /<SleepStartOptions|<SleepStopOptions|<SleepWaveCard|computeTodayTotals/);
   const action = fs.readFileSync('src/components/SleepPrimaryAction.tsx', 'utf8');

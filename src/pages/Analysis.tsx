@@ -1,3 +1,4 @@
+import { ageInDays } from "../analytics/localDate";
 import { useEffect, useState } from "react";
 
 import { useAppStore } from "../stores/appStore";
@@ -129,6 +130,7 @@ export default function Analysis() {
 
           {tab === "day" && (
             <DayTab
+              ageDays={ageInDays(currentBaby?.birth_date, now)}
               active={active}
               sessions={sessions}
               now={now}
@@ -144,6 +146,7 @@ export default function Analysis() {
 
           {tab === "insight" && (
             <InsightTab
+              ageDays={ageInDays(currentBaby?.birth_date, now)}
               active={active}
               sessions={sessions}
               now={now}

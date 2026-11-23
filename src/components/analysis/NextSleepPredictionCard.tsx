@@ -1,6 +1,5 @@
-import { computeForecastSleepProfile } from "../../analytics/personalSleepProfile";
-import { computeSleepPrediction, type PredictionBasisEntry } from "../../analytics/sleepPrediction";
-import { formatClock, formatDuration } from "../../lib/format";
+import { useSleepForecasts } from "../../hooks/useSleepForecasts";
+import { formatClock } from "../../lib/format";
 import { useTranslation, type TranslationKey } from "../../i18n";
 import type { ActiveSleep, SleepSession } from "../../analytics/types";
 
@@ -8,7 +7,7 @@ type Props = {
   sessions: SleepSession[];
   active: ActiveSleep | null;
   now: number;
-  ageDays: number | null;
+  birthDate: string | null;
 };
 
 const CONFIDENCE_KEYS: Record<string, TranslationKey> = {
@@ -17,29 +16,10 @@ const CONFIDENCE_KEYS: Record<string, TranslationKey> = {
   high: "common.confidenceHigh",
 };
 
-function basisText(
-  entry: PredictionBasisEntry,
-  t: (key: TranslationKey, params?: Record<string, string | number>) => string
-): string {
-  switch (entry.id) {
-    case "age-guideline":
-      return t("analysis.prediction.basisAgeGuideline");
-    case "time-of-day-pattern":
-      return t("analysis.prediction.basisTimeOfDayPattern");
-    case "personal-pattern":
-      return t("analysis.prediction.basisPersonalPattern", { days: entry.days ?? 0 });
-    case "limited-history":
-      return t("analysis.prediction.basisLimitedHistory", { days: entry.days ?? 0 });
-    default:
-      return "";
-  }
-}
-
-export default function NextSleepPredictionCard({ sessions, active, now, ageDays }: Props) {
+export default function NextSleepPredictionCard({ sessions, active, now, birthDate }: Props) {
   const { t, lang } = useTranslation();
 
-  const profile = computeForecastSleepProfile(sessions, now);
-  const result = computeSleepPrediction({ sessions, active, now, ageDays, profile });
+  const { nextSleep: result } = useSleepForecasts({ sessions, active, now, birthDate });
 
   if (result.status === "sleeping") {
     return (
@@ -56,7 +36,7 @@ export default function NextSleepPredictionCard({ sessions, active, now, ageDays
     );
   }
 
-  if (result.status === "unavailable") {
+  if (result.status !== "ready" || result.earliestStart == null || result.latestStart == null) {
     return (
       <section className="analysis-card">
         <div className="analysis-card-heading">
@@ -71,7 +51,7 @@ export default function NextSleepPredictionCard({ sessions, active, now, ageDays
     );
   }
 
-  const { prediction } = result;
+
 
   return (
     <section className="analysis-card">
@@ -79,29 +59,15 @@ export default function NextSleepPredictionCard({ sessions, active, now, ageDays
         <div>
           <p className="card-label">{t("analysis.prediction.title")}</p>
           <h2>
-            {formatClock(prediction.earliestSleepMs, lang)}–
-            {formatClock(prediction.latestSleepMs, lang)}
+            {formatClock(result.earliestStart, lang)}â€“
+            {formatClock(result.latestStart, lang)}
           </h2>
         </div>
 
-        <span className="trend-chip neutral">{t(CONFIDENCE_KEYS[prediction.confidence])}</span>
+        <span className="trend-chip neutral">{t(CONFIDENCE_KEYS[result.confidence ?? "low"])}</span>
       </div>
 
-      <p className="muted prediction-based-on-label">{t("analysis.prediction.basedOn")}</p>
-
-      <ul className="prediction-basis-list">
-        <li>{t("analysis.prediction.lastWakeUpAt", { time: formatClock(prediction.lastWakeMs, lang) })}</li>
-
-        {prediction.basis.map((entry, i) => (
-          <li key={`${entry.id}-${i}`}>{basisText(entry, t)}</li>
-        ))}
-      </ul>
-
-      <p className="muted">
-        {t("analysis.prediction.estimatedWakeWindow", {
-          duration: formatDuration(prediction.wakeWindowMinutes, lang),
-        })}
-      </p>
+      <p className="muted">{t("analysis.prediction.recentSequence")}</p>
 
       <p className="guidance-disclaimer">{t("common.guidanceDisclaimer")}</p>
     </section>

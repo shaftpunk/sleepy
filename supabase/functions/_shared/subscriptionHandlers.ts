@@ -1,7 +1,8 @@
 import { createRevenueCatAPI, parseWebhook, record, SubscriptionError, uuid, webhookAuthorized,
   type RCConfig, type VerifiedSource } from "./revenuecat.ts";
+import { createSubscriptionDiagnostics, type SubscriptionDiagnostics } from "./subscriptionDiagnostics.ts";
 
-type Dependencies = { config: () => RCConfig;
+type Dependencies = { config: () => RCConfig; diagnostics?: SubscriptionDiagnostics;
   authenticate: (authorization: string) => Promise<string | null>;
   rpc: (name: string, args: Record<string, unknown>) => Promise<unknown>;
   resolve: (authorization: string, household: string) => Promise<unknown>;
@@ -19,27 +20,36 @@ async function input(req: Request): Promise<unknown> {
 }
 const errorResponse=(error: unknown)=>error instanceof SubscriptionError ? response({error:error.message},error.status) : response({error:"subscription_verification_unavailable"},503);
 export function createSubscriptionHandlers(deps: Dependencies) {
+  const diagnostics = deps.diagnostics ?? createSubscriptionDiagnostics();
   async function reconcile(user: string,config: RCConfig,intent: string|null=null,transaction?:string) {
-    const api=deps.snapshot?null:createRevenueCatAPI(config);
-    const started=await deps.rpc("revenuecat_begin",{p_user:user,p_project:config.project,p_app:config.app});
-    if(started===null)return null;
-    const job=record(started);
-    if(!Number.isSafeInteger(job.revision)||!Array.isArray(job.subscription_ids)||job.subscription_ids.some(id=>typeof id!=="string"))throw new SubscriptionError(503,"invalid_reconciliation_job");
-    const sources=await (deps.snapshot ? deps.snapshot(config,user,job.subscription_ids as string[],transaction) : api!.snapshot(user,job.subscription_ids as string[],transaction));
-    const applied=record(await deps.rpc("revenuecat_apply",{p_user:user,p_project:config.project,p_app:config.app,p_revision:job.revision,p_sources:sources,p_intent:intent,p_transaction:transaction??null}));
-    return {applied,sources};
+    return diagnostics.run("reconciliation", async () => {
+      const api=deps.snapshot?null:createRevenueCatAPI(config, undefined, undefined, diagnostics);
+      const job=await diagnostics.run("reconciliation_job", async () => {
+        const started=await deps.rpc("revenuecat_begin",{p_user:user,p_project:config.project,p_app:config.app});
+        if(started===null)return null;
+        const job=record(started);
+        if(!Number.isSafeInteger(job.revision)||!Array.isArray(job.subscription_ids)||job.subscription_ids.some(id=>typeof id!=="string"))throw new SubscriptionError(503,"invalid_reconciliation_job");
+        return job;
+      });
+      if(job===null)return null;
+      const sources=await diagnostics.run("revenuecat_snapshot", () => deps.snapshot ? deps.snapshot(config,user,job.subscription_ids as string[],transaction) : api!.snapshot(user,job.subscription_ids as string[],transaction));
+      const applied=await diagnostics.run("apply_rpc", async () => record(await deps.rpc("revenuecat_apply",{p_user:user,p_project:config.project,p_app:config.app,p_revision:job.revision,p_sources:sources,p_intent:intent,p_transaction:transaction??null})));
+      return {applied,sources};
+    });
   }
   async function safeResult(authorization:string,result:Record<string,unknown>,sources:VerifiedSource[]) {
     const household=result.householdId;
     const subscriptionState=["production","sandbox","none"].includes(String(result.subscriptionState))?result.subscriptionState:
       sources.some(s=>s.access&&s.environment==="production")?"production":sources.some(s=>s.access&&s.environment==="sandbox")?"sandbox":"none";
     if(household===null)return {state:result.state,subscriptionState,householdId:null,entitlement:null};
-    if(!uuid(household))throw new SubscriptionError(503,"invalid_entitlement_result");
-    const raw=record(await deps.resolve(authorization,household));
-    const allowed=["household_id","tier","is_plus","features","verification_state","verified_at","valid_until","recheck_at","policy_version"];
-    if(raw.household_id!==household||!["free","plus"].includes(String(raw.tier))||raw.is_plus!==(raw.tier==="plus"))throw new SubscriptionError(503,"invalid_entitlement_result");
-    const entitlement=Object.fromEntries(allowed.map(key=>[key,raw[key]]));
-    return {state:raw.tier==="free" && subscriptionState==="sandbox"?"sandboxVerified":"verified",subscriptionState,householdId:household,entitlement};
+    return diagnostics.run("entitlement_resolve", async () => {
+      if(!uuid(household))throw new SubscriptionError(503,"invalid_entitlement_result");
+      const raw=record(await deps.resolve(authorization,household));
+      const allowed=["household_id","tier","is_plus","features","verification_state","verified_at","valid_until","recheck_at","policy_version"];
+      if(raw.household_id!==household||!["free","plus"].includes(String(raw.tier))||raw.is_plus!==(raw.tier==="plus"))throw new SubscriptionError(503,"invalid_entitlement_result");
+      const entitlement=Object.fromEntries(allowed.map(key=>[key,raw[key]]));
+      return {state:raw.tier==="free" && subscriptionState==="sandbox"?"sandboxVerified":"verified",subscriptionState,householdId:household,entitlement};
+    });
   }
   async function authenticated(req:Request):Promise<Response> {
     if(req.method==="OPTIONS")return response({});if(req.method!=="POST")return response({error:"method_not_allowed"},405);
@@ -59,7 +69,7 @@ export function createSubscriptionHandlers(deps: Dependencies) {
         if(!uuid(body.householdId)||!uuid(body.babyId)||!uuid(body.attemptId)||!["monthly","annual"].includes(String(body.plan)))throw new SubscriptionError(400,"invalid_purchase_context");
         // Check membership before any expensive provider call, and again atomically
         // in prepare. resolve derives auth.uid() from this caller's original JWT.
-        await deps.resolve(authorization,body.householdId);
+        await diagnostics.run("entitlement_resolve", () => deps.resolve(authorization,body.householdId as string));
         const verified=await reconcile(user,config);if(!verified)throw new SubscriptionError(403,"account_unavailable");
         const prepared=record(await deps.rpc("revenuecat_prepare",{p_user:user,p_project:config.project,p_app:config.app,
           p_household:body.householdId,p_baby:body.babyId,p_product:body.plan==="monthly"?"sleepy_plus_monthly":"sleepy_plus_yearly",
