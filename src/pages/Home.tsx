@@ -225,6 +225,7 @@ function HomeActivity() {
             <use className="home-ring-pulse" href="#home-ring-arc" stroke="url(#home-ring-warm)" />
           </g>
         </svg>
+        <RecentOrbMarkers now={now} sleep={completedSleepEnd} feed={lastFeed?.starttime} diaper={lastDiaper?.changed_at} />
         <img className="home-current-animal" src={activeSleep ? sleepingFox : awakeFox} alt="" draggable={false} />
       </>}
       {isDefault && !loading && !activeSleep && completedSleepEnd && <>
@@ -288,6 +289,24 @@ function HomeActivity() {
       }} />}
     {feedEditor && <FeedModal allowDelete feed={feedEditor.feed} nextSide={nextFeedSide} onClose={() => setFeedEditor(null)} onSaved={loadFeedData} />}
   </>;
+}
+
+function RecentOrbMarkers({ now, sleep, feed, diaper }: {
+  now: number;
+  sleep?: string | null;
+  feed?: string | null;
+  diaper?: string | null;
+}) {
+  const latest = { sleep, feed, diaper };
+  const recent = (["sleep", "feed", "diaper"] as const)
+    .map(kind => ({ kind, time: Date.parse(latest[kind] ?? "") }))
+    .filter(event => event.time <= now && now - event.time <= 24 * 60 * 60 * 1000)
+    .sort((a, b) => a.time - b.time);
+
+  if (recent.length < 2) return null;
+  return <div className="home-orb-markers" aria-hidden="true">
+    {recent.map(event => <SleepyIcon key={event.kind} name={event.kind} />)}
+  </div>;
 }
 
 function RecentRow({ kind, label, editLabel, onEdit, children }: {

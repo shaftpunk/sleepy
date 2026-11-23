@@ -275,6 +275,28 @@
     --orb-halo: 1px;
     --orb-scale: 1.005;
   }
+  & .home-orb-markers {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    color: var(--lavender);
+    opacity: .47;
+  }
+  & .home-orb-markers svg {
+    position: absolute;
+    width: 5.5%;
+    height: 5.5%;
+    transform: translate(-50%, -50%);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.85;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  /* Ordered clockwise, with the most recent trace near the lower right. */
+  & .home-orb-markers svg:first-child { left: 17%; top: 24%; }
+  & .home-orb-markers svg:nth-child(2) { left: 75%; top: 16%; }
+  & .home-orb-markers svg:last-child { left: 91%; top: 59%; }
   & .home-ring-cool {
     opacity: 0;
     filter: drop-shadow(0 0 1px var(--orb-cool));

@@ -59,7 +59,7 @@ function mock(url) {
       if(babyId!=='baby')return [];
       if(limit===1){
         if(new URLSearchParams(location.search).has('empty'))return [];
-        return [window.__savedDiaper||{id:'both',type:'both',baby_id:babyId,changed_at:'2026-11-21T11:00:00Z'}];
+        return [window.__savedDiaper||{id:'both',type:'both',baby_id:babyId,changed_at:${process.argv.includes('--minimal-home') ? 'new Date(Date.now()-900000).toISOString()' : "'2026-11-21T11:00:00Z'"}}];
       }
       return [...rows.map(([id,time,baby_id])=>({id,type:id,baby_id,changed_at:'2026-11-21T'+time+':00Z'})),
         {id:'yesterday',type:'wet',baby_id:'baby',changed_at:'2026-11-20T18:00:00Z'}];
@@ -766,6 +766,32 @@ async function main() {
         await page.locator('.sleep-action').waitFor();
         await page.waitForFunction(() => !document.querySelector('.sleep-action').disabled);
         const home = page.locator('.home-minimal');
+        async function checkMarkers() {
+          if (skin !== 'default') return;
+          const layer = home.locator('.home-orb-markers');
+          assert.equal(await layer.getAttribute('aria-hidden'), 'true');
+          await layer.locator('svg').nth(2).waitFor();
+          assert.equal(await layer.locator('svg').count(), 3);
+          const clear = await layer.evaluate(el => {
+            const orb = el.parentElement;
+            const bounds = orb.getBoundingClientRect();
+            const occupied = [orb.querySelector('img').getBoundingClientRect()];
+            for (const content of orb.querySelectorAll('h2, p, button, strong, span')) {
+              const range = document.createRange();
+              range.selectNodeContents(content);
+              occupied.push(...range.getClientRects());
+            }
+            return [...el.children].every(icon => {
+              const box = icon.getBoundingClientRect();
+              const insideRing = Math.hypot(Math.abs(box.x + box.width / 2 - bounds.x - bounds.width / 2) + box.width / 2,
+                Math.abs(box.y + box.height / 2 - bounds.y - bounds.height / 2) + box.height / 2) < bounds.width * .47;
+              const overlaps = occupied.some(r => box.left < r.right && box.right > r.left && box.top < r.bottom && box.bottom > r.top);
+              occupied.push(box);
+              return insideRing && !overlaps && getComputedStyle(icon).animationName === 'none';
+            });
+          });
+          assert.ok(clear, 'markers stay inside the ring and clear of the fox and text');
+        }
         async function checkOrb(sleeping) {
           if (skin !== 'default') return;
           const fox = home.locator('.home-current-animal');
@@ -780,6 +806,7 @@ async function main() {
           assert.ok(foxBox.y > ringBox.y + 8);
           assert.ok(Math.abs(foxBox.x + foxBox.width / 2 - ringBox.x - ringBox.width / 2) < 2);
           await page.emulateMedia({ reducedMotion: 'reduce' });
+          await checkMarkers();
           for (const layer of [ring, pulse, home.locator('.home-ring-cool'), fox]) assert.equal(await layer.evaluate(animation), 'none');
           assert.equal(await ring.locator('linearGradient').count(), 2);
           await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -864,6 +891,7 @@ async function main() {
         await home.locator('.home-current-value').waitFor();
         assert.equal(await home.locator('.home-current-animal').count(), skin === 'default' ? 1 : 0);
         if (width >= 375) assert.ok(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1), 'forecast Home fits the viewport');
+        await checkMarkers();
         await check('minimal-home-forecast', true);
         if (width === 320 && skin === 'default') {
           await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
@@ -884,6 +912,7 @@ async function main() {
         assert.equal(await home.locator('button.home-recent-row').count(), 0);
         assert.equal(await home.locator('.home-current-value').count(), 0);
         assert.equal(await home.locator('.home-awake-duration').count(), 0);
+        assert.equal(await home.locator('.home-orb-markers').count(), 0);
         await check('minimal-home');
         await visit('/settings/notifications/sound', 'active&sound=listening');
         await page.locator('.sound-settings .home-sound-controls > summary').click();
