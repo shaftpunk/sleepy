@@ -216,11 +216,12 @@ function HomeActivity() {
               <stop stopColor="#ad94d3" /><stop offset=".55" stopColor="#c9a8ce" /><stop offset="1" stopColor="#e6b6c6" />
             </linearGradient>
             <linearGradient id="home-ring-warm" x2="1" y2="1">
-              <stop stopColor="var(--orb-warm)" /><stop offset=".6" stopColor="#e9acbd" /><stop offset="1" stopColor="#c4a7d9" />
+              <stop stopColor="var(--orb-warm)" /><stop offset=".6" stopColor="var(--orb-pink)" /><stop offset="1" stopColor="var(--orb-warm)" />
             </linearGradient>
           </defs>
           <g fill="none" strokeWidth="4" strokeLinecap="round">
             <use href="#home-ring-arc" stroke="url(#home-ring-base)" />
+            <use className="home-ring-cool" href="#home-ring-arc" stroke="var(--orb-cool)" />
             <use className="home-ring-pulse" href="#home-ring-arc" stroke="url(#home-ring-warm)" />
           </g>
         </svg>

@@ -780,7 +780,7 @@ async function main() {
           assert.ok(foxBox.y > ringBox.y + 8);
           assert.ok(Math.abs(foxBox.x + foxBox.width / 2 - ringBox.x - ringBox.width / 2) < 2);
           await page.emulateMedia({ reducedMotion: 'reduce' });
-          for (const layer of [ring, pulse, fox]) assert.equal(await layer.evaluate(animation), 'none');
+          for (const layer of [ring, pulse, home.locator('.home-ring-cool'), fox]) assert.equal(await layer.evaluate(animation), 'none');
           assert.equal(await ring.locator('linearGradient').count(), 2);
           await page.emulateMedia({ reducedMotion: 'no-preference' });
           if (width === 390 && theme === 'light' && lang === 'en' && (sleeping || !await page.evaluate(() => window.__orbObserved))) {
@@ -792,6 +792,9 @@ async function main() {
                 const fox = document.querySelector('.home-current-animal');
                 return { opacity: Number(getComputedStyle(el).opacity), rotation: matrix.b, foxY: new DOMMatrix(getComputedStyle(fox).transform).f };
               }));
+              if (!sleeping && (i === 0 || i === 6)) {
+                await home.locator('.home-current').screenshot({ path: path.join(output, context + '-orb-phase-' + i + '.png') });
+              }
               if (i < 12) await new Promise(resolve => setTimeout(resolve, cycle / 12));
             }
             assert.ok(Math.min(...samples.map(s => s.opacity)) < .1 && Math.max(...samples.map(s => s.opacity)) > .9);
@@ -806,6 +809,11 @@ async function main() {
           if (sleeping) assert.equal(await home.locator('.home-current h2').innerText(), lang === 'en' ? 'Sleeping for' : 'Sover i');
         }
         if (skin === 'default') {
+          const actions = home.locator('.home-sleep-actions > :is(.sleep-action,.secondary-button)');
+          for (const button of await actions.all()) {
+            const box = await button.boundingBox();
+            assert.ok(box.width >= 88 && box.width <= 96 && Math.abs(box.width - box.height) < 1);
+          }
           const header = home.locator('.home-header');
           const select = header.locator('select');
           const available = await select.evaluate(el => el.clientWidth - parseFloat(getComputedStyle(el).paddingRight) - parseFloat(getComputedStyle(el).paddingLeft));
