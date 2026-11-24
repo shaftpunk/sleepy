@@ -878,8 +878,8 @@ async function main() {
                 const fox = document.querySelector('.home-orb-fox-motion');
                 return { opacity: Number(getComputedStyle(el).opacity), rotation: matrix.b, foxY: new DOMMatrix(getComputedStyle(fox).transform).f };
               }));
-              if (!sleeping && (i === 0 || i === 6)) {
-                await home.locator('.home-current').screenshot({ path: path.join(output, context + '-orb-phase-' + i + '.png') });
+              if (i === 0 || i === 6) {
+                await home.locator('.home-current').screenshot({ path: path.join(output, context + (sleeping ? '-sleeping' : '-awake') + '-orb-phase-' + i + '.png') });
               }
               if (i < 12) await new Promise(resolve => setTimeout(resolve, cycle / 12));
             }

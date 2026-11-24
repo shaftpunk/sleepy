@@ -6,8 +6,7 @@ import { getRecentDiaperChanges, type DiaperChange } from "../services/diaperSer
 import { subscribeToSleepChanges } from "../services/sleepRealtime";
 import { subscribeToFeedChanges } from "../services/feedRealtime";
 import SleepyIcon from "../components/SleepyIcon";
-import awakeFox from "../assets/awake-fox.png";
-import sleepingFox from "../assets/sleeping-fox.png";
+import { AnimatedSleepyFox } from "../components/AnimatedSleepyFox";
 import FeedModal from "../components/FeedModal";
 import SleepModal from "../components/SleepModal";
 import DiaperModal from "../components/DiaperModal";
@@ -223,11 +222,7 @@ function HomeActivity() {
           <circle className="home-orb-now" cx="183" cy="148" r="3.4" />
         </svg>
         <RecentOrbMarkers now={now} sleep={completedSleepEnd} feed={lastFeed?.starttime} diaper={lastDiaper?.changed_at} />
-        <div className="home-orb-fox-slot">
-          <div className="home-orb-fox-motion">
-            <img className="home-current-animal" src={activeSleep ? sleepingFox : awakeFox} alt="" draggable={false} />
-          </div>
-        </div>
+        <AnimatedSleepyFox sleeping={Boolean(activeSleep)} />
       </>}
       {isDefault && !loading && !activeSleep && completedSleepEnd && <>
         <span className="home-awake-label">{t("home.awakeFor")}</span>

@@ -278,7 +278,7 @@
     /* Sleeping: breathing. Height grows a little more than width, almost no lift. */
     --fox-lift: -.95px;
     --fox-scale-x: 1.003;
-    --fox-scale-y: 1.007;
+    --fox-scale-y: 1.024;
     --orb-warm: #cfb7d8;
     --orb-pink: #ddaebf;
     --orb-cool: #b59ed0;
@@ -361,6 +361,7 @@
     pointer-events: none;
     user-select: none;
   }
+  & .home-orb-fox-slot[data-playing="false"] :is(.home-orb-fox-motion, .home-current-animal) { animation-play-state: paused; }
   & .home-awake-label { font-size: .8125rem; color: var(--text-secondary); }
   & .home-awake-duration { font-size: 1.25rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
   & .home-current h2 { margin-top: 4px; font-size: 1rem; font-weight: 550; }
