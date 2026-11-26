@@ -214,7 +214,7 @@ function HomeActivity() {
               <stop stopColor="var(--orb-warm)" /><stop offset=".6" stopColor="var(--orb-pink)" /><stop offset="1" stopColor="var(--orb-warm)" />
             </linearGradient>
           </defs>
-          <g fill="none" strokeWidth="4" strokeLinecap="round">
+          <g fill="none" strokeWidth="2.6" strokeLinecap="round">
             <use href="#home-ring-arc" stroke="url(#home-ring-base)" />
             <use className="home-ring-cool" href="#home-ring-arc" stroke="var(--orb-cool)" />
             <use className="home-ring-pulse" href="#home-ring-arc" stroke="url(#home-ring-warm)" />
@@ -224,10 +224,10 @@ function HomeActivity() {
         <RecentOrbMarkers now={now} sleep={completedSleepEnd} feed={lastFeed?.starttime} diaper={lastDiaper?.changed_at} />
         <AnimatedSleepyFox sleeping={Boolean(activeSleep)} />
       </>}
-      {isDefault && !loading && !activeSleep && completedSleepEnd && <>
+      {isDefault && !loading && !activeSleep && completedSleepEnd && <div className="home-awake-summary">
         <span className="home-awake-label">{t("home.awakeFor")}</span>
         <strong className="home-awake-duration">{formatHomeDuration(Math.floor(Math.max(0, now - Date.parse(completedSleepEnd)) / 60000), lang)}</strong>
-      </>}
+      </div>}
       <h2 id="home-current-title">{t(activeSleep ? (isDefault ? "home.sleepingFor" : "common.sleeping") : "home.nextSleepTitle")}</h2>
       {loading ? <p>{t("common.loading")}</p> : activeSleep ? <>
         <p className="home-current-value">{formatHomeDuration(Math.floor(Math.max(0, now - Date.parse(activeSleep.starttime)) / 60000), lang)}</p>

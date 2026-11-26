@@ -899,7 +899,7 @@ async function main() {
           const actions = home.locator('.home-sleep-actions > :is(.sleep-action,.secondary-button)');
           for (const button of await actions.all()) {
             const box = await button.boundingBox();
-            assert.ok(box.width >= 88 && box.width <= 96 && Math.abs(box.width - box.height) < 1);
+            assert.ok(box.width >= 80 && box.height >= 48 && box.width > box.height);
           }
           const header = home.locator('.home-header');
           const select = header.locator('select');
