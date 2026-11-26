@@ -1,0 +1,9 @@
+.modal-backdrop.care-backdrop { display: flex; align-items: flex-end; justify-content: center; }
+.care-backdrop .care-sheet { display: grid; gap: 12px; width: min(100%, 30rem); padding-top: 0; }
+.care-sheet header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.care-sheet h2, .care-sheet p { margin: 0; }
+.care-sheet h2 { font-size: 1.25rem; }
+.care-sheet p { line-height: 1.55; }
+.care-grip { height: 32px; display: grid; place-items: center; touch-action: none; cursor: grab; }
+.care-grip::before { content: ""; width: 38px; height: 4px; border-radius: 8px; background: var(--ui-muted); opacity: .5; }
+.care-summary { white-space: pre-line; overflow-wrap: anywhere; user-select: text; }

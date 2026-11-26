@@ -80,6 +80,7 @@ async function getCurrentUserId(): Promise<string> {
 export async function startSleep(
   babyId: string,
   minutesAgo = 0,
+  onCreated?: (sleep: SleepRecord) => void,
 ) {
   // Anchor to the click time, before the asynchronous checks.
   const started = new Date(Date.now() - minutesAgo * 60000);
@@ -136,6 +137,7 @@ export async function startSleep(
   }
 
   notifySleepPresentationChanged();
+  onCreated?.(data as SleepRecord);
   return data as SleepRecord;
 }
 
@@ -143,6 +145,7 @@ export async function stopSleep(
   sleepId: string,
   starttime: string,
   minutesAgo = 0,
+  onEnded?: (sleep: SleepRecord) => void,
 ) {
   // Anchor to the click time, before the asynchronous checks (mirrors startSleep).
   const ended = new Date(Date.now() - minutesAgo * 60000);
@@ -154,7 +157,32 @@ export async function stopSleep(
     throw new Error(t("errors.endTimeAfterStart"));
   }
 
-  return endSleep(sleepId, ended.toISOString());
+  const row = await endSleep(sleepId, ended.toISOString());
+  // The command returns the original end time on an idempotent retry.
+  if (row.endtime && Date.parse(row.endtime) === ended.getTime()) onEnded?.(row);
+  return row;
+}
+
+export async function undoSleepAction(row: SleepRecord) {
+  const user = await getCurrentUserId();
+  const conflict = () => new Error(t("care.failed"));
+  if (row.updated_by_user_id !== user) throw conflict();
+  if (row.endtime) {
+    const [active, latest] = await Promise.all([getActiveSleep(row.baby_id), getLastCompletedSleep(row.baby_id)]);
+    if (active || latest?.id !== row.id) throw conflict();
+  }
+  const now = new Date().toISOString();
+  const fields = row.endtime ? { endtime: null, durationminutes: null }
+    : { deleted_at: now, deleted_by_user_id: user };
+  let query = supabase.from("sleep").update({ ...fields, updated_at: now, updated_by_user_id: user })
+    .eq("id", row.id).eq("baby_id", row.baby_id).eq("starttime", row.starttime)
+    .eq("updated_by_user_id", user).is("deleted_at", null);
+  query = row.updated_at ? query.eq("updated_at", row.updated_at) : query.is("updated_at", null);
+  query = row.endtime ? query.eq("endtime", row.endtime) : query.is("endtime", null);
+  const { data, error } = await query.select("id").maybeSingle();
+  if (error) throw error;
+  if (!data) throw conflict();
+  notifySleepPresentationChanged();
 }
 
 export async function resumeSleep(

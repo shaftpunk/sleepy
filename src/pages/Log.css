@@ -1,5 +1,6 @@
 ﻿.log-page { display: grid; gap: 14px; }
-.log-header, .log-date { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.log-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.log-date { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .log-header h1 { margin: 0; font-size: 1.4rem; }
 .log-page button { min-height: 44px; }
 .log-date button { min-width: 44px; padding: 0 10px; font-size: 1.4rem; }
@@ -16,21 +17,26 @@
 .log-row > span > span, .log-empty { color: var(--ui-muted); font-size: .875rem; }
 .log-add-dialog { display: grid; gap: 8px; }
 
-.log-identity { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.log-identity { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; min-width: 0; }
 .log-identity > svg { width: 40px; height: 40px; padding: 9px; flex-shrink: 0; border-radius: 50%; background: var(--pink-soft, var(--control-bg)); fill: none; stroke: currentColor; stroke-width: 1.5; }
 .log-identity strong, .log-identity small { display: block; overflow-wrap: anywhere; }
-.log-identity:has(strong) h1, .log-identity small { font-size: .8125rem; color: var(--ui-muted); }
-.log-identity strong { font-size: 1.125rem; }
+.log-identity small { font-size: .8125rem; color: var(--ui-muted); }
+.log-identity strong { font-size: 1rem; }
 .log-header-actions { display: flex; align-items: center; flex-shrink: 0; gap: 4px; }
 .log-header-actions > button { flex-shrink: 0; }
 .log-insights-link {
-  display: grid;
-  place-items: center;
-  width: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding-inline: 12px;
+  font-size: .875rem;
+  text-decoration: none;
   height: 44px;
   color: var(--lavender, var(--ui-text));
   background: var(--lavender-soft, var(--control-bg));
-  border-radius: 50%;
+  border-radius: 999px;
 }
+.log-identity-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; }
+.log-identity-meta .log-handoff { padding-inline: 4px; font-size: .8125rem; }
 .log-insights-link:focus-visible { outline: 2px solid var(--focus-ring, currentColor); outline-offset: 2px; }
 .log-insights-link svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }

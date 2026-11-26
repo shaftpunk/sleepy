@@ -140,3 +140,42 @@ test('Home durations are calm, localized and minute based without changing calcu
   assert.equal(formatHomeDuration(72, 'no'), '1 t 12 min');
   assert.equal(formatHomeDuration(0, 'no'), '0 min');
 });
+
+test('Undo writes only the recorded version belonging to the caregiver and baby', async () => {
+  const receipt = { id: 'sleep', baby_id: 'baby', starttime: 'start', endtime: null,
+    updated_by_user_id: 'parent', updated_at: 'first-version', deleted_at: null };
+  let stored = { ...receipt };
+  const supabase = {
+    auth: { getUser: async () => ({ data: { user: { id: 'parent' } } }) },
+    from() {
+      const filters = [];
+      let patch;
+      return {
+        update(value) { patch = value; return this; },
+        eq(key, value) { filters.push([key, value]); return this; },
+        is(key, value) { return this.eq(key, value); },
+        select() { return this; },
+        async maybeSingle() {
+          if (!filters.every(([key, value]) => stored[key] === value)) return { data: null };
+          Object.assign(stored, patch);
+          return { data: { id: stored.id } };
+        },
+      };
+    },
+  };
+  const service = load('src/services/sleepService.ts', {
+    '../lib/supabase': { supabase }, '../i18n': { translate: (_, key) => key },
+    '../stores/appStore': { useAppStore: { getState: () => ({ language: 'en' }) } },
+    './sleepPresentationEvents': { notifySleepPresentationChanged() {} },
+  });
+  for (const changed of [{ updated_at: 'edited' }, { updated_by_user_id: 'caregiver' },
+    { baby_id: 'other' }, { endtime: 'woke up' }, { starttime: 'corrected' }]) {
+    stored = { ...receipt, ...changed };
+    await assert.rejects(service.undoSleepAction(receipt), /care.failed/);
+    assert.equal(stored.deleted_at, null);
+  }
+  stored = { ...receipt };
+  await service.undoSleepAction(receipt);
+  assert.equal(stored.deleted_by_user_id, 'parent');
+  await assert.rejects(service.undoSleepAction(receipt), /care.failed/);
+});

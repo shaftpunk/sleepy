@@ -51,7 +51,7 @@ function mock(url) {
   if(url.endsWith('/householdContextService.ts'))return `${params}export async function getHouseholdCandidates(user,baby){await new Promise(r=>setTimeout(r,window.__contextDelay||0));if(window.__contextFailure)throw Error('Synthetic offline');return window.__candidates||(p.has('multiple')?[{id:'A',name:'Household A',role:'viewer'},{id:'B',name:'Household B',role:'parent'}]:[{id:'household',name:'Synthetic household',role:'owner'}])};export const subscribeHouseholdContext=()=>()=>{};`;
   if(url.endsWith('/entitlementService.ts'))return `import features from '/src/entitlements/features.json';export async function resolveHouseholdEntitlements(householdId){const tier=window.__tier||(new URLSearchParams(location.search).has('plus-entitled')?'plus':'free'),delay=window.__resolutionDelay||0;await new Promise(r=>setTimeout(r,delay));if(window.__resolutionFailure)throw Error('Synthetic unavailable RPC');return {householdId,tier,isPlus:tier==='plus',features:Object.keys(features).filter(f=>tier==='plus'||features[f].requiredTier==='free'),verificationState:'verified',verifiedAt:new Date().toISOString(),validUntil:null,recheckAt:new Date(Date.now()+300000).toISOString(),policyVersion:1}};`;
   if (url === '/src/auth/AuthProvider.tsx') return `${params}export const useAuth=()=>({user:{id:'user',email:'parent.with.a.long.synthetic.email@example.invalid',user_metadata:{full_name:'Alexandra Strande Engevik'}},session:{user:{id:'user'}},loading:p.has('loading'),signOut:async()=>{window.__signedOut=true;}});`;
-  if (url === '/src/services/diaperService.ts' && (logOnly||process.argv.includes('--today-summary')||process.argv.includes('--minimal-home'))) return `
+  if (url === '/src/services/diaperService.ts' && (logOnly||process.argv.includes('--care')||process.argv.includes('--today-summary')||process.argv.includes('--minimal-home'))) return `
     export const diaperTypes=['wet','dirty','both','dry'];
     export async function countDiaperChangesBetween(...args){window.__diaperCountQuery=args;return new URLSearchParams(location.search).has("empty")?0:5;}
     const rows=[['wet','10:00','baby'],['dirty','09:00','baby'],['both','11:00','baby'],['other','11:30','another']];
@@ -88,8 +88,9 @@ function mock(url) {
     if(p.has('last-slept-fixture')&&sleeps[0])Object.assign(sleeps[0],{starttime:iso(now-223*60000),endtime:iso(now-151*60000),durationminutes:72});
     export const getActiveSleep=async()=>window.__homeActive!==undefined?window.__homeActive:p.has('active')?{...sleeps[0],id:'active',baby_id:'baby',sleep_type:'sleep',starttime:p.has('wave-fixture')||p.has('home-fixture')||p.has('last-slept-fixture')?iso(now-42*60000):sleeps[0].starttime,endtime:null}:null,
     getLastCompletedSleep=async()=>window.__homeLast||(p.has('hold-room')?{...sleeps[0],endtime:iso(now-2*3600000)}:sleeps[0])||null,getRecentSleeps=async()=>sleeps.slice(0,8),getAllSleeps=async()=>sleeps,getSleepsFromDate=async()=>sleeps,getSleepsOverlappingPeriod=async(id,from,to)=>(p.has("insights-fixture")&&(window.__insightsReads=(window.__insightsReads||0)+1),p.has("log-fixture")?[...sleeps,{...sleeps[0],id:"overnight",starttime:"2026-11-20T22:40:00.000Z",endtime:"2026-11-21T00:20:00.000Z",durationminutes:100},{...sleeps[0],id:"active",starttime:window.__logActiveStart??"2026-11-21T17:00:00.000Z",endtime:null}].filter(row=>row.baby_id===id&&row.starttime<to&&(!row.endtime||row.endtime>from)):window.__waveRows??sleeps);
-    export async function startSleep(babyId,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'start',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));return window.__homeActive={...sleeps[0],id:'started',baby_id:babyId,starttime:iso(Date.now()-minutes*60000),endtime:null};}
-    export async function stopSleep(id,start,minutes=0){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'stop',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));window.__homeActive=null;return window.__homeLast={...sleeps[0],id,starttime:start,endtime:iso(Date.now()-minutes*60000)};}
+    export async function startSleep(babyId,minutes=0,created){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'start',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));window.__homeActive={...sleeps[0],id:'started',baby_id:babyId,starttime:iso(Date.now()-minutes*60000),endtime:null};created?.(window.__homeActive);return window.__homeActive;}
+    export async function stopSleep(id,start,minutes=0,ended){if(!p.has('home-actions'))return blocked();(window.__sleepActions??=[]).push({kind:'stop',minutes});if(p.has('action-error'))return blocked();await new Promise(r=>setTimeout(r,100));window.__homeActive=null;window.__homeLast={...sleeps[0],id,starttime:start,endtime:iso(Date.now()-minutes*60000)};ended?.(window.__homeLast);return window.__homeLast;}
+    export async function undoSleepAction(row){if(!p.has('home-actions')||p.has('undo-conflict'))return blocked();window.__homeActive=row.endtime?{...row,endtime:null}:null;window.__homeLast=null;}
     export async function updateActiveSleepStart(row,starttime){if(p.has('log-fixture')){window.__logActiveStart=starttime;return;}if(!p.has('home-refinement'))return blocked();window.__homeActive={...row,starttime};window.__corrected=row.id;}
     export async function updateSleep(id,starttime,endtime,rate){if(!p.has("recent-edit")&&!p.has("log-fixture"))return blocked();const row=sleeps.find(row=>row.id===id);Object.assign(row,{starttime,endtime,rate,durationminutes:(Date.parse(endtime)-Date.parse(starttime))/60000});(window.__editedSleeps??=[]).push(id);}
     export {blocked as resumeSleep};
@@ -273,6 +274,40 @@ async function main() {
       const skin=(process.argv.find(value=>value.startsWith('--skin='))||'--skin=default').split('=')[1];
       context=`${width}x${height}-${theme}-${lang}-${skin}`;query=`theme=${theme}&lang=${lang}&skin=${skin}&long`;
       await page.setViewportSize({width,height});
+      if (process.argv.includes('--care')) {
+        await visit('/log','log-fixture');
+        await page.locator('.log-handoff').click();
+        await page.locator('.care-summary').waitFor();
+        assert.match(await page.locator('.care-summary').innerText(), /Amalie/);
+        await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', {configurable:true, value:{writeText:async text=>{window.__copied=text;}}}));
+        await page.locator('.care-sheet .primary-button').click();
+        assert.equal(await page.evaluate(()=>window.__copied), await page.locator('.care-summary').innerText());
+        await check('handoff',true);
+        await page.evaluate(() => { navigator.clipboard.writeText = async () => { throw Error('Denied'); }; });
+        await page.locator('.care-sheet .primary-button').click();
+        await page.getByRole('status').filter({hasText: lang === 'en' ? 'Select and copy' : 'Marker og kopier'}).waitFor();
+        const grip = await page.locator('.care-grip').boundingBox();
+        await page.mouse.move(grip.x+30,grip.y+12);
+        await page.mouse.down(); await page.mouse.move(grip.x+31,grip.y+80); await page.mouse.up();
+        await page.locator('.care-sheet').waitFor({state:'hidden'});
+        await visit('/','home-actions&next-sleep-fixture');
+        await page.locator('.forecast-trigger').click();
+        await page.locator('.care-sheet').waitFor();
+        await check('forecast-details',true);
+        await page.keyboard.press('Escape');
+        const action = page.locator('.home-sleep-actions .sleep-action');
+        const undo = page.locator('.sleep-undo button');
+        await action.click(); await undo.click();
+        await page.locator('.home-current[data-sleeping="false"]').waitFor();
+        await action.click(); await page.locator('.home-current[data-sleeping="true"]').waitFor();
+        await action.click(); await undo.click();
+        await page.locator('.home-current[data-sleeping="true"]').waitFor();
+        await visit('/', 'home-actions&undo-conflict');
+        await action.click(); await undo.click();
+        await page.locator('.home-quick-actions [role="alert"]').waitFor();
+        await page.locator('.home-current[data-sleeping="true"]').waitFor();
+        continue;
+      }
       if (process.argv.includes('--onset-display')) {
         await visit('/','view=onset');
         const card=page.locator('.sleep-wave');
@@ -1163,7 +1198,7 @@ async function main() {
         await row('old').waitFor({ state: 'hidden' });
 
         for (const index of [0,1,2]) {
-          await log.locator('.log-header button').click();
+          await log.locator('.log-header-actions button').click();
           await dialog.locator('button').nth(index).click();
           await dialog.locator('input[type=datetime-local]').first().waitFor();
           assert.ok((await dialog.locator('input[type=datetime-local]').first().inputValue()).startsWith('2026-10-24'));

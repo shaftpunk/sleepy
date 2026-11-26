@@ -3,6 +3,24 @@ import type { Translations } from "./types";
 // English — mirrors no.ts's shape exactly. `satisfies Translations` makes a
 // missing or extra key here a compile error.
 const en = {
+  care: {
+    insights: "Insights",
+    handoff: "Handoff",
+    copy: "Copy handoff",
+    copied: "Copied",
+    manual: "Select and copy the summary below.",
+    asOf: "{{name}} · {{time}}",
+    sleeping: "Sleeping since {{time}}",
+    awake: "Awake since {{time}}",
+    missing: "No entry recorded",
+    forecast: "About this estimate",
+    basis: "Sleepy compared {{count}} recorded gaps between sleeps around this time of day. More recent days and similar sleep sequences carry more weight.",
+    typical: "Typical gap",
+    undo: "Undo",
+    started: "Sleep started",
+    ended: "Wake-up saved",
+    failed: "Couldn’t undo this action. Check the latest entry in Log.",
+  },
   sleepWave: {
     rhythm: "Your baby's daily rhythm", rhythmFor: "{{name}} · Daily rhythm",
     now: "Now", expectedOnset: "Expected time to fall asleep",

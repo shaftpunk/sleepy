@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useAppStore } from "../stores/appStore";
-import { getActiveSleep, getLastCompletedSleep, startSleep, stopSleep, type SleepRecord } from "../services/sleepService";
+import { getActiveSleep, getLastCompletedSleep, startSleep, stopSleep, undoSleepAction, type SleepRecord } from "../services/sleepService";
+import CareSheet from "../components/CareSheet";
 import { getLastFeed, type FeedRecord } from "../services/feedService";
 import { getRecentDiaperChanges, type DiaperChange } from "../services/diaperService";
 import { subscribeToSleepChanges } from "../services/sleepRealtime";
@@ -63,6 +64,13 @@ function HomeActivity() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sleepActionError, setSleepActionError] = useState<string | null>(null);
+  const [undo, setUndo] = useState<SleepRecord | null>(null);
+  const [forecastOpen, setForecastOpen] = useState(false);
+  useEffect(() => {
+    if (!undo) return;
+    const timeout = window.setTimeout(() => setUndo(null), 12000);
+    return () => window.clearTimeout(timeout);
+  }, [undo]);
   const [now, setNow] = useState(Date.now);
   const { sessions, active, feeds } = useAnalyticsData(currentBabyId);
   const nextSleep = useNextSleepPrediction(sessions, active, now, currentBaby?.birth_date);
@@ -163,13 +171,14 @@ function HomeActivity() {
     const restoreActionFocus = Boolean(document.activeElement?.closest(".home-sleep-actions"));
     try {
       setSleepActionError(null);
+      setUndo(null);
       setSaving(true);
 
       if (activeSleep) {
         await stopSleep(
           activeSleep.id,
           activeSleep.starttime,
-          minutesAgo
+          minutesAgo, setUndo
         );
       } else {
         if (!currentBabyId) {
@@ -178,7 +187,7 @@ function HomeActivity() {
 
         await startSleep(
           currentBabyId,
-          minutesAgo
+          minutesAgo, setUndo
         );
       }
 
@@ -196,6 +205,23 @@ function HomeActivity() {
       );
       return false;
     } finally {
+      sleepActionBusy.current = false;
+      setSaving(false);
+    }
+  }
+
+  async function handleUndo() {
+    if (!undo || sleepActionBusy.current) return;
+    sleepActionBusy.current = true;
+    setSaving(true);
+    setUndo(null);
+    try {
+      await undoSleepAction(undo);
+    } catch {
+      setSleepActionError(t("care.failed"));
+    } finally {
+      try { await loadSleepData(); }
+      catch { setSleepActionError(t("log.loadError")); }
       sleepActionBusy.current = false;
       setSaving(false);
     }
@@ -238,7 +264,16 @@ function HomeActivity() {
         <p className="home-current-value">{clock(nextSleep.earliestStart)}&ndash;{clock(nextSleep.latestStart)}</p>
         {nextSleep.peak && <p>{t("home.mostLikely", { time: clock(nextSleep.peak.peakTime) })}</p>}
       </> : <p>{t("home.nextSleepLearning")}</p>}
+      {!loading && !activeSleep && <button type="button" className="forecast-trigger" aria-haspopup="dialog"
+        aria-label={t("care.forecast")} onClick={() => setForecastOpen(true)} />}
     </section>
+    {forecastOpen && <CareSheet title={t("care.forecast")} onClose={() => setForecastOpen(false)}>
+      {nextSleep.status === "ready" ? <>
+        <p>{t("care.basis", { count: nextSleep.sampleSize })}</p>
+        {nextSleep.typicalAwakeMinutes && <p>{t("care.typical")} · {formatHomeDuration(nextSleep.typicalAwakeMinutes.min, lang)}
+          {nextSleep.typicalAwakeMinutes.max !== nextSleep.typicalAwakeMinutes.min && <>–{formatHomeDuration(nextSleep.typicalAwakeMinutes.max, lang)}</>}</p>}
+      </> : <p>{t(nextSleep.status === "sleeping" ? "analysis.prediction.sleepingNowDescription" : "analysis.prediction.unavailableDescription")}</p>}
+    </CareSheet>}
     <div className="home-quick-actions">
       <SleepPrimaryAction key={`${currentBabyId}:${activeSleep?.id ?? "awake"}:${activeSleep?.starttime ?? lastSleep?.endtime ?? ""}`} ending={Boolean(activeSleep)}
         after={activeSleep ? Date.parse(activeSleep.starttime) : completedSleepEnd ? Date.parse(completedSleepEnd) : null}
@@ -254,6 +289,8 @@ function HomeActivity() {
           </button>
         </>} onCommit={handleSleep} />
       {sleepActionError && <p role="alert">{sleepActionError}</p>}
+      {undo && <div className="sleep-undo"><span role="status">{t(undo.endtime ? "care.ended" : "care.started")}</span>
+        <button type="button" disabled={saving} onClick={handleUndo}>{t("care.undo")}</button></div>}
       {diaperSaved && <p role="status">{t("diaper.saved")}</p>}
     </div>
 

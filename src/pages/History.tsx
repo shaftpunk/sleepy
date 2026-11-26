@@ -2,6 +2,7 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { ageInDays } from "../analytics/localDate";
 import SleepyIcon from "../components/SleepyIcon";
+import HandoffSheet from "../components/HandoffSheet";
 import DiaperModal from "../components/DiaperModal";
 import FeedModal from "../components/FeedModal";
 import SleepModal from "../components/SleepModal";
@@ -46,6 +47,7 @@ export default function History() {
   const { t, lang } = useTranslation();
   const viewKey = JSON.stringify([babyId, day]);
   const [adding, setAdding] = useState<string | null>(null);
+  const [handoffBaby, setHandoffBaby] = useState<string | null>(null);
   const addButton = useRef<HTMLButtonElement>(null);
   function selectDate(date: string) {
     setAdding(null);
@@ -62,22 +64,27 @@ export default function History() {
     }).format(start);
   return <main className="history-page log-page">
     <header className="log-header">
-      <div className="log-identity">
-        {baby && <SleepyIcon name="baby" />}
-        <div><h1>{t("nav.log")}</h1>
-          {baby && <strong>{baby.name}</strong>}
-          {age != null && <small>{new Intl.NumberFormat(LOCALES[lang], { style: "unit", unit: "day", unitDisplay: "long" }).format(age)}</small>}
-        </div>
-      </div>
+      <h1>{t("nav.log")}</h1>
       <div className="log-header-actions">
         <Link className="log-insights-link" aria-label={t("sleepInsights.title")} to={{ pathname: "/log/insights", search: params.toString() }}>
           <SleepyIcon name="glasses" />
+          {t("care.insights")}
         </Link>
         <button className="secondary-button" type="button" disabled={!babyId} ref={addButton} onClick={() => setAdding(viewKey)}>
           <span aria-hidden="true">+</span> {t("log.add")}
         </button>
       </div>
+      {baby && <div className="log-identity">
+        <SleepyIcon name="baby" />
+        <div><strong>{baby.name}</strong>
+          <div className="log-identity-meta">
+            {age != null && <small>{new Intl.NumberFormat(LOCALES[lang], { style: "unit", unit: "day", unitDisplay: "long" }).format(age)}</small>}
+            <button className="text-button log-handoff" onClick={() => setHandoffBaby(baby.id)}>{t("care.handoff")}</button>
+          </div>
+        </div>
+      </div>}
     </header>
+    {baby && handoffBaby === baby.id && <HandoffSheet key={baby.id} babyId={baby.id} name={baby.name} onClose={() => setHandoffBaby(null)} />}
     <div className="log-date">
       <button type="button" className="secondary-button" aria-label={t("log.previous")}
         onClick={() => selectDate(localDayKey(shiftLocalDay(start, -1)))}>&lsaquo;</button>

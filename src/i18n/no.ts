@@ -2,6 +2,24 @@
 // of truth: en.ts is written `satisfies Translations` against `typeof
 // noTranslations`, so a missing/extra key there is a compile error.
 const no = {
+  care: {
+    insights: "Innsikt",
+    handoff: "Overlevering",
+    copy: "Kopier oppsummering",
+    copied: "Kopiert",
+    manual: "Marker og kopier oppsummeringen nedenfor.",
+    asOf: "{{name}} · {{time}}",
+    sleeping: "Sover siden {{time}}",
+    awake: "Våken siden {{time}}",
+    missing: "Ingen registrering",
+    forecast: "Om anslaget",
+    basis: "Sleepy sammenlignet {{count}} registrerte opphold mellom søvnperioder rundt denne tiden på døgnet. Nyere dager og lignende søvnmønstre veier tyngre.",
+    typical: "Vanlig opphold",
+    undo: "Angre",
+    started: "Søvn startet",
+    ended: "Oppvåkning lagret",
+    failed: "Kunne ikke angre. Sjekk siste registrering i loggen.",
+  },
   sleepWave: {
     rhythm: "Barnets daglige søvnrytme", rhythmFor: "{{name}} · Dagens søvnrytme",
     now: "Nå", expectedOnset: "Forventet innsovning",
